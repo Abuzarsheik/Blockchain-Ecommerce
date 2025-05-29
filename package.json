@@ -1,0 +1,51 @@
+{
+  "name": "blocmerce-phase1",
+  "version": "1.0.0",
+  "description": "Blocmerce Phase 1: Traditional Ecommerce + Blockchain Data Storage",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "migrate": "node scripts/migrate.js",
+    "deploy-contracts": "node scripts/deploy.js",
+    "test": "jest",
+    "frontend": "cd frontend && npm start",
+    "build": "cd frontend && npm run build"
+  },
+  "dependencies": {
+    "aes-js": "^3.1.2",
+    "bcryptjs": "^2.4.3",
+    "bech32": "^2.0.0",
+    "bn.js": "^5.2.2",
+    "clsx": "^2.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "ethers": "^5.7.2",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^6.0.1",
+    "ipfs-http-client": "^56.0.1",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^7.0.0",
+    "multer": "^1.4.4",
+    "react-toastify": "^11.0.5",
+    "stripe": "^10.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "keywords": [
+    "blockchain",
+    "ecommerce",
+    "web3",
+    "cryptocurrency",
+    "nft",
+    "smart-contracts"
+  ],
+  "author": "Blocmerce Team",
+  "license": "ISC",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}
