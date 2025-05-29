@@ -283,4 +283,4 @@ This project is licensed under the ISC License - see the [LICENSE](LICENSE) file
 
 *Connecting Commerce with Blockchain Innovation*
 
-</div> 
+</div>
