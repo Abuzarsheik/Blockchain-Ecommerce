@@ -1,9 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Twitter, Github, MessageCircle, Mail } from 'lucide-react';
 import '../styles/Footer.css';
 
 const Footer = () => {
+  const { user, isAuthenticated } = useSelector(state => state.auth);
+
   return (
     <footer className="footer">
       <div className="footer-container">
@@ -30,7 +33,9 @@ const Footer = () => {
           <div className="link-column">
             <h4>Marketplace</h4>
             <Link to="/catalog">Browse NFTs</Link>
-            <Link to="/create">Create NFT</Link>
+            {(isAuthenticated && (user?.userType === 'seller' || user?.role === 'admin')) && (
+              <Link to="/create-nft">Create NFT</Link>
+            )}
             <Link to="/technology">Technology</Link>
             <Link to="/about">About Us</Link>
           </div>

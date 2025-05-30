@@ -18,6 +18,9 @@ const Header = () => {
     navigate('/');
   };
 
+  // Check if user is a seller (sellers shouldn't see cart)
+  const isSeller = user?.userType === 'seller' && user?.role !== 'admin';
+
   return (
     <header className="header">
       <div className="header-container">
@@ -33,10 +36,13 @@ const Header = () => {
         </nav>
 
         <div className="header-actions">
-          <Link to="/cart" className="cart-link">
-            <ShoppingCart size={20} />
-            {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
-          </Link>
+          {/* Only show cart for buyers and admins, not for pure sellers */}
+          {isAuthenticated && !isSeller && (
+            <Link to="/cart" className="cart-link">
+              <ShoppingCart size={20} />
+              {itemCount > 0 && <span className="cart-count">{itemCount}</span>}
+            </Link>
+          )}
 
           {isAuthenticated ? (
             <div className="user-menu">

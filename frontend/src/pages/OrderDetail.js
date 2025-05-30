@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
@@ -14,11 +14,13 @@ import {
   AlertCircle,
   User,
   Mail,
-  Phone
+  Phone,
+  ExternalLink
 } from 'lucide-react';
 import { fetchOrderById } from '../store/slices/ordersSlice';
 import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
+import OrderTracking from '../components/OrderTracking';
 import '../styles/OrderDetail.css';
 
 const OrderDetail = () => {
@@ -27,6 +29,7 @@ const OrderDetail = () => {
   const dispatch = useDispatch();
   
   const { currentOrder: order, loading, error } = useSelector(state => state.orders);
+  const [showTracking, setShowTracking] = useState(false);
 
   useEffect(() => {
     if (orderId) {
@@ -37,14 +40,21 @@ const OrderDetail = () => {
   const getStatusIcon = (status) => {
     switch (status?.toLowerCase()) {
       case 'pending':
+      case 'confirmed':
         return <Clock className="status-icon pending" />;
       case 'processing':
         return <Package className="status-icon processing" />;
+      case 'ready_to_ship':
+        return <Package className="status-icon ready" />;
       case 'shipped':
+      case 'in_transit':
         return <Truck className="status-icon shipped" />;
+      case 'out_for_delivery':
+        return <Truck className="status-icon out-for-delivery" />;
       case 'delivered':
         return <CheckCircle className="status-icon delivered" />;
       case 'cancelled':
+      case 'returned':
         return <AlertCircle className="status-icon cancelled" />;
       default:
         return <Clock className="status-icon" />;
@@ -56,10 +66,14 @@ const OrderDetail = () => {
       case 'delivered':
         return 'status-delivered';
       case 'shipped':
+      case 'in_transit':
+      case 'out_for_delivery':
         return 'status-shipped';
       case 'processing':
+      case 'ready_to_ship':
         return 'status-processing';
       case 'cancelled':
+      case 'returned':
         return 'status-cancelled';
       default:
         return 'status-pending';
@@ -74,6 +88,15 @@ const OrderDetail = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const hasTrackingInfo = () => {
+    return order?.shipping_info?.tracking_number || order?.tracking_number;
+  };
+
+  const isTrackableStatus = () => {
+    const trackableStatuses = ['shipped', 'in_transit', 'out_for_delivery', 'delivered'];
+    return trackableStatuses.includes(order?.status?.toLowerCase());
   };
 
   if (loading) {
@@ -124,7 +147,7 @@ const OrderDetail = () => {
             <h1>Order #{order.orderNumber}</h1>
             <div className={`order-status ${getStatusClass(order.status)}`}>
               {getStatusIcon(order.status)}
-              <span>{order.status || 'Pending'}</span>
+              <span>{order.status?.replace('_', ' ') || 'Pending'}</span>
             </div>
           </div>
         </div>
@@ -152,7 +175,11 @@ const OrderDetail = () => {
                 <CreditCard size={16} />
                 <div>
                   <span className="label">Payment Method</span>
-                  <span className="value">{order.payment_method === 'card' ? 'Credit Card' : 'Cryptocurrency'}</span>
+                  <span className="value">
+                    {order.payment_method === 'card' ? 'Credit Card' : 
+                     order.payment_method === 'crypto' ? 'Cryptocurrency' : 
+                     order.payment_method === 'escrow' ? 'Escrow' : 'Unknown'}
+                  </span>
                 </div>
               </div>
               <div className="info-item">
@@ -164,6 +191,93 @@ const OrderDetail = () => {
               </div>
             </div>
           </div>
+
+          {/* Shipping & Tracking Info */}
+          {(hasTrackingInfo() || order.shipping_info) && (
+            <div className="shipping-tracking-card">
+              <h2>Shipping & Tracking</h2>
+              <div className="shipping-info-grid">
+                {order.shipping_info?.carrier && (
+                  <div className="info-item">
+                    <Truck size={16} />
+                    <div>
+                      <span className="label">Carrier</span>
+                      <span className="value">
+                        {order.shipping_info.carrier.toUpperCase()}
+                        {order.shipping_info.service_type && ` - ${order.shipping_info.service_type}`}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                {hasTrackingInfo() && (
+                  <div className="info-item">
+                    <Package size={16} />
+                    <div>
+                      <span className="label">Tracking Number</span>
+                      <span className="value tracking-number">
+                        {order.shipping_info?.tracking_number || order.tracking_number}
+                        {order.shipping_info?.tracking_url && (
+                          <a 
+                            href={order.shipping_info.tracking_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="external-tracking-link"
+                          >
+                            <ExternalLink size={14} />
+                          </a>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {order.shipped_at && (
+                  <div className="info-item">
+                    <Calendar size={16} />
+                    <div>
+                      <span className="label">Shipped Date</span>
+                      <span className="value">{formatDate(order.shipped_at)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {(order.shipping_info?.estimated_delivery || order.estimated_delivery) && (
+                  <div className="info-item">
+                    <Calendar size={16} />
+                    <div>
+                      <span className="label">Estimated Delivery</span>
+                      <span className="value">
+                        {formatDate(order.shipping_info?.estimated_delivery || order.estimated_delivery)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {order.delivered_at && (
+                  <div className="info-item delivered">
+                    <CheckCircle size={16} />
+                    <div>
+                      <span className="label">Delivered</span>
+                      <span className="value">{formatDate(order.delivered_at)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {hasTrackingInfo() && isTrackableStatus() && (
+                <div className="tracking-actions">
+                  <button 
+                    onClick={() => setShowTracking(true)} 
+                    className="btn-primary track-button"
+                  >
+                    <Truck size={16} />
+                    Track Package
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Order Items */}
           <div className="order-items-card">
@@ -207,7 +321,7 @@ const OrderDetail = () => {
               )}
               <div className="price-row">
                 <span>Shipping</span>
-                <span>${order.shipping?.toFixed(2) || '0.00'}</span>
+                <span>${order.shipping_cost?.toFixed(2) || '0.00'}</span>
               </div>
               <div className="price-row">
                 <span>Tax</span>
@@ -221,7 +335,7 @@ const OrderDetail = () => {
           </div>
 
           {/* Billing & Shipping Info */}
-          <div className="address-cards">
+          <div className="address-info-grid">
             {/* Billing Information */}
             <div className="address-card">
               <h3>
@@ -259,22 +373,31 @@ const OrderDetail = () => {
               </h3>
               {order.shipping_address && (
                 <div className="address-details">
+                  <p className="name">
+                    {order.shipping_address.firstName} {order.shipping_address.lastName}
+                  </p>
+                  {order.shipping_address.company && (
+                    <p className="company">{order.shipping_address.company}</p>
+                  )}
                   <div className="address">
                     <MapPin size={14} />
                     <div>
                       <p>{order.shipping_address.street}</p>
+                      {order.shipping_address.street2 && <p>{order.shipping_address.street2}</p>}
                       <p>{order.shipping_address.city}, {order.shipping_address.state} {order.shipping_address.zipCode}</p>
                       <p>{order.shipping_address.country}</p>
                     </div>
                   </div>
-                  {order.tracking_number && (
-                    <div className="tracking-info">
-                      <strong>Tracking Number:</strong> {order.tracking_number}
-                    </div>
+                  {order.shipping_address.phone && (
+                    <p className="contact">
+                      <Phone size={14} />
+                      {order.shipping_address.phone}
+                    </p>
                   )}
-                  {order.estimated_delivery && (
-                    <div className="delivery-info">
-                      <strong>Estimated Delivery:</strong> {formatDate(order.estimated_delivery)}
+                  {order.shipping_address.delivery_instructions && (
+                    <div className="delivery-instructions">
+                      <strong>Delivery Instructions:</strong>
+                      <p>{order.shipping_address.delivery_instructions}</p>
                     </div>
                   )}
                 </div>
@@ -284,8 +407,11 @@ const OrderDetail = () => {
 
           {/* Action Buttons */}
           <div className="order-actions">
-            {order.tracking_number && (
-              <button className="btn-secondary">
+            {hasTrackingInfo() && isTrackableStatus() && (
+              <button 
+                onClick={() => setShowTracking(true)} 
+                className="btn-secondary"
+              >
                 <Truck size={16} />
                 Track Package
               </button>
@@ -301,6 +427,15 @@ const OrderDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Tracking Modal */}
+      {showTracking && (
+        <OrderTracking 
+          orderId={order._id}
+          trackingNumber={order.shipping_info?.tracking_number || order.tracking_number}
+          onClose={() => setShowTracking(false)}
+        />
+      )}
     </div>
   );
 };

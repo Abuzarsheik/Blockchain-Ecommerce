@@ -1,9 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Home, Search } from 'lucide-react';
 import '../styles/NotFound.css';
 
 const NotFound = () => {
+  const { user, isAuthenticated } = useSelector(state => state.auth);
+
   return (
     <div className="not-found-page">
       <div className="not-found-container">
@@ -32,7 +35,9 @@ const NotFound = () => {
             <div className="quick-links">
               <Link to="/technology">Technology</Link>
               <Link to="/about">About Us</Link>
-              <Link to="/create">Create NFT</Link>
+              {(isAuthenticated && (user?.userType === 'seller' || user?.role === 'admin')) && (
+                <Link to="/create-nft">Create NFT</Link>
+              )}
               <Link to="/dashboard">Dashboard</Link>
             </div>
           </div>

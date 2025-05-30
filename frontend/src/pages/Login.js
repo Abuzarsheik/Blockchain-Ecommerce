@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Loader } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Eye, EyeOff, Loader, Shield, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
-import { loginUser, clearError } from '../store/slices/authSlice';
-import '../styles/Login.css';
+import { loginUser, verify2FA, clearError } from '../store/slices/authSlice';
+import '../styles/Auth.css';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
+  const { loading, error, isAuthenticated, user } = useSelector(state => state.auth);
   
-  const { isAuthenticated, loading, error } = useSelector(state => state.auth);
-  
+  const [step, setStep] = useState('login'); // 'login', '2fa', 'success'
+  const [tempToken, setTempToken] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    twoFactorCode: '',
     rememberMe: false
   });
   
@@ -23,15 +25,15 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
-  // Redirect if already authenticated
+  // Check if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
       const from = location.state?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, user, navigate, location]);
 
-  // Handle auth errors
+  // Handle Redux auth errors
   useEffect(() => {
     if (error) {
       toast.error(error);
@@ -48,7 +50,11 @@ const Login = () => {
         return '';
       case 'password':
         if (!value) return 'Password is required';
-        if (value.length < 6) return 'Password must be at least 6 characters long';
+        if (value.length < 8) return 'Password must be at least 8 characters long';
+        return '';
+      case 'twoFactorCode':
+        if (!value) return '2FA code is required';
+        if (!/^\d{6}$/.test(value)) return '2FA code must be 6 digits';
         return '';
       default:
         return '';
@@ -57,7 +63,12 @@ const Login = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    const fieldValue = type === 'checkbox' ? checked : value;
+    let fieldValue = type === 'checkbox' ? checked : value;
+    
+    // Format 2FA code input
+    if (name === 'twoFactorCode') {
+      fieldValue = value.replace(/\D/g, '').slice(0, 6);
+    }
     
     setFormData(prev => ({
       ...prev,
@@ -85,258 +96,341 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate all fields
-    const newErrors = {};
-    Object.keys(formData).forEach(key => {
-      if (key !== 'rememberMe') {
+    if (step === 'login') {
+      // Validate login fields
+      const newErrors = {};
+      ['email', 'password'].forEach(key => {
         const error = validateField(key, formData[key]);
         if (error) newErrors[key] = error;
-      }
-    });
+      });
 
-    setErrors(newErrors);
-    setTouched({ email: true, password: true });
+      setErrors(newErrors);
+      setTouched({ email: true, password: true });
 
-    if (Object.keys(newErrors).length === 0) {
-      try {
-        const result = await dispatch(loginUser({
-          email: formData.email,
-          password: formData.password
-        }));
-        
-        if (loginUser.fulfilled.match(result)) {
-          toast.success('Welcome back! Login successful.');
-          // Navigation will be handled by the useEffect when isAuthenticated changes
-        }
-      } catch (err) {
-        console.error('Login error:', err);
-        
-        // If it's a demo login, provide fallback authentication
-        if (formData.email === 'demo@blocmerce.com' && formData.password === 'demo123') {
-          // Mock successful login for demo
-          localStorage.setItem('token', 'demo-token-123');
+      if (Object.keys(newErrors).length === 0) {
+        try {
+          const result = await dispatch(loginUser({
+            email: formData.email,
+            password: formData.password
+          })).unwrap();
+
+          if (result.requires2FA) {
+            setStep('2fa');
+            setTempToken(result.tempToken);
+            toast.info('Please enter your 2FA code to complete login');
+          } else {
+            // Login successful
+            setStep('success');
+            toast.success('Welcome back! Login successful.');
+            
+            setTimeout(() => {
+              const from = location.state?.from?.pathname || '/dashboard';
+              navigate(from, { replace: true });
+            }, 1500);
+          }
+        } catch (error) {
+          // Additional specific error handling beyond Redux
+          console.error('Login error:', error);
           
-          // Manually set auth state for demo
-          const demoUser = {
-            id: 'demo-user-123',
-            firstName: 'Demo',
-            lastName: 'User',
-            username: 'demo_user',
-            email: 'demo@blocmerce.com',
-            userType: 'buyer'
-          };
-          
-          // Create a custom fulfilled action for demo
-          dispatch({
-            type: 'auth/loginUser/fulfilled',
-            payload: {
-              user: demoUser,
-              token: 'demo-token-123'
-            }
-          });
-          
-          toast.success('Welcome to the demo! Login successful.');
-        } else {
-          toast.error('Login failed. Please check your credentials and try again.');
+          // Handle specific error cases that might not be caught by Redux
+          if (typeof error === 'string') {
+            toast.error(error);
+          } else if (error?.message) {
+            toast.error(error.message);
+          } else {
+            toast.error('Login failed. Please check your credentials and try again.');
+          }
         }
       }
-    } else {
-      toast.error('Please correct the errors in the form');
+    } else if (step === '2fa') {
+      // Validate 2FA code
+      const newErrors = {};
+      const codeError = validateField('twoFactorCode', formData.twoFactorCode);
+      if (codeError) newErrors.twoFactorCode = codeError;
+
+      setErrors(newErrors);
+      setTouched({ twoFactorCode: true });
+
+      if (Object.keys(newErrors).length === 0) {
+        try {
+          await dispatch(verify2FA({
+            tempToken: tempToken,
+            twoFactorCode: formData.twoFactorCode
+          })).unwrap();
+
+          setStep('success');
+          toast.success('Two-factor authentication successful!');
+          
+          setTimeout(() => {
+            const from = location.state?.from?.pathname || '/dashboard';
+            navigate(from, { replace: true });
+          }, 1500);
+        } catch (error) {
+          console.error('2FA verification error:', error);
+          // Error is already handled by Redux and the useEffect
+        }
+      }
     }
   };
 
   const handleDemoLogin = () => {
     setFormData({
       email: 'demo@blocmerce.com',
-      password: 'demo123',
+      password: 'Demo123!@#',
+      twoFactorCode: '',
       rememberMe: false
     });
-    // Clear any existing errors
     setErrors({});
     setTouched({});
     toast.info('Demo credentials filled in. Click "Sign In" to continue.');
   };
 
-  const handleSocialLogin = (provider) => {
-    toast.info(`${provider} login integration coming soon! Stay tuned for updates.`);
+  const handleBack = () => {
+    setStep('login');
+    setFormData(prev => ({ ...prev, twoFactorCode: '' }));
+    setErrors({});
+    setTouched({});
   };
 
-  return (
-    <div className="login-container">
-      <div className="login-background">
-        <div className="login-card">
-          <div className="login-header">
-            <h1>Welcome Back</h1>
-            <p>Sign in to your Blocmerce account and continue your NFT journey</p>
+  const handleForgotPassword = () => {
+    if (formData.email) {
+      navigate('/forgot-password', { state: { email: formData.email } });
+    } else {
+      navigate('/forgot-password');
+    }
+  };
+
+  const renderLoginForm = () => (
+    <>
+      <div className="auth-header">
+        <div className="header-icon">
+          <Lock size={32} />
+        </div>
+        <h1>Welcome Back</h1>
+        <p>Sign in to your account and continue your journey</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="auth-form" noValidate>
+        {/* Email Field */}
+        <div className="form-group">
+          <label htmlFor="email" className="form-label">
+            <Mail size={16} />
+            Email Address
+          </label>
+          <div className="input-wrapper">
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={`form-input ${errors.email && touched.email ? 'error' : ''}`}
+              placeholder="Enter your email address"
+              autoComplete="email"
+              aria-describedby={errors.email && touched.email ? 'email-error' : undefined}
+            />
           </div>
+          {errors.email && touched.email && (
+            <span className="error-message" id="email-error" role="alert">
+              <AlertCircle size={14} />
+              {errors.email}
+            </span>
+          )}
+        </div>
 
-          <form onSubmit={handleSubmit} className="login-form" noValidate>
-            {/* Email Field */}
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
-                Email Address
-              </label>
-              <div className="input-wrapper">
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  className={`form-input ${errors.email && touched.email ? 'error' : ''}`}
-                  placeholder="Enter your email address"
-                  autoComplete="email"
-                  aria-describedby={errors.email && touched.email ? 'email-error' : undefined}
-                />
-              </div>
-              {errors.email && touched.email && (
-                <span className="error-message" id="email-error" role="alert">
-                  {errors.email}
-                </span>
-              )}
-            </div>
-
-            {/* Password Field */}
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">
-                Password
-              </label>
-              <div className="input-wrapper">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  className={`form-input ${errors.password && touched.password ? 'error' : ''}`}
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                  aria-describedby={errors.password && touched.password ? 'password-error' : undefined}
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              {errors.password && touched.password && (
-                <span className="error-message" id="password-error" role="alert">
-                  {errors.password}
-                </span>
-              )}
-            </div>
-
-            {/* Remember Me & Forgot Password */}
-            <div className="form-options">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="rememberMe"
-                  checked={formData.rememberMe}
-                  onChange={handleChange}
-                  className="checkbox-input"
-                />
-                <span className="checkbox-custom"></span>
-                Keep me signed in
-              </label>
-              <Link to="/forgot-password" className="forgot-link">
-                Forgot your password?
-              </Link>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="login-button"
-              aria-describedby="submit-help"
-            >
-              {loading ? (
-                <>
-                  <Loader className="spinner" size={16} />
-                  Signing you in...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-            <div id="submit-help" className="sr-only">
-              Click to sign in to your account
-            </div>
-
-            {/* Demo Login */}
+        {/* Password Field */}
+        <div className="form-group">
+          <label htmlFor="password" className="form-label">
+            <Lock size={16} />
+            Password
+          </label>
+          <div className="input-wrapper password-wrapper">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={`form-input ${errors.password && touched.password ? 'error' : ''}`}
+              placeholder="Enter your password"
+              autoComplete="current-password"
+              aria-describedby={errors.password && touched.password ? 'password-error' : undefined}
+            />
             <button
               type="button"
-              onClick={handleDemoLogin}
-              className="demo-button"
-              aria-label="Fill in demo account credentials"
+              className="password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
-              Try Demo Account
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="divider">
-            <span>or continue with</span>
-          </div>
-
-          {/* Social Login */}
-          <div className="social-login">
-            <button
-              onClick={() => handleSocialLogin('Google')}
-              className="social-button google"
-              aria-label="Sign in with Google"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-              Google
-            </button>
-            <button
-              onClick={() => handleSocialLogin('GitHub')}
-              className="social-button github"
-              aria-label="Sign in with GitHub"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-              </svg>
-              GitHub
-            </button>
-            <button
-              onClick={() => handleSocialLogin('MetaMask')}
-              className="social-button metamask"
-              aria-label="Sign in with MetaMask"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.05 8.54l-3.24-9.64a.85.85 0 00-.81-.6H5.99a.85.85 0 00-.81.6L1.94 8.54a.85.85 0 00.16.96l8.04 6.73a.85.85 0 001.01 0l8.04-6.73a.85.85 0 00.16-.96z" fill="#E2761B"/>
-              </svg>
-              MetaMask
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-
-          {/* Register Link */}
-          <div className="register-link">
-            <p>
-              New to Blocmerce?{' '}
-              <Link to="/register" className="link">
-                Create your account
-              </Link>
-            </p>
-          </div>
-
-          {/* Security Notice */}
-          <div className="security-notice">
-            <span>Your connection is secured with end-to-end encryption</span>
-          </div>
+          {errors.password && touched.password && (
+            <span className="error-message" id="password-error" role="alert">
+              <AlertCircle size={14} />
+              {errors.password}
+            </span>
+          )}
         </div>
+
+        {/* Remember Me and Forgot Password */}
+        <div className="form-options">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              name="rememberMe"
+              checked={formData.rememberMe}
+              onChange={handleChange}
+            />
+            <span className="checkmark"></span>
+            Remember me for 30 days
+          </label>
+          <button
+            type="button"
+            className="forgot-password-link"
+            onClick={handleForgotPassword}
+          >
+            Forgot password?
+          </button>
+        </div>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          className="submit-button"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader className="spinning" size={18} />
+              Signing In...
+            </>
+          ) : (
+            'Sign In'
+          )}
+        </button>
+
+        {/* Demo Login */}
+        <button
+          type="button"
+          className="demo-button"
+          onClick={handleDemoLogin}
+          disabled={loading}
+        >
+          Try Demo Login
+        </button>
+      </form>
+
+      <div className="auth-footer">
+        <p>
+          Don't have an account?{' '}
+          <Link to="/register" className="register-link">
+            Create one here
+          </Link>
+        </p>
+      </div>
+    </>
+  );
+
+  const render2FAForm = () => (
+    <>
+      <div className="auth-header">
+        <div className="header-icon">
+          <Shield size={32} />
+        </div>
+        <h1>Two-Factor Authentication</h1>
+        <p>Enter the 6-digit code from your authenticator app</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="auth-form" noValidate>
+        <div className="form-group">
+          <label htmlFor="twoFactorCode" className="form-label">
+            <Shield size={16} />
+            Authentication Code
+          </label>
+          <div className="input-wrapper">
+            <input
+              type="text"
+              id="twoFactorCode"
+              name="twoFactorCode"
+              value={formData.twoFactorCode}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={`form-input code-input ${errors.twoFactorCode && touched.twoFactorCode ? 'error' : ''}`}
+              placeholder="000000"
+              maxLength="6"
+              autoComplete="one-time-code"
+              aria-describedby={errors.twoFactorCode && touched.twoFactorCode ? 'code-error' : undefined}
+            />
+          </div>
+          {errors.twoFactorCode && touched.twoFactorCode && (
+            <span className="error-message" id="code-error" role="alert">
+              <AlertCircle size={14} />
+              {errors.twoFactorCode}
+            </span>
+          )}
+        </div>
+
+        <div className="form-buttons">
+          <button
+            type="button"
+            className="back-button"
+            onClick={handleBack}
+            disabled={loading}
+          >
+            Back
+          </button>
+          <button
+            type="submit"
+            className="submit-button"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader className="spinning" size={18} />
+                Verifying...
+              </>
+            ) : (
+              'Verify & Sign In'
+            )}
+          </button>
+        </div>
+      </form>
+
+      <div className="help-text">
+        <p>Can't access your authenticator app?</p>
+        <button
+          type="button"
+          className="help-link"
+          onClick={() => toast.info('Contact support for assistance with backup codes')}
+        >
+          Use backup code
+        </button>
+      </div>
+    </>
+  );
+
+  const renderSuccessForm = () => (
+    <div className="success-container">
+      <div className="success-icon">
+        <CheckCircle size={64} color="#28a745" />
+      </div>
+      <h1>Login Successful!</h1>
+      <p>Welcome back, {user?.firstName}! Redirecting you now...</p>
+      <div className="loading-indicator">
+        <Loader className="spinning" size={24} />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="auth-container">
+      <div className="auth-card">
+        {step === 'login' && renderLoginForm()}
+        {step === '2fa' && render2FAForm()}
+        {step === 'success' && renderSuccessForm()}
       </div>
     </div>
   );

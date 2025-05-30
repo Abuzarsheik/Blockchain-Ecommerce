@@ -1,9 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { ArrowRight, Verified, TrendingUp, Users, ShoppingBag, User, HelpCircle, Settings } from 'lucide-react';
 import '../styles/HomePage.css';
 
 const HomePage = () => {
+  const { user, isAuthenticated } = useSelector(state => state.auth);
+
   return (
     <div className="home-page">
       <section className="hero">
@@ -15,9 +18,11 @@ const HomePage = () => {
               Explore Marketplace
               <ArrowRight size={20} />
             </Link>
-            <Link to="/create" className="cta-button secondary">
-              Create NFT
-            </Link>
+            {(isAuthenticated && (user?.userType === 'seller' || user?.role === 'admin')) && (
+              <Link to="/create-nft" className="cta-button secondary">
+                Create NFT
+              </Link>
+            )}
           </div>
         </div>
       </section>

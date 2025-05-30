@@ -35,8 +35,8 @@ const Register = () => {
   };
 
   const validatePassword = (password) => {
-    // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
+    // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     return passwordRegex.test(password);
   };
 
@@ -83,6 +83,13 @@ const Register = () => {
       feedback.push({ text: 'Number', met: true });
     } else {
       feedback.push({ text: 'Number', met: false });
+    }
+
+    if (/[@$!%*?&]/.test(password)) {
+      score += 1;
+      feedback.push({ text: 'Special character (@$!%*?&)', met: true });
+    } else {
+      feedback.push({ text: 'Special character (@$!%*?&)', met: false });
     }
 
     return { score, feedback };
@@ -206,8 +213,8 @@ const Register = () => {
       }));
 
       if (registerUser.fulfilled.match(result)) {
-        toast.success('Account created successfully! Welcome to Blocmerce.');
-        navigate('/dashboard');
+        toast.success('Account created successfully! Please log in to continue.');
+        navigate('/login');
       } else {
         // Handle registration errors
         const errorMessage = result.payload || 'Registration failed';
@@ -236,13 +243,13 @@ const Register = () => {
       lastName: 'Doe',
       username: 'johndoe_nft',
       email: 'john.doe@example.com',
-      password: 'SecurePass123',
-      confirmPassword: 'SecurePass123',
+      password: 'SecurePass123!',
+      confirmPassword: 'SecurePass123!',
       userType: 'buyer',
       agreeToTerms: true,
       agreeToMarketing: false
     });
-    setPasswordStrength(calculatePasswordStrength('SecurePass123'));
+    setPasswordStrength(calculatePasswordStrength('SecurePass123!'));
     setErrors({});
     toast.info('Demo data filled in. Review and submit to create account.');
   };

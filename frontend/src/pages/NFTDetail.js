@@ -14,12 +14,14 @@ import {
   MoreHorizontal,
   Trash2,
   Edit,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { api } from '../services/api';
 import { addToCart } from '../store/slices/cartSlice';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { getNFTImageUrl } from '../utils/imageUtils';
 import '../styles/NFTDetail.css';
 
 const NFTDetail = () => {
@@ -246,11 +248,11 @@ const NFTDetail = () => {
         <div className="nft-image-section">
           <div className="nft-image-container">
             <img 
-              src={`http://localhost:5000${nft.image_url}`} 
+              src={getNFTImageUrl(nft.image_url)} 
               alt={nft.name}
               className="nft-image"
               onError={(e) => {
-                e.target.src = 'https://via.placeholder.com/500x500?text=NFT+Image';
+                e.target.src = 'https://via.placeholder.com/500x500?text=NFT+Image+Not+Found';
               }}
             />
             

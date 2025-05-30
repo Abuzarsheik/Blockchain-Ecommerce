@@ -4,13 +4,85 @@ import { api } from '../../services/api';
 // Async thunks
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
-  async ({ email, password }, { rejectWithValue }) => {
+  async ({ email, password, twoFactorCode }, { rejectWithValue }) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
-      localStorage.setItem('token', response.data.token);
+      const response = await api.post('/auth/login', { 
+        email, 
+        password,
+        ...(twoFactorCode && { twoFactorCode })
+      });
+      
+      // Only set token if login is complete (not requiring 2FA)
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+      }
+      
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data.message);
+      // Handle different error scenarios
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.error || error.response.data?.message || 'Login failed';
+        const statusCode = error.response.status;
+        
+        // Handle specific status codes
+        switch (statusCode) {
+          case 401:
+            return rejectWithValue('Invalid email or password. Please check your credentials.');
+          case 423:
+            return rejectWithValue('Account temporarily locked due to too many failed attempts. Please try again later.');
+          case 429:
+            return rejectWithValue('Too many login attempts. Please wait before trying again.');
+          case 500:
+            return rejectWithValue('Server error. Please try again later.');
+          default:
+            return rejectWithValue(errorMessage);
+        }
+      } else if (error.request) {
+        // Network error
+        return rejectWithValue('Network error. Please check your connection and try again.');
+      } else {
+        // Other error
+        return rejectWithValue('An unexpected error occurred. Please try again.');
+      }
+    }
+  }
+);
+
+export const verify2FA = createAsyncThunk(
+  'auth/verify2FA',
+  async ({ tempToken, twoFactorCode }, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/auth/verify-2fa', { 
+        tempToken, 
+        twoFactorCode 
+      });
+      
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+      }
+      
+      return response.data;
+    } catch (error) {
+      if (error.response) {
+        const errorMessage = error.response.data?.error || error.response.data?.message || '2FA verification failed';
+        const statusCode = error.response.status;
+        
+        switch (statusCode) {
+          case 401:
+            return rejectWithValue('Invalid 2FA code. Please try again.');
+          case 400:
+            return rejectWithValue('Invalid or expired 2FA session. Please login again.');
+          case 429:
+            return rejectWithValue('Too many 2FA attempts. Please wait before trying again.');
+          default:
+            return rejectWithValue(errorMessage);
+        }
+      } else if (error.request) {
+        return rejectWithValue('Network error. Please check your connection and try again.');
+      } else {
+        return rejectWithValue('An unexpected error occurred. Please try again.');
+      }
     }
   }
 );
@@ -27,7 +99,8 @@ export const registerUser = createAsyncThunk(
         password, 
         userType 
       });
-      localStorage.setItem('token', response.data.token);
+      // Don't store token automatically - user should login manually after registration
+      // localStorage.setItem('token', response.data.token);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Registration failed');
@@ -103,12 +176,12 @@ const authSlice = createSlice({
         state.token = null;
       })
       
-      // Register
-      .addCase(registerUser.pending, (state) => {
+      // Verify 2FA
+      .addCase(verify2FA.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(registerUser.fulfilled, (state, action) => {
+      .addCase(verify2FA.fulfilled, (state, action) => {
         state.loading = false;
         state.isAuthenticated = true;
         state.user = {
@@ -116,6 +189,27 @@ const authSlice = createSlice({
           userId: action.payload.user._id || action.payload.user.id || action.payload.user.userId
         };
         state.token = action.payload.token;
+      })
+      .addCase(verify2FA.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.isAuthenticated = false;
+        state.user = null;
+        state.token = null;
+      })
+      
+      // Register
+      .addCase(registerUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(registerUser.fulfilled, (state, action) => {
+        state.loading = false;
+        // Don't automatically authenticate user after registration
+        // User should login manually after successful registration
+        state.isAuthenticated = false;
+        state.user = null;
+        state.token = null;
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;

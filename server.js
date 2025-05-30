@@ -14,12 +14,32 @@ const PORT = process.env.PORT || 5000;
 // Create uploads directories if they don't exist
 const uploadsDir = path.join(__dirname, 'uploads');
 const nftUploadsDir = path.join(uploadsDir, 'nfts');
+const kycUploadsDir = path.join(uploadsDir, 'kyc');
+const avatarUploadsDir = path.join(uploadsDir, 'avatars');
+const productUploadsDir = path.join(uploadsDir, 'products');
+const disputeUploadsDir = path.join(uploadsDir, 'disputes');
+const reviewUploadsDir = path.join(uploadsDir, 'reviews');
 
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir);
 }
 if (!fs.existsSync(nftUploadsDir)) {
     fs.mkdirSync(nftUploadsDir);
+}
+if (!fs.existsSync(kycUploadsDir)) {
+    fs.mkdirSync(kycUploadsDir);
+}
+if (!fs.existsSync(avatarUploadsDir)) {
+    fs.mkdirSync(avatarUploadsDir);
+}
+if (!fs.existsSync(productUploadsDir)) {
+    fs.mkdirSync(productUploadsDir);
+}
+if (!fs.existsSync(disputeUploadsDir)) {
+    fs.mkdirSync(disputeUploadsDir);
+}
+if (!fs.existsSync(reviewUploadsDir)) {
+    fs.mkdirSync(reviewUploadsDir);
 }
 
 // Initialize database connection
@@ -41,13 +61,37 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Import routes
+const authRoutes = require('./backend/routes/auth');
+const profileRoutes = require('./backend/routes/profile');
+const productRoutes = require('./backend/routes/products');
+const orderRoutes = require('./backend/routes/orders');
+const reviewRoutes = require('./backend/routes/reviews');
+const disputeRoutes = require('./backend/routes/disputes');
+const nftRoutes = require('./backend/routes/nfts');
+const blockchainRoutes = require('./backend/routes/blockchain');
+const escrowRoutes = require('./backend/routes/escrow');
+const paymentRoutes = require('./backend/routes/payments');
+const notificationRoutes = require('./backend/routes/notifications');
+const trackingRoutes = require('./backend/routes/tracking');
+const adminRoutes = require('./backend/routes/admin');
+const auditRoutes = require('./backend/routes/audit');
+
 // Routes
-app.use('/api/auth', require('./backend/routes/auth'));
-app.use('/api/products', require('./backend/routes/products'));
-app.use('/api/orders', require('./backend/routes/orders'));
-app.use('/api/reviews', require('./backend/routes/reviews'));
-app.use('/api/blockchain', require('./backend/routes/blockchain'));
-app.use('/api/nfts', require('./backend/routes/nfts')); // Add NFT routes
+app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/disputes', disputeRoutes);
+app.use('/api/nfts', nftRoutes);
+app.use('/api/blockchain', blockchainRoutes);
+app.use('/api/escrow', escrowRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/tracking', trackingRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/audit', auditRoutes);
 
 // Serve static files
 app.use('/assets', express.static('assets'));
@@ -76,6 +120,9 @@ function startServer(port) {
         console.log(`📊 Database: MongoDB configured`);
         console.log(`⛓️  Blockchain: ${process.env.RPC_URL ? 'Connected' : 'Not configured'}`);
         console.log(`💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? 'Configured' : 'Not configured'}`);
+        console.log(`💰 Crypto Payments: Enabled`);
+        console.log(`🔒 Escrow System: Active`);
+        console.log(`📝 Transaction Recording: Active`);
     });
 
     server.on('error', (err) => {

@@ -19,12 +19,13 @@ import { toast } from 'react-toastify';
 import { api } from '../services/api';
 import { addToCart } from '../store/slices/cartSlice';
 import LoadingSpinner from '../components/LoadingSpinner';
-import '../styles/ProductCatalog.css';
+import { getNFTImageUrl } from '../utils/imageUtils';
+import '../styles/NFTCatalog.css';
 
 const NFTCatalog = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { isAuthenticated } = useSelector(state => state.auth);
+  const { isAuthenticated, user } = useSelector(state => state.auth);
   
   const [nfts, setNfts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -217,6 +218,7 @@ const NFTCatalog = () => {
 
   const NFTCard = ({ nft }) => {
     const popularity = getPopularityBadge(nft);
+    const [imageLoaded, setImageLoaded] = useState(false);
     
     return (
       <div 
@@ -225,11 +227,12 @@ const NFTCatalog = () => {
       >
         <div className="nft-image-wrapper">
           <img 
-            src={`http://localhost:5000${nft.image_url}`} 
+            src={getNFTImageUrl(nft.image_url)}
             alt={nft.name}
-            className="nft-image"
+            className={`nft-image ${imageLoaded ? 'loaded' : ''}`}
+            onLoad={() => setImageLoaded(true)}
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/400x400?text=NFT+Image';
+              e.target.src = 'https://via.placeholder.com/400x400/667eea/ffffff?text=NFT+Not+Found';
             }}
           />
           
@@ -467,8 +470,29 @@ const NFTCatalog = () => {
           {nfts.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">🎨</div>
-              <h3>No NFTs found</h3>
-              <p>Try adjusting your search criteria or check back later for new drops.</p>
+              <h3>No NFTs Available</h3>
+              <p>No seller-created NFTs found. Be the first to create and upload your unique digital artwork!</p>
+              {isAuthenticated && (user?.userType === 'seller' || user?.role === 'admin') && (
+                <button 
+                  onClick={() => navigate('/create-nft')} 
+                  className="btn-primary"
+                  style={{ marginTop: '1rem' }}
+                >
+                  Create Your First NFT
+                </button>
+              )}
+              {isAuthenticated && user?.userType !== 'seller' && user?.role !== 'admin' && (
+                <p style={{ marginTop: '1rem', color: '#666' }}>
+                  Contact support to upgrade your account to seller status to create NFTs.
+                </p>
+              )}
+              {!isAuthenticated && (
+                <p style={{ marginTop: '1rem', color: '#666' }}>
+                  <button onClick={() => navigate('/login')} className="btn-primary">
+                    Log in
+                  </button> to start creating NFTs.
+                </p>
+              )}
             </div>
           ) : (
             <div className={`nfts-grid ${viewMode === 'list' ? 'list-view' : ''}`}>

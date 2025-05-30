@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { Package, Calendar, DollarSign, Eye, ArrowRight } from 'lucide-react';
+import { Package, Calendar, DollarSign, Eye, ArrowRight, Truck, ExternalLink } from 'lucide-react';
 import { fetchOrders } from '../store/slices/ordersSlice';
 import LoadingSpinner from '../components/LoadingSpinner';
+import OrderTracking from '../components/OrderTracking';
 import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
 import '../styles/OrderHistory.css';
 
@@ -11,6 +12,7 @@ const OrderHistory = () => {
   const dispatch = useDispatch();
   const { isAuthenticated } = useSelector(state => state.auth);
   const { items: orders, loading, error } = useSelector(state => state.orders);
+  const [trackingOrder, setTrackingOrder] = useState(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -53,14 +55,20 @@ const OrderHistory = () => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'completed':
-        return 'status-completed';
-      case 'processing':
-        return 'status-processing';
-      case 'shipped':
-        return 'status-shipped';
       case 'delivered':
         return 'status-delivered';
+      case 'processing':
+      case 'confirmed':
+        return 'status-processing';
+      case 'ready_to_ship':
+        return 'status-ready';
+      case 'shipped':
+      case 'in_transit':
+        return 'status-shipped';
+      case 'out_for_delivery':
+        return 'status-out-for-delivery';
       case 'cancelled':
+      case 'returned':
         return 'status-cancelled';
       default:
         return 'status-pending';
@@ -75,6 +83,39 @@ const OrderHistory = () => {
     });
   };
 
+  const hasTrackingInfo = (order) => {
+    return order.shipping_info?.tracking_number || order.tracking_number;
+  };
+
+  const isTrackableStatus = (status) => {
+    const trackableStatuses = ['shipped', 'in_transit', 'out_for_delivery', 'delivered'];
+    return trackableStatuses.includes(status?.toLowerCase());
+  };
+
+  const handleTrackOrder = (order) => {
+    setTrackingOrder(order);
+  };
+
+  const getTrackingUrl = (order) => {
+    if (order.shipping_info?.tracking_url) {
+      return order.shipping_info.tracking_url;
+    }
+    
+    const trackingNumber = order.shipping_info?.tracking_number || order.tracking_number;
+    const carrier = order.shipping_info?.carrier?.toLowerCase();
+    
+    if (!trackingNumber || !carrier) return null;
+    
+    const trackingUrls = {
+      'fedex': `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`,
+      'ups': `https://www.ups.com/track?loc=en_US&tracknum=${trackingNumber}`,
+      'dhl': `https://www.dhl.com/en/express/tracking.html?AWB=${trackingNumber}`,
+      'usps': `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`
+    };
+    
+    return trackingUrls[carrier] || null;
+  };
+
   return (
     <div className="order-history">
       <div className="order-history-container">
@@ -83,7 +124,7 @@ const OrderHistory = () => {
           <p>Track and manage all your NFT purchases</p>
         </div>
 
-        {orders.length === 0 ? (
+        {!orders || orders.length === 0 ? (
           <div className="order-history-empty">
             <Package size={64} className="empty-icon" />
             <h3>No Orders Yet</h3>
@@ -105,7 +146,7 @@ const OrderHistory = () => {
                     </span>
                   </div>
                   <div className={`order-status ${getStatusColor(order.status)}`}>
-                    {order.status || 'Pending'}
+                    {order.status?.replace('_', ' ') || 'Pending'}
                   </div>
                 </div>
 
@@ -119,6 +160,29 @@ const OrderHistory = () => {
                     <span className="amount">${(order.total || order.amount || 0).toFixed(2)}</span>
                   </div>
                 </div>
+
+                {/* Tracking Information */}
+                {hasTrackingInfo(order) && (
+                  <div className="order-tracking-info">
+                    <div className="tracking-details">
+                      <Truck size={16} />
+                      <div className="tracking-text">
+                        <span className="tracking-label">
+                          {order.shipping_info?.carrier?.toUpperCase() || 'Tracking'}
+                        </span>
+                        <span className="tracking-number">
+                          {order.shipping_info?.tracking_number || order.tracking_number}
+                        </span>
+                      </div>
+                    </div>
+                    {order.shipping_info?.estimated_delivery && (
+                      <div className="estimated-delivery">
+                        <Calendar size={14} />
+                        <span>Est. {formatDate(order.shipping_info.estimated_delivery)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {order.items && order.items.length > 0 && (
                   <div className="order-items-preview">
@@ -155,15 +219,33 @@ const OrderHistory = () => {
                     View Details
                   </Link>
                   
+                  {hasTrackingInfo(order) && isTrackableStatus(order.status) && (
+                    <>
+                      <button 
+                        onClick={() => handleTrackOrder(order)}
+                        className="btn-outline track-btn"
+                      >
+                        <Truck size={16} />
+                        Track Order
+                      </button>
+                      
+                      {getTrackingUrl(order) && (
+                        <a 
+                          href={getTrackingUrl(order)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-outline external-track-btn"
+                        >
+                          <ExternalLink size={16} />
+                          Carrier Site
+                        </a>
+                      )}
+                    </>
+                  )}
+                  
                   {order.status === 'delivered' && (
                     <button className="btn-outline">
                       Leave Review
-                    </button>
-                  )}
-                  
-                  {['pending', 'processing', 'shipped'].includes(order.status?.toLowerCase()) && (
-                    <button className="btn-outline">
-                      Track Order
                     </button>
                   )}
                 </div>
@@ -171,14 +253,16 @@ const OrderHistory = () => {
             ))}
           </div>
         )}
-
-        <div className="order-history-footer">
-          <Link to="/dashboard" className="back-link">
-            <ArrowRight size={16} />
-            Back to Dashboard
-          </Link>
-        </div>
       </div>
+
+      {/* Tracking Modal */}
+      {trackingOrder && (
+        <OrderTracking 
+          orderId={trackingOrder._id || trackingOrder.id}
+          trackingNumber={trackingOrder.shipping_info?.tracking_number || trackingOrder.tracking_number}
+          onClose={() => setTrackingOrder(null)}
+        />
+      )}
     </div>
   );
 };

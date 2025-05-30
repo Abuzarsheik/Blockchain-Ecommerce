@@ -8,7 +8,7 @@ import '../styles/CreateNFT.css';
 
 const CreateNFT = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useSelector(state => state.auth);
+  const { isAuthenticated, user } = useSelector(state => state.auth);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -19,13 +19,16 @@ const CreateNFT = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated or not a seller/admin
   React.useEffect(() => {
     if (!isAuthenticated) {
       toast.error('Please log in to create NFTs');
       navigate('/login');
+    } else if (user && user.userType !== 'seller' && user.role !== 'admin') {
+      toast.error('Only sellers and admins can create NFTs. Please contact support to upgrade your account.');
+      navigate('/dashboard');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

@@ -82,10 +82,24 @@ export const apiEndpoints = {
   clearCart: () => api.delete('/cart'),
 
   // Admin
-  getDashboardStats: () => api.get('/admin/stats'),
+  getDashboardStats: (period) => api.get('/admin/dashboard/stats', { params: { period } }),
+  getDashboardActivity: (limit) => api.get('/admin/dashboard/activity', { params: { limit } }),
   getUsers: (params) => api.get('/admin/users', { params }),
+  getUser: (id) => api.get(`/admin/users/${id}`),
   updateUser: (id, userData) => api.put(`/admin/users/${id}`, userData),
-  deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  unlockUser: (id) => api.post(`/admin/users/${id}/unlock`),
+  getPendingKyc: (params) => api.get('/admin/kyc/pending', { params }),
+  reviewKyc: (userId, reviewData) => api.post(`/admin/kyc/${userId}/review`, reviewData),
+  getDisputes: (params) => api.get('/disputes/admin/dashboard', { params }),
+  getAdminDisputes: (params) => api.get('/admin/disputes', { params }),
+  getDispute: (id) => api.get(`/disputes/${id}`),
+  assignDispute: (id, adminId) => api.post(`/disputes/${id}/assign`, { adminId }),
+  escalateDispute: (id, data) => api.post(`/disputes/${id}/escalate`, data),
+  resolveDispute: (id, resolutionData) => api.post(`/disputes/${id}/resolve`, resolutionData),
+  closeDispute: (id, data) => api.post(`/disputes/${id}/close`, data),
+  updateDisputePriority: (id, priority) => api.put(`/disputes/${id}/priority`, { priority }),
+  addDisputeMessage: (id, messageData) => api.post(`/disputes/${id}/messages`, messageData),
+  updateDisputeNotes: (id, notes) => api.put(`/disputes/${id}/admin-notes`, { notes }),
 
   // NFTs
   getNFTs: (params) => api.get('/nfts', { params }),
@@ -94,6 +108,27 @@ export const apiEndpoints = {
   updateNFT: (id, nftData) => api.put(`/nfts/${id}`, nftData),
   deleteNFT: (id) => api.delete(`/nfts/${id}`),
   likeNFT: (id) => api.post(`/nfts/${id}/like`),
+
+  // Analytics
+  getAnalytics: (params) => api.get('/admin/analytics', { params }),
+  exportAnalyticsReport: (params) => api.get('/admin/analytics/export', { params, responseType: 'blob' }),
+
+  // Security & Audit Trail
+  getAuditLogs: (params) => api.get('/admin/audit-logs', { params }),
+  exportAuditLog: (params) => api.get('/admin/audit-logs/export', { params, responseType: 'blob' }),
+  getSmartContracts: (params) => api.get('/admin/smart-contracts', { params }),
+  getSmartContract: (id) => api.get(`/admin/smart-contracts/${id}`),
+  requestContractAudit: (id) => api.post(`/admin/smart-contracts/${id}/audit`),
+  updateContractStatus: (id, status) => api.put(`/admin/smart-contracts/${id}/status`, { status }),
+  getSecurityEvents: (params) => api.get('/admin/security-events', { params }),
+  createSecurityEvent: (eventData) => api.post('/admin/security-events', eventData),
+  updateSecurityEvent: (id, eventData) => api.put(`/admin/security-events/${id}`, eventData),
+  getSecurityReport: (params) => api.get('/admin/security-report', { params }),
+
+  // Audit Trail Logging
+  logUserAction: (actionData) => api.post('/audit/log', actionData),
+  logSystemEvent: (eventData) => api.post('/audit/system-event', eventData),
+  logSecurityEvent: (eventData) => api.post('/audit/security-event', eventData),
 };
 
 export default api; 

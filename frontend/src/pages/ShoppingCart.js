@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -34,6 +34,22 @@ const ShoppingCart = () => {
   
   const [couponCode, setCouponCode] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
+  // Check if user is a seller (sellers shouldn't access cart)
+  const isSeller = user?.userType === 'seller' && user?.role !== 'admin';
+
+  // Redirect sellers away from cart
+  useEffect(() => {
+    if (isSeller) {
+      toast.info('Cart is not available for sellers. Redirecting to marketplace...');
+      navigate('/catalog');
+    }
+  }, [isSeller, navigate]);
+
+  // If seller, show nothing while redirecting
+  if (isSeller) {
+    return null;
+  }
 
   const handleQuantityChange = (productId, newQuantity) => {
     if (newQuantity < 1) {

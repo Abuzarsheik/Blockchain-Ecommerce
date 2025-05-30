@@ -50,6 +50,9 @@ const Dashboard = () => {
     }
   ];
 
+  // Check if user is a seller (sellers shouldn't see cart/buying options)
+  const isSeller = user?.userType === 'seller' && user?.role !== 'admin';
+
   if (!isAuthenticated) {
     return (
       <div className="dashboard-unauthorized">
@@ -115,12 +118,14 @@ const Dashboard = () => {
                 <ArrowRight size={16} />
               </Link>
               
-              <Link to="/create" className="action-card">
-                <Plus size={32} />
-                <h3>Create NFT</h3>
-                <p>Mint your own digital assets</p>
-                <ArrowRight size={16} />
-              </Link>
+              {(user?.userType === 'seller' || user?.role === 'admin') && (
+                <Link to="/create-nft" className="action-card">
+                  <Plus size={32} />
+                  <h3>Create NFT</h3>
+                  <p>Mint your own digital assets</p>
+                  <ArrowRight size={16} />
+                </Link>
+              )}
               
               <Link to="/profile" className="action-card">
                 <User size={32} />
@@ -129,12 +134,15 @@ const Dashboard = () => {
                 <ArrowRight size={16} />
               </Link>
               
-              <Link to="/cart" className="action-card">
-                <ShoppingBag size={32} />
-                <h3>View Cart ({items.length})</h3>
-                <p>Review items in your cart</p>
-                <ArrowRight size={16} />
-              </Link>
+              {/* Only show cart for buyers and admins, not for pure sellers */}
+              {!isSeller && (
+                <Link to="/cart" className="action-card">
+                  <ShoppingBag size={32} />
+                  <h3>View Cart ({items.length})</h3>
+                  <p>Review items in your cart</p>
+                  <ArrowRight size={16} />
+                </Link>
+              )}
             </div>
           </div>
 
@@ -176,31 +184,36 @@ const Dashboard = () => {
 
           {/* Account Management */}
           <div className="dashboard-section">
-            <h2>Account Management</h2>
-            <div className="account-links">
-              <Link to="/profile" className="account-link">
-                <User size={20} />
+            <div className="section-header">
+              <h2>Account Management</h2>
+            </div>
+            
+            <div className="management-grid">
+              <Link to="/profile" className="management-card">
+                <Settings size={24} />
                 <div>
                   <h4>Profile Settings</h4>
-                  <p>Manage your personal information</p>
+                  <p>Update personal information and preferences</p>
                 </div>
               </Link>
               
-              <Link to="/orders" className="account-link">
-                <Package size={20} />
+              <Link to="/security" className="management-card">
+                <User size={24} />
                 <div>
-                  <h4>Order History</h4>
-                  <p>View all your past orders</p>
+                  <h4>Security</h4>
+                  <p>Manage password and security settings</p>
                 </div>
               </Link>
               
-              <Link to="/help" className="account-link">
-                <Settings size={20} />
-                <div>
-                  <h4>Help & Support</h4>
-                  <p>Get help with your account</p>
-                </div>
-              </Link>
+              {isSeller && (
+                <Link to="/seller-settings" className="management-card">
+                  <TrendingUp size={24} />
+                  <div>
+                    <h4>Seller Settings</h4>
+                    <p>Configure your seller profile and preferences</p>
+                  </div>
+                </Link>
+              )}
             </div>
           </div>
         </div>

@@ -1,0 +1,179 @@
+{
+  "timestamp": "2025-05-30T02:07:31.656Z",
+  "summary": {
+    "total": 24,
+    "passed": 10,
+    "failed": 14,
+    "successRate": "41.7"
+  },
+  "details": [
+    {
+      "name": "Server Health Check",
+      "status": "PASSED"
+    },
+    {
+      "name": "Auth - Register Endpoint",
+      "status": "PASSED"
+    },
+    {
+      "name": "Auth - Login Endpoint",
+      "status": "FAILED",
+      "error": "Login endpoint failed: Request failed with status code 500"
+    },
+    {
+      "name": "Products - Get Products",
+      "status": "PASSED"
+    },
+    {
+      "name": "Products - Create Product (No Auth)",
+      "status": "PASSED"
+    },
+    {
+      "name": "Orders - Get Orders (No Auth)",
+      "status": "PASSED"
+    },
+    {
+      "name": "Admin - Dashboard Stats (No Auth)",
+      "status": "PASSED"
+    },
+    {
+      "name": "Admin - Audit Logs (No Auth)",
+      "status": "FAILED",
+      "error": "Admin audit logs endpoint failed: read ECONNRESET"
+    },
+    {
+      "name": "Admin - Smart Contracts (No Auth)",
+      "status": "FAILED",
+      "error": "Admin smart contracts endpoint failed: "
+    },
+    {
+      "name": "Admin - Security Events (No Auth)",
+      "status": "FAILED",
+      "error": "Admin security events endpoint failed: "
+    },
+    {
+      "name": "Admin - Analytics (No Auth)",
+      "status": "FAILED",
+      "error": "Admin analytics endpoint failed: "
+    },
+    {
+      "name": "Audit - Log Action (No Auth)",
+      "status": "FAILED",
+      "error": "Audit log endpoint failed: "
+    },
+    {
+      "name": "Disputes - Get Disputes (No Auth)",
+      "status": "FAILED",
+      "error": "Disputes endpoint failed: "
+    },
+    {
+      "name": "NFTs - Get NFTs",
+      "status": "FAILED",
+      "error": "NFTs endpoint failed: "
+    },
+    {
+      "name": "Blockchain - Verify Product (No Product)",
+      "status": "FAILED",
+      "error": "Blockchain verify endpoint failed: "
+    },
+    {
+      "name": "Payments - Get Transactions (No Auth)",
+      "status": "FAILED",
+      "error": "Payments endpoint failed: "
+    },
+    {
+      "name": "Notifications - Get Notifications (No Auth)",
+      "status": "FAILED",
+      "error": "Notifications endpoint failed: "
+    },
+    {
+      "name": "Tracking - Get Tracking Info (No Auth)",
+      "status": "FAILED",
+      "error": "Tracking endpoint failed: "
+    },
+    {
+      "name": "Escrow - Get Escrows (No Auth)",
+      "status": "FAILED",
+      "error": "Escrow endpoint failed: "
+    },
+    {
+      "name": "Reviews - Get Reviews for Product",
+      "status": "FAILED",
+      "error": "Reviews endpoint failed: "
+    },
+    {
+      "name": "Frontend Build Directory Exists",
+      "status": "PASSED"
+    },
+    {
+      "name": "Environment Configuration Files Exist",
+      "status": "PASSED"
+    },
+    {
+      "name": "Required Backend Models Exist",
+      "status": "PASSED"
+    },
+    {
+      "name": "Required Frontend Pages Exist",
+      "status": "PASSED"
+    }
+  ],
+  "errors": [
+    {
+      "name": "Auth - Login Endpoint",
+      "error": "Login endpoint failed: Request failed with status code 500"
+    },
+    {
+      "name": "Admin - Audit Logs (No Auth)",
+      "error": "Admin audit logs endpoint failed: read ECONNRESET"
+    },
+    {
+      "name": "Admin - Smart Contracts (No Auth)",
+      "error": "Admin smart contracts endpoint failed: "
+    },
+    {
+      "name": "Admin - Security Events (No Auth)",
+      "error": "Admin security events endpoint failed: "
+    },
+    {
+      "name": "Admin - Analytics (No Auth)",
+      "error": "Admin analytics endpoint failed: "
+    },
+    {
+      "name": "Audit - Log Action (No Auth)",
+      "error": "Audit log endpoint failed: "
+    },
+    {
+      "name": "Disputes - Get Disputes (No Auth)",
+      "error": "Disputes endpoint failed: "
+    },
+    {
+      "name": "NFTs - Get NFTs",
+      "error": "NFTs endpoint failed: "
+    },
+    {
+      "name": "Blockchain - Verify Product (No Product)",
+      "error": "Blockchain verify endpoint failed: "
+    },
+    {
+      "name": "Payments - Get Transactions (No Auth)",
+      "error": "Payments endpoint failed: "
+    },
+    {
+      "name": "Notifications - Get Notifications (No Auth)",
+      "error": "Notifications endpoint failed: "
+    },
+    {
+      "name": "Tracking - Get Tracking Info (No Auth)",
+      "error": "Tracking endpoint failed: "
+    },
+    {
+      "name": "Escrow - Get Escrows (No Auth)",
+      "error": "Escrow endpoint failed: "
+    },
+    {
+      "name": "Reviews - Get Reviews for Product",
+      "error": "Reviews endpoint failed: "
+    }
+  ]
+}

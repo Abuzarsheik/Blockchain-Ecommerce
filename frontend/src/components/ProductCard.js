@@ -1,27 +1,52 @@
-import React, { useState, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useState, useCallback, memo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingCart, Verified, Star, Eye } from 'lucide-react';
+import { Heart, ShoppingCart, Verified, Star, Eye, TrendingUp } from 'lucide-react';
 import { addToCart } from '../store/slices/cartSlice';
 import { toast } from 'react-toastify';
 import { formatPrice, formatAddress } from '../utils/performance';
 import BlockchainVerification from './BlockchainVerification';
+import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
 import '../styles/ProductCard.css';
 
 const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='400' height='400' fill='%23f0f0f0'/%3E%3Ctext x='200' y='200' text-anchor='middle' font-family='Arial, sans-serif' font-size='16' fill='%23999'%3EProduct Image%3C/text%3E%3C/svg%3E";
 
-const ProductCard = React.memo(({ product, viewMode = 'grid' }) => {
+const ProductCard = memo(({ product, viewMode = 'grid' }) => {
   const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth);
   const [isLiked, setIsLiked] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
+
+  // Check if user is a seller (sellers shouldn't see cart functionality)
+  const isSeller = user?.userType === 'seller' && user?.role !== 'admin';
 
   const handleAddToCart = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     
-    dispatch(addToCart({ product, quantity: 1 }));
+    if (!user) {
+      toast.error('Please login to add items to cart');
+      return;
+    }
+
+    if (isSeller) {
+      toast.info('Sellers cannot purchase items. You can view and create NFTs instead.');
+      return;
+    }
+    
+    dispatch(addToCart({
+      productId: product._id || product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image_url,
+      category: product.category,
+      isVerified: product.isVerified || false,
+      isDigital: true,
+      stock: product.stock || 999
+    }));
+    
     toast.success(`${product.name} added to cart!`);
-  }, [dispatch, product]);
+  }, [dispatch, product, user, isSeller]);
 
   const handleLike = useCallback((e) => {
     e.preventDefault();
@@ -104,15 +129,18 @@ const ProductCard = React.memo(({ product, viewMode = 'grid' }) => {
                 <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
               </button>
 
-              <button 
-                className="cart-button"
-                onClick={handleAddToCart}
-                title="Add to cart"
-                aria-label="Add to cart"
-              >
-                <ShoppingCart size={16} />
-                Add to Cart
-              </button>
+              {/* Only show Add to Cart for buyers and admins, not for pure sellers */}
+              {!isSeller && (
+                <button 
+                  className="cart-button"
+                  onClick={handleAddToCart}
+                  title="Add to cart"
+                  aria-label="Add to cart"
+                >
+                  <ShoppingCart size={16} />
+                  Add to Cart
+                </button>
+              )}
 
               {product.isVerified && (
                 <button 
@@ -236,14 +264,17 @@ const ProductCard = React.memo(({ product, viewMode = 'grid' }) => {
               <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
             </button>
 
-            <button 
-              className="cart-button"
-              onClick={handleAddToCart}
-              title="Add to cart"
-              aria-label="Add to cart"
-            >
-              <ShoppingCart size={16} />
-            </button>
+            {/* Only show Add to Cart for buyers and admins, not for pure sellers */}
+            {!isSeller && (
+              <button 
+                className="cart-button"
+                onClick={handleAddToCart}
+                title="Add to cart"
+                aria-label="Add to cart"
+              >
+                <ShoppingCart size={16} />
+              </button>
+            )}
 
             {product.isVerified && (
               <button 

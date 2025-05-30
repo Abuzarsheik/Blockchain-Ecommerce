@@ -1,9 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Target, Award, ArrowRight } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { Users, Target, Award, ArrowRight, User, ShoppingBag } from 'lucide-react';
 import '../styles/About.css';
 
 const About = () => {
+  const { isAuthenticated, user } = useSelector(state => state.auth);
+
   return (
     <div className="about-page">
       <section className="about-hero">
@@ -76,16 +79,40 @@ const About = () => {
 
       <section className="cta-section">
         <div className="container">
-          <h2>Join the Revolution</h2>
-          <p>Be part of the future of commerce with Blocmerce</p>
-          <div className="cta-buttons">
-            <Link to="/catalog" className="btn-primary">
-              Start Shopping <ArrowRight size={20} />
-            </Link>
-            <Link to="/register" className="btn-secondary">
-              Create Account
-            </Link>
-          </div>
+          {isAuthenticated ? (
+            <>
+              <h2>Welcome back, {user?.firstName || 'valued member'}!</h2>
+              <p>Continue exploring our marketplace and discover amazing NFTs and products</p>
+              <div className="cta-buttons">
+                <Link to="/catalog" className="btn-primary">
+                  Explore NFTs <ArrowRight size={20} />
+                </Link>
+                <Link to="/dashboard" className="btn-secondary">
+                  <User size={20} />
+                  My Dashboard
+                </Link>
+                {(user?.userType === 'seller' || user?.role === 'admin') && (
+                  <Link to="/create-nft" className="btn-secondary">
+                    <ShoppingBag size={20} />
+                    Create NFT
+                  </Link>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <h2>Join the Revolution</h2>
+              <p>Be part of the future of commerce with Blocmerce</p>
+              <div className="cta-buttons">
+                <Link to="/catalog" className="btn-primary">
+                  Start Shopping <ArrowRight size={20} />
+                </Link>
+                <Link to="/register" className="btn-secondary">
+                  Create Account
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
     </div>
