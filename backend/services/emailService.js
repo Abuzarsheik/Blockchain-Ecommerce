@@ -3,18 +3,42 @@ const crypto = require('crypto');
 
 class EmailService {
     constructor() {
-        this.transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'localhost',
-            port: process.env.SMTP_PORT || 587,
-            secure: process.env.SMTP_SECURE === 'true',
-            auth: {
-                user: process.env.SMTP_USER || 'noreply@yourapp.com',
-                pass: process.env.SMTP_PASS || 'password'
-            }
-        });
+        // Check if email credentials are provided
+        const hasEmailConfig = process.env.SMTP_USER && process.env.SMTP_PASS && 
+                               process.env.SMTP_USER !== 'noreply@yourapp.com' && 
+                               process.env.SMTP_PASS !== 'password';
+
+        if (hasEmailConfig) {
+            this.transporter = nodemailer.createTransport({
+                host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                port: process.env.SMTP_PORT || 587,
+                secure: process.env.SMTP_SECURE === 'true',
+                auth: {
+                    user: process.env.SMTP_USER,
+                    pass: process.env.SMTP_PASS
+                }
+            });
+            this.emailEnabled = true;
+            console.log('✅ Email service configured with real SMTP');
+        } else {
+            // Create a dummy transporter for development
+            this.transporter = nodemailer.createTransport({
+                streamTransport: true,
+                newline: 'unix',
+                buffer: true
+            });
+            this.emailEnabled = false;
+            console.log('⚠️ Email service running in development mode (no emails sent)');
+        }
     }
 
     async sendPasswordResetEmail(user, resetToken) {
+        if (!this.emailEnabled) {
+            console.log(`📧 [DEV MODE] Password reset email would be sent to ${user.email}`);
+            console.log(`📧 [DEV MODE] Reset token: ${resetToken}`);
+            return true; // Return success in development mode
+        }
+
         const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
         
         const mailOptions = {
@@ -55,6 +79,12 @@ class EmailService {
     }
 
     async sendEmailVerification(user, verificationToken) {
+        if (!this.emailEnabled) {
+            console.log(`📧 [DEV MODE] Email verification would be sent to ${user.email}`);
+            console.log(`📧 [DEV MODE] Verification token: ${verificationToken}`);
+            return true; // Return success in development mode
+        }
+
         const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
         
         const mailOptions = {
@@ -94,6 +124,11 @@ class EmailService {
     }
 
     async sendLoginNotification(user, ipAddress, userAgent, location) {
+        if (!this.emailEnabled) {
+            console.log(`📧 [DEV MODE] Login notification would be sent to ${user.email}`);
+            return true; // Return success in development mode
+        }
+
         const mailOptions = {
             from: process.env.FROM_EMAIL || 'noreply@yourapp.com',
             to: user.email,

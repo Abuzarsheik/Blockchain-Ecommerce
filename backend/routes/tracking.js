@@ -5,6 +5,7 @@ const shippingService = require('../services/shippingService');
 const Order = require('../models/Order');
 const notificationService = require('../services/notificationService');
 const { body, param, query, validationResult } = require('express-validator');
+const trackingService = require('../services/trackingService');
 
 /**
  * @route   GET /api/tracking/:trackingNumber
@@ -565,6 +566,241 @@ router.put('/notifications/settings', auth, [
         res.status(500).json({ 
             success: false, 
             error: 'Failed to update notification settings' 
+        });
+    }
+});
+
+// Create new shipment
+router.post('/shipments', auth, async (req, res) => {
+    try {
+        const {
+            orderId,
+            nftId,
+            buyer,
+            provider = 'local',
+            service = 'standard',
+            origin,
+            destination,
+            weight,
+            dimensions,
+            value
+        } = req.body;
+
+        // Validate required fields
+        if (!orderId || !nftId || !buyer || !destination) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields: orderId, nftId, buyer, destination'
+            });
+        }
+
+        const result = await trackingService.createShipment({
+            orderId,
+            nftId,
+            seller: req.user.id,
+            buyer,
+            provider,
+            service,
+            origin,
+            destination,
+            weight,
+            dimensions,
+            value
+        });
+
+        res.status(201).json(result);
+
+    } catch (error) {
+        console.error('Create shipment error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Track shipment by tracking number
+router.get('/track/:trackingNumber', async (req, res) => {
+    try {
+        const { trackingNumber } = req.params;
+        
+        const result = await trackingService.trackShipment(trackingNumber);
+        
+        res.json(result);
+
+    } catch (error) {
+        console.error('Track shipment error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Update shipment status (for logistics providers)
+router.put('/shipments/:trackingNumber', auth, async (req, res) => {
+    try {
+        const { trackingNumber } = req.params;
+        const updateData = req.body;
+
+        // Validate update data
+        if (!updateData.status && !updateData.location && !updateData.estimatedDelivery) {
+            return res.status(400).json({
+                success: false,
+                error: 'At least one update field required: status, location, estimatedDelivery'
+            });
+        }
+
+        const result = await trackingService.updateShipmentStatus(trackingNumber, updateData);
+        
+        res.json({
+            success: true,
+            shipment: result
+        });
+
+    } catch (error) {
+        console.error('Update shipment error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get user's shipments
+router.get('/shipments/user/:userId', auth, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { role = 'buyer' } = req.query;
+
+        // Check if user can access these shipments
+        if (userId !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied'
+            });
+        }
+
+        const result = await trackingService.getUserShipments(userId, role);
+        
+        res.json(result);
+
+    } catch (error) {
+        console.error('Get user shipments error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get delivery proof
+router.get('/proof/:trackingNumber', auth, async (req, res) => {
+    try {
+        const { trackingNumber } = req.params;
+        
+        const result = await trackingService.getDeliveryProof(trackingNumber);
+        
+        res.json(result);
+
+    } catch (error) {
+        console.error('Get delivery proof error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Bulk track multiple shipments
+router.post('/track/bulk', async (req, res) => {
+    try {
+        const { trackingNumbers } = req.body;
+
+        if (!Array.isArray(trackingNumbers) || trackingNumbers.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'trackingNumbers must be a non-empty array'
+            });
+        }
+
+        if (trackingNumbers.length > 50) {
+            return res.status(400).json({
+                success: false,
+                error: 'Maximum 50 tracking numbers allowed per request'
+            });
+        }
+
+        const results = await Promise.allSettled(
+            trackingNumbers.map(trackingNumber => 
+                trackingService.trackShipment(trackingNumber)
+            )
+        );
+
+        const response = results.map((result, index) => ({
+            trackingNumber: trackingNumbers[index],
+            success: result.status === 'fulfilled',
+            data: result.status === 'fulfilled' ? result.value : null,
+            error: result.status === 'rejected' ? result.reason.message : null
+        }));
+
+        res.json({
+            success: true,
+            results: response
+        });
+
+    } catch (error) {
+        console.error('Bulk tracking error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get tracking statistics
+router.get('/stats', auth, async (req, res) => {
+    try {
+        // Only allow admin or authenticated users
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                error: 'Admin access required'
+            });
+        }
+
+        const db = require('../config/database');
+        
+        const stats = await db.collection('shipments').aggregate([
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 },
+                    avgDeliveryTime: {
+                        $avg: {
+                            $subtract: ['$metadata.lastUpdated', '$metadata.created']
+                        }
+                    }
+                }
+            }
+        ]).toArray();
+
+        const totalShipments = await db.collection('shipments').countDocuments();
+        
+        res.json({
+            success: true,
+            stats: {
+                total: totalShipments,
+                byStatus: stats,
+                lastUpdated: new Date()
+            }
+        });
+
+    } catch (error) {
+        console.error('Get tracking stats error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 });

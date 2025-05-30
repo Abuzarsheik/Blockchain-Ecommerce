@@ -1,24 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { 
   Shield, 
   Lock, 
   Key, 
+  Bell, 
   Smartphone, 
-  Eye, 
-  EyeOff,
+  Settings, 
   AlertTriangle,
   CheckCircle,
   Clock,
-  MapPin,
   Monitor,
+  MapPin,
+  Eye,
+  EyeOff,
   RefreshCw,
   LogOut,
-  Settings,
-  User,
-  Mail,
-  Bell,
   Download
 } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -50,16 +48,7 @@ const Security = () => {
     sessionTimeout: 7
   });
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    
-    fetchSecurityData();
-  }, [isAuthenticated, navigate]);
-
-  const fetchSecurityData = async () => {
+  const fetchSecurityData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -111,7 +100,16 @@ const Security = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    
+    fetchSecurityData();
+  }, [isAuthenticated, navigate, fetchSecurityData]);
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();

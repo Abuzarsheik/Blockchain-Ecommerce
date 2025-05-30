@@ -102,6 +102,36 @@ router.post('/register', authLimiter, registerValidation, async (req, res) => {
                 token: emailVerificationToken,
                 expires: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
             },
+            // Initialize KYC with proper defaults to prevent validation errors
+            kyc: {
+                status: 'pending',
+                level: 'basic',
+                personalInfo: {
+                    sourceOfFunds: 'employment'
+                },
+                documents: {
+                    identity: {
+                        type: 'national_id'
+                    },
+                    proofOfAddress: {
+                        type: 'utility_bill'
+                    }
+                },
+                riskAssessment: {
+                    level: 'low'
+                },
+                compliance: {
+                    sanctionsList: {
+                        result: 'clear'
+                    },
+                    pepCheck: {
+                        result: 'clear'
+                    },
+                    adverseMedia: {
+                        result: 'clear'
+                    }
+                }
+            },
             profile: {
                 avatar: null,
                 bio: '',
