@@ -55,8 +55,8 @@ router.get('/my', auth, async (req, res) => {
     try {
         const { status, search, page = 1, limit = 20 } = req.query;
         
-        let query = { seller: req.user.id };
-        if (status) query.status = status;
+        const query = { seller: req.user.id };
+        if (status) {query.status = status;}
         if (search) {
             query.$or = [
                 { name: { $regex: search, $options: 'i' } },
@@ -199,8 +199,8 @@ router.get('/', optionalAuth, async (req, res) => {
         // Price range filter
         if (minPrice || maxPrice) {
             filter.price = {};
-            if (minPrice) filter.price.$gte = parseFloat(minPrice);
-            if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+            if (minPrice) {filter.price.$gte = parseFloat(minPrice);}
+            if (maxPrice) {filter.price.$lte = parseFloat(maxPrice);}
         }
 
         // In stock filter
@@ -529,7 +529,13 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
                 sku: sku || `SKU-${Date.now()}`
             },
             shipping: {
-                weight: weight ? parseFloat(weight) : 0,
+                weight: weight ? {
+                    value: parseFloat(weight),
+                    unit: 'lbs' // Default unit
+                } : {
+                    value: 0,
+                    unit: 'lbs'
+                },
                 dimensions: dimensions ? (typeof dimensions === 'string' ? JSON.parse(dimensions) : dimensions) : { length: 0, width: 0, height: 0 },
                 freeShipping: freeShipping === 'true',
                 shippingCost: shippingCost ? parseFloat(shippingCost) : 0
@@ -633,23 +639,29 @@ router.put('/:id', auth, upload.array('newImages', 5), async (req, res) => {
         }
 
         // Update product fields safely
-        if (name) product.name = name;
-        if (description) product.description = description;
-        if (shortDescription) product.shortDescription = shortDescription;
-        if (price) product.price = parseFloat(price);
-        if (originalPrice) product.originalPrice = parseFloat(originalPrice);
-        if (discountPercentage !== undefined) product.discountPercentage = parseFloat(discountPercentage);
-        if (category) product.category = category;
-        if (subcategory) product.subcategory = subcategory;
-        if (tags) product.tags = typeof tags === 'string' ? JSON.parse(tags) : tags;
-        if (specifications) product.specifications = typeof specifications === 'string' ? JSON.parse(specifications) : specifications;
-        if (status) product.status = status;
+        if (name) {product.name = name;}
+        if (description) {product.description = description;}
+        if (shortDescription) {product.shortDescription = shortDescription;}
+        if (price) {product.price = parseFloat(price);}
+        if (originalPrice) {product.originalPrice = parseFloat(originalPrice);}
+        if (discountPercentage !== undefined) {product.discountPercentage = parseFloat(discountPercentage);}
+        if (category) {product.category = category;}
+        if (subcategory) {product.subcategory = subcategory;}
+        if (tags) {product.tags = typeof tags === 'string' ? JSON.parse(tags) : tags;}
+        if (specifications) {product.specifications = typeof specifications === 'string' ? JSON.parse(specifications) : specifications;}
+        if (status) {product.status = status;}
         
         // Update images
         product.images = images;
         
         // Update shipping safely
-        if (weight) product.shipping.weight = parseFloat(weight);
+        if (weight) {product.shipping.weight = weight ? {
+            value: parseFloat(weight),
+            unit: 'lbs' // Default unit
+        } : {
+            value: 0,
+            unit: 'lbs'
+        };}
         if (dimensions) {
             const parsedDimensions = typeof dimensions === 'string' ? JSON.parse(dimensions) : dimensions;
             product.shipping.dimensions = {
@@ -658,12 +670,12 @@ router.put('/:id', auth, upload.array('newImages', 5), async (req, res) => {
                 height: parsedDimensions.height || 0
             };
         }
-        if (freeShipping !== undefined) product.shipping.freeShipping = freeShipping === 'true';
-        if (shippingCost) product.shipping.shippingCost = parseFloat(shippingCost);
+        if (freeShipping !== undefined) {product.shipping.freeShipping = freeShipping === 'true';}
+        if (shippingCost) {product.shipping.shippingCost = parseFloat(shippingCost);}
         
         // Update SEO
-        if (metaTitle) product.seo.metaTitle = metaTitle;
-        if (metaDescription) product.seo.metaDescription = metaDescription;
+        if (metaTitle) {product.seo.metaTitle = metaTitle;}
+        if (metaDescription) {product.seo.metaDescription = metaDescription;}
 
         await product.save();
 

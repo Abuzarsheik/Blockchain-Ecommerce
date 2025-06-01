@@ -90,7 +90,7 @@ router.get('/', optionalAuth, async (req, res) => {
         const skip = (page - 1) * limit;
         
         // Build filter object
-        let filter = {};
+        const filter = {};
         
         if (req.query.search) {
             filter.$or = [
@@ -109,7 +109,7 @@ router.get('/', optionalAuth, async (req, res) => {
         }
         
         // Build sort object
-        let sort = {};
+        const sort = {};
         switch (req.query.sort) {
             case 'oldest':
                 sort.created_at = 1;
@@ -345,10 +345,10 @@ router.put('/:id', auth, async (req, res) => {
         
         const { name, description, price, category } = req.body;
         
-        if (name) nft.name = name;
-        if (description) nft.description = description;
-        if (price) nft.price = parseFloat(price);
-        if (category) nft.category = category;
+        if (name) {nft.name = name;}
+        if (description) {nft.description = description;}
+        if (price) {nft.price = parseFloat(price);}
+        if (category) {nft.category = category;}
         
         nft.updated_at = new Date();
         

@@ -1,5 +1,8 @@
 import { ethers } from 'ethers';
 
+import { blockchainService } from './blockchain';
+import { api } from './api';
+
 // Mock ethers for build compatibility
 const ethersMock = {
   BrowserProvider: class MockBrowserProvider {},
@@ -8,9 +11,6 @@ const ethersMock = {
   isAddress: (address) => typeof address === 'string' && address.length === 42,
   Contract: class MockContract {}
 };
-
-import { blockchainService } from './blockchain';
-import { api } from './api';
 
 // Supported wallet types
 export const WALLET_TYPES = {

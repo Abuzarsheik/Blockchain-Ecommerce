@@ -194,13 +194,13 @@ const globalErrorHandler = (err, req, res, next) => {
     error.message = err.message;
 
     // Handle specific error types
-    if (error.name === 'CastError') error = handleCastErrorDB(error);
-    if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
-    if (error.name === 'JsonWebTokenError') error = handleJWTError();
-    if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
-    if (error.name === 'MulterError') error = handleMulterError(error);
-    if (error.type && error.type.includes('Stripe')) error = handleStripeError(error);
+    if (error.name === 'CastError') {error = handleCastErrorDB(error);}
+    if (error.code === 11000) {error = handleDuplicateFieldsDB(error);}
+    if (error.name === 'ValidationError') {error = handleValidationErrorDB(error);}
+    if (error.name === 'JsonWebTokenError') {error = handleJWTError();}
+    if (error.name === 'TokenExpiredError') {error = handleJWTExpiredError();}
+    if (error.name === 'MulterError') {error = handleMulterError(error);}
+    if (error.type && error.type.includes('Stripe')) {error = handleStripeError(error);}
 
     sendErrorProd(error, res);
   }

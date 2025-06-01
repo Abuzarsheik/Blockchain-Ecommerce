@@ -182,7 +182,7 @@ const User = require('../models/User');
 const { auth, generateToken } = require('../middleware/auth');
 const emailService = require('../services/emailService');
 const notificationService = require('../services/notificationService');
-const jwt = require('jsonwebtoken');
+const { KYC_STATUS } = require('../config/constants');
 
 const router = express.Router();
 
@@ -322,7 +322,7 @@ router.post('/register', authLimiter, registerValidation, async (req, res) => {
             },
             // Initialize KYC with proper defaults to prevent validation errors
             kyc: {
-                status: 'pending',
+                status: KYC_STATUS.NOT_STARTED,
                 level: 'basic',
                 personalInfo: {
                     sourceOfFunds: 'employment'
@@ -365,7 +365,11 @@ router.post('/register', authLimiter, registerValidation, async (req, res) => {
                 storeName: '',
                 storeDescription: '',
                 isVerified: false,
-                rating: 0,
+                rating: {
+                    average: 0,
+                    count: 0,
+                    lastUpdated: new Date()
+                },
                 totalSales: 0,
                 commission: 5
             } : undefined
@@ -955,10 +959,10 @@ router.put('/profile', auth, async (req, res) => {
             updated_at: new Date()
         };
 
-        if (firstName) updateData.firstName = firstName.trim();
-        if (lastName) updateData.lastName = lastName.trim();
-        if (username) updateData.username = username.toLowerCase().trim();
-        if (wallet_address !== undefined) updateData.wallet_address = wallet_address;
+        if (firstName) {updateData.firstName = firstName.trim();}
+        if (lastName) {updateData.lastName = lastName.trim();}
+        if (username) {updateData.username = username.toLowerCase().trim();}
+        if (wallet_address !== undefined) {updateData.wallet_address = wallet_address;}
 
         if (profile) {
             updateData.profile = profile;
@@ -1045,10 +1049,10 @@ router.put('/security-settings', auth, [
         }
 
         // Update security settings
-        if (loginNotifications !== undefined) user.security.loginNotifications = loginNotifications;
-        if (emailAlerts !== undefined) user.security.emailAlerts = emailAlerts;
-        if (suspiciousActivityAlerts !== undefined) user.security.suspiciousActivityAlerts = suspiciousActivityAlerts;
-        if (sessionTimeout !== undefined) user.security.sessionTimeout = sessionTimeout;
+        if (loginNotifications !== undefined) {user.security.loginNotifications = loginNotifications;}
+        if (emailAlerts !== undefined) {user.security.emailAlerts = emailAlerts;}
+        if (suspiciousActivityAlerts !== undefined) {user.security.suspiciousActivityAlerts = suspiciousActivityAlerts;}
+        if (sessionTimeout !== undefined) {user.security.sessionTimeout = sessionTimeout;}
 
         user.updated_at = new Date();
         await user.save();
@@ -1135,7 +1139,7 @@ router.post('/logout', auth, async (req, res) => {
 
 // Helper function to determine device type
 function getDeviceType(userAgent) {
-    if (!userAgent) return 'Unknown';
+    if (!userAgent) {return 'Unknown';}
     
     userAgent = userAgent.toLowerCase();
     

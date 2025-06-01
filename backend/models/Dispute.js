@@ -532,15 +532,15 @@ disputeSchema.statics.findByOrder = function(orderId) {
 disputeSchema.statics.findUserDisputes = function(userId, options = {}) {
     const { page = 1, limit = 10, status, category } = options;
     
-    let query = {
+    const query = {
         $or: [
             { buyer_id: userId },
             { seller_id: userId }
         ]
     };
     
-    if (status) query.status = status;
-    if (category) query.category = category;
+    if (status) {query.status = status;}
+    if (category) {query.category = category;}
     
     return this.find(query)
         .populate('order_id', 'orderNumber total')
@@ -555,7 +555,7 @@ disputeSchema.statics.findUserDisputes = function(userId, options = {}) {
 disputeSchema.statics.findAdminDisputes = function(options = {}) {
     const { page = 1, limit = 20, status, priority, assigned_admin } = options;
     
-    let query = {
+    const query = {
         $or: [
             { status: 'admin_review' },
             { requires_manual_review: true },
@@ -563,9 +563,9 @@ disputeSchema.statics.findAdminDisputes = function(options = {}) {
         ]
     };
     
-    if (status) query.status = status;
-    if (priority) query.priority = priority;
-    if (assigned_admin) query.assigned_admin = assigned_admin;
+    if (status) {query.status = status;}
+    if (priority) {query.priority = priority;}
+    if (assigned_admin) {query.assigned_admin = assigned_admin;}
     
     return this.find(query)
         .populate('order_id', 'orderNumber total')

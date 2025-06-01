@@ -176,7 +176,7 @@ class EmailService {
         };
 
         const template = templates[type];
-        if (!template) return null;
+        if (!template) {return null;}
 
         return baseTemplate
             .replace('{{title}}', template.title)

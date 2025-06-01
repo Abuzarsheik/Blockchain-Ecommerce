@@ -325,7 +325,7 @@ class GasOptimizationService {
      * Process batched transactions
      */
     async processBatch() {
-        if (this.batchQueue.length === 0) return;
+        if (this.batchQueue.length === 0) {return;}
 
         try {
             const transactions = [...this.batchQueue];
@@ -415,7 +415,7 @@ class GasOptimizationService {
      * Analyze gas price trends
      */
     analyzeGasTrends(prices) {
-        if (prices.length < 2) return;
+        if (prices.length < 2) {return;}
 
         const first = parseFloat(prices[0].gwei);
         const last = parseFloat(prices[prices.length - 1].gwei);
@@ -438,10 +438,10 @@ class GasOptimizationService {
      * Get gas usage recommendation
      */
     getGasRecommendation(change) {
-        if (change > 10) return 'Gas prices rising rapidly - consider waiting';
-        if (change > 5) return 'Gas prices increasing - use fast priority if urgent';
-        if (change < -10) return 'Gas prices falling - good time for transactions';
-        if (change < -5) return 'Gas prices decreasing - consider standard priority';
+        if (change > 10) {return 'Gas prices rising rapidly - consider waiting';}
+        if (change > 5) {return 'Gas prices increasing - use fast priority if urgent';}
+        if (change < -10) {return 'Gas prices falling - good time for transactions';}
+        if (change < -5) {return 'Gas prices decreasing - consider standard priority';}
         return 'Gas prices stable - use standard priority';
     }
 

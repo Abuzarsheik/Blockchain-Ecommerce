@@ -571,8 +571,8 @@ userSchema.methods.addLoginHistory = function(ipAddress, userAgent, location, su
 userSchema.methods.updateKycStatus = function(status, reviewedBy = null, reason = null) {
     this.kyc.status = status;
     this.kyc.reviewDate = new Date();
-    if (reviewedBy) this.kyc.reviewedBy = reviewedBy;
-    if (reason) this.kyc.rejectionReason = reason;
+    if (reviewedBy) {this.kyc.reviewedBy = reviewedBy;}
+    if (reason) {this.kyc.rejectionReason = reason;}
     
     // Set expiry date for approved KYC (1 year from approval)
     if (status === KYC_STATUS.APPROVED) {
@@ -661,14 +661,14 @@ userSchema.virtual('kycCompletionPercentage').get(function() {
     let completed = 0;
     const total = 8; // Total number of required fields
     
-    if (this.kyc.personalInfo.dateOfBirth) completed++;
-    if (this.kyc.personalInfo.nationality) completed++;
-    if (this.kyc.personalInfo.phoneNumber) completed++;
-    if (this.kyc.personalInfo.address.street && this.kyc.personalInfo.address.city) completed++;
-    if (this.kyc.documents.identity.frontImage) completed++;
-    if (this.kyc.documents.proofOfAddress.image) completed++;
-    if (this.kyc.documents.selfie.image) completed++;
-    if (this.kyc.personalInfo.sourceOfFunds) completed++;
+    if (this.kyc.personalInfo.dateOfBirth) {completed++;}
+    if (this.kyc.personalInfo.nationality) {completed++;}
+    if (this.kyc.personalInfo.phoneNumber) {completed++;}
+    if (this.kyc.personalInfo.address && this.kyc.personalInfo.address.street && this.kyc.personalInfo.address.city) {completed++;}
+    if (this.kyc.documents.identity.frontImage) {completed++;}
+    if (this.kyc.documents.proofOfAddress.image) {completed++;}
+    if (this.kyc.documents.selfie.image) {completed++;}
+    if (this.kyc.personalInfo.sourceOfFunds) {completed++;}
     
     return Math.round((completed / total) * 100);
 });

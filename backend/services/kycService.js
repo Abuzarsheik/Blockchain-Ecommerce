@@ -301,8 +301,8 @@ class KYCService {
         // Age factor
         if (user.kyc.personalInfo.dateOfBirth) {
             const age = new Date().getFullYear() - new Date(user.kyc.personalInfo.dateOfBirth).getFullYear();
-            if (age < 18 || age > 80) score += 20;
-            else if (age < 25 || age > 65) score += 10;
+            if (age < 18 || age > 80) {score += 20;}
+            else if (age < 25 || age > 65) {score += 10;}
         }
 
         // Country risk
@@ -318,17 +318,17 @@ class KYCService {
         }
 
         // Compliance check results
-        if (user.kyc.compliance.sanctionsList.result === 'match') score += 50;
-        if (user.kyc.compliance.pepCheck.result === 'match') score += 25;
-        if (user.kyc.compliance.adverseMedia.result === 'match') score += 20;
+        if (user.kyc.compliance.sanctionsList.result === 'match') {score += 50;}
+        if (user.kyc.compliance.pepCheck.result === 'match') {score += 25;}
+        if (user.kyc.compliance.adverseMedia.result === 'match') {score += 20;}
 
         return Math.min(score, 100); // Cap at 100
     }
 
     // Get risk level from score
     getRiskLevel(score) {
-        if (score <= 30) return 'low';
-        if (score <= 60) return 'medium';
+        if (score <= 30) {return 'low';}
+        if (score <= 60) {return 'medium';}
         return 'high';
     }
 

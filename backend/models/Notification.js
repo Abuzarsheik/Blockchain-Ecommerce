@@ -222,12 +222,12 @@ notificationSchema.statics.findByUser = function(userId, options = {}) {
     priority
   } = options;
 
-  let query = { userId };
+  const query = { userId };
   
-  if (category) query.category = category;
-  if (type) query.type = type;
-  if (typeof isRead === 'boolean') query.isRead = isRead;
-  if (priority) query.priority = priority;
+  if (category) {query.category = category;}
+  if (type) {query.type = type;}
+  if (typeof isRead === 'boolean') {query.isRead = isRead;}
+  if (priority) {query.priority = priority;}
 
   return this.find(query)
     .sort({ createdAt: -1 })
@@ -391,10 +391,10 @@ notificationSchema.methods.getTimeAgo = function() {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
   
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffMins < 1) {return 'Just now';}
+  if (diffMins < 60) {return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;}
+  if (diffHours < 24) {return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;}
+  if (diffDays < 7) {return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;}
   
   return created.toLocaleDateString();
 };

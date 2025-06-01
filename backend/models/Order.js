@@ -335,7 +335,7 @@ orderSchema.methods.getTrackingURL = function() {
     
     // Generate tracking URL based on carrier and tracking number
     const trackingNumber = this.shippingInfo?.trackingNumber || this.trackingNumber;
-    if (!trackingNumber) return null;
+    if (!trackingNumber) {return null;}
     
     const carrier = this.shippingInfo?.carrier?.toLowerCase();
     const trackingUrls = {

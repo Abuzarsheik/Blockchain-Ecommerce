@@ -272,16 +272,16 @@ productSchema.methods.isLowStock = function() {
 };
 
 productSchema.methods.canSell = function(quantity = 1) {
-    if (!this.inventory.trackInventory) return true;
-    if (this.availableInventory >= quantity) return true;
-    if (this.inventory.allowBackorders) return true;
+    if (!this.inventory.trackInventory) {return true;}
+    if (this.availableInventory >= quantity) {return true;}
+    if (this.inventory.allowBackorders) {return true;}
     return false;
 };
 
 // Static methods
 productSchema.statics.findBySeller = function(sellerId, status = null) {
     const query = { seller: sellerId };
-    if (status) query.status = status;
+    if (status) {query.status = status;}
     return this.find(query).sort({ updatedAt: -1 });
 };
 
@@ -309,10 +309,10 @@ productSchema.statics.searchProducts = function(query, filters = {}) {
         ];
     }
     
-    if (filters.category) searchQuery.category = filters.category;
-    if (filters.seller) searchQuery.seller = filters.seller;
-    if (filters.status) searchQuery.status = filters.status;
-    if (filters.minPrice) searchQuery.price = { $gte: filters.minPrice };
+    if (filters.category) {searchQuery.category = filters.category;}
+    if (filters.seller) {searchQuery.seller = filters.seller;}
+    if (filters.status) {searchQuery.status = filters.status;}
+    if (filters.minPrice) {searchQuery.price = { $gte: filters.minPrice };}
     if (filters.maxPrice) {
         searchQuery.price = searchQuery.price || {};
         searchQuery.price.$lte = filters.maxPrice;

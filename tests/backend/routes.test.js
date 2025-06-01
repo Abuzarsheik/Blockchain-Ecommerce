@@ -437,7 +437,7 @@ describe('🔥 COMPREHENSIVE API ROUTES TEST SUITE', () => {
 
         expect(response.body.message).toBeDefined();
         expect(response.body.order.items).toHaveLength(1);
-        expect(response.body.order.user_id).toBe(testUser._id.toString());
+        expect(response.body.order.userId).toBe(testUser._id.toString());
       });
 
       it('should reject order without authentication', async () => {

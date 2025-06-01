@@ -386,7 +386,7 @@ router.post('/action', auth, [
     }
 
     // Handle different actions
-    let result = { success: true, message: 'Action processed' };
+    const result = { success: true, message: 'Action processed' };
 
     switch (action) {
       case 'confirm_delivery':
@@ -479,10 +479,10 @@ router.get('/admin/all', auth, [
       priority
     } = req.query;
 
-    let query = {};
-    if (userId) query.userId = userId;
-    if (category) query.category = category;
-    if (priority) query.priority = priority;
+    const query = {};
+    if (userId) {query.userId = userId;}
+    if (category) {query.category = category;}
+    if (priority) {query.priority = priority;}
 
     const skip = (page - 1) * limit;
 

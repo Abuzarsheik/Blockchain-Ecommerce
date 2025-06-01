@@ -24,7 +24,7 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
         
         // Calculate date range
         const now = new Date();
-        let startDate = new Date();
+        const startDate = new Date();
         switch (period) {
             case '7d':
                 startDate.setDate(now.getDate() - 7);
@@ -752,13 +752,13 @@ router.get('/audit-logs', adminAuth, async (req, res) => {
 
         const query = {};
         
-        if (action) query.action = action;
-        if (userId) query.userId = userId;
-        if (severity) query.severity = severity;
+        if (action) {query.action = action;}
+        if (userId) {query.userId = userId;}
+        if (severity) {query.severity = severity;}
         if (startDate || endDate) {
             query.timestamp = {};
-            if (startDate) query.timestamp.$gte = new Date(startDate);
-            if (endDate) query.timestamp.$lte = new Date(endDate);
+            if (startDate) {query.timestamp.$gte = new Date(startDate);}
+            if (endDate) {query.timestamp.$lte = new Date(endDate);}
         }
         if (search) {
             query.$or = [
@@ -875,8 +875,8 @@ router.get('/smart-contracts', adminAuth, async (req, res) => {
         ];
 
         let filteredContracts = mockContracts;
-        if (status) filteredContracts = filteredContracts.filter(c => c.status === status);
-        if (riskLevel) filteredContracts = filteredContracts.filter(c => c.riskLevel === riskLevel);
+        if (status) {filteredContracts = filteredContracts.filter(c => c.status === status);}
+        if (riskLevel) {filteredContracts = filteredContracts.filter(c => c.riskLevel === riskLevel);}
 
         res.json({
             success: true,

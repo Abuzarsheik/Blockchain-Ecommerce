@@ -1,5 +1,5 @@
 const os = require('os');
-const process = require('process');
+// const process = require('process'); // Remove - use global process instead
 
 // In-memory storage for metrics (in production, use Redis or database)
 let metrics = {
@@ -25,55 +25,73 @@ let metrics = {
 // Performance monitoring middleware
 const performanceMiddleware = (req, res, next) => {
   const startTime = Date.now();
-  const endpoint = `${req.method} ${req.route?.path || req.path}`;
-
-  // Track request
-  metrics.requests.total++;
   
-  if (!metrics.requests.byEndpoint[endpoint]) {
-    metrics.requests.byEndpoint[endpoint] = {
+  // Track request metrics
+  const routeKey = `${req.method}:${req.route?.path || req.path}`;
+  if (!metrics.requests.byEndpoint[routeKey]) {
+    metrics.requests.byEndpoint[routeKey] = {
       count: 0,
       totalTime: 0,
-      avgTime: 0,
       errors: 0
     };
   }
-  
-  if (!metrics.requests.byMethod[req.method]) {
-    metrics.requests.byMethod[req.method] = 0;
-  }
-  
-  metrics.requests.byEndpoint[endpoint].count++;
-  metrics.requests.byMethod[req.method]++;
+  metrics.requests.byEndpoint[routeKey].count++;
 
-  // Override res.end to capture response time
-  const originalEnd = res.end;
-  res.end = function(...args) {
-    const responseTime = Date.now() - startTime;
+  // Performance monitoring
+  const startMemory = process.memoryUsage();
+  let _memUsage = process.memoryUsage(); // Prefix with underscore to indicate intentionally unused
+
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    metrics.requests.byEndpoint[routeKey].totalTime += duration;
     
-    // Track response time
-    metrics.requests.responseTimes.push(responseTime);
+    if (res.statusCode >= 400) {
+      metrics.requests.byEndpoint[routeKey].errors++;
+    }
+    
+    // Update performance metrics
+    metrics.requests.responseTimes.push(duration);
     if (metrics.requests.responseTimes.length > 1000) {
       metrics.requests.responseTimes = metrics.requests.responseTimes.slice(-1000);
     }
     
-    // Update endpoint metrics
-    metrics.requests.byEndpoint[endpoint].totalTime += responseTime;
-    metrics.requests.byEndpoint[endpoint].avgTime = 
-      metrics.requests.byEndpoint[endpoint].totalTime / 
-      metrics.requests.byEndpoint[endpoint].count;
-
     // Track success/failure
     if (res.statusCode >= 200 && res.statusCode < 400) {
       metrics.requests.successful++;
     } else {
       metrics.requests.failed++;
-      metrics.requests.byEndpoint[endpoint].errors++;
     }
 
-    originalEnd.apply(this, args);
-  };
+    // Update endpoint metrics
+    metrics.requests.byEndpoint[routeKey].totalTime += duration;
+    metrics.requests.byEndpoint[routeKey].avgTime = 
+      metrics.requests.byEndpoint[routeKey].totalTime / 
+      metrics.requests.byEndpoint[routeKey].count;
 
+    // Track memory usage
+    const memDelta = process.memoryUsage().heapUsed - startMemory.heapUsed;
+    metrics.system.lastCheck = Date.now();
+
+    // Track error
+    if (res.statusCode >= 400) {
+      metrics.errors.total++;
+      metrics.errors.recent.unshift({
+        timestamp: new Date().toISOString(),
+        message: `Request failed with status code ${res.statusCode}`,
+        stack: '',
+        endpoint: routeKey,
+        type: 'RequestError',
+        statusCode: res.statusCode
+      });
+      
+      // Track by type
+      if (!metrics.errors.byType['RequestError']) {
+        metrics.errors.byType['RequestError'] = 0;
+      }
+      metrics.errors.byType['RequestError']++;
+    }
+  });
+  
   next();
 };
 
@@ -196,7 +214,7 @@ const monitor = {
       : 100;
 
     let status = 'healthy';
-    let issues = [];
+    const issues = [];
 
     if (memPercentage > 90) {
       status = 'critical';

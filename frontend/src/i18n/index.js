@@ -4,6 +4,10 @@
  * Zero risk implementation - works independently
  */
 
+import React from 'react';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
 // Simple i18n implementation without external dependencies
 class SimpleI18n {
     constructor() {

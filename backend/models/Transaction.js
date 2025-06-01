@@ -176,11 +176,11 @@ transactionSchema.statics.findByUser = function(userId, options = {}) {
     currency
   } = options;
 
-  let query = { userId };
+  const query = { userId };
   
-  if (type) query.type = type;
-  if (status) query.status = status;
-  if (currency) query.currency = currency;
+  if (type) {query.type = type;}
+  if (status) {query.status = status;}
+  if (currency) {query.currency = currency;}
 
   return this.find(query)
     .sort({ timestamp: -1 })
@@ -199,16 +199,16 @@ transactionSchema.statics.findByAddress = function(address, options = {}) {
     currency
   } = options;
 
-  let query = {
+  const query = {
     $or: [
       { fromAddress: address },
       { toAddress: address }
     ]
   };
   
-  if (type) query.type = type;
-  if (status) query.status = status;
-  if (currency) query.currency = currency;
+  if (type) {query.type = type;}
+  if (status) {query.status = status;}
+  if (currency) {query.currency = currency;}
 
   return this.find(query)
     .sort({ timestamp: -1 })
@@ -221,16 +221,16 @@ transactionSchema.statics.findByAddress = function(address, options = {}) {
 transactionSchema.statics.getStats = function(filters = {}) {
   const { startDate, endDate, currency, type } = filters;
   
-  let matchStage = {};
+  const matchStage = {};
   
   if (startDate || endDate) {
     matchStage.timestamp = {};
-    if (startDate) matchStage.timestamp.$gte = new Date(startDate);
-    if (endDate) matchStage.timestamp.$lte = new Date(endDate);
+    if (startDate) {matchStage.timestamp.$gte = new Date(startDate);}
+    if (endDate) {matchStage.timestamp.$lte = new Date(endDate);}
   }
   
-  if (currency) matchStage.currency = currency;
-  if (type) matchStage.type = type;
+  if (currency) {matchStage.currency = currency;}
+  if (type) {matchStage.type = type;}
 
   return this.aggregate([
     { $match: matchStage },
@@ -280,10 +280,10 @@ transactionSchema.methods.updateStatus = function(status, additionalData = {}) {
   }
   
   // Update additional blockchain data
-  if (additionalData.blockNumber) this.blockNumber = additionalData.blockNumber;
-  if (additionalData.gasUsed) this.gasUsed = additionalData.gasUsed;
-  if (additionalData.gasPrice) this.gasPrice = additionalData.gasPrice;
-  if (additionalData.confirmations) this.confirmations = additionalData.confirmations;
+  if (additionalData.blockNumber) {this.blockNumber = additionalData.blockNumber;}
+  if (additionalData.gasUsed) {this.gasUsed = additionalData.gasUsed;}
+  if (additionalData.gasPrice) {this.gasPrice = additionalData.gasPrice;}
+  if (additionalData.confirmations) {this.confirmations = additionalData.confirmations;}
   
   return this.save();
 };
@@ -298,7 +298,7 @@ transactionSchema.methods.addError = function(errorMessage) {
 };
 
 transactionSchema.methods.getExplorerUrl = function() {
-  if (!this.txHash) return null;
+  if (!this.txHash) {return null;}
   
   const explorerUrls = {
     ethereum: 'https://etherscan.io/tx/',
@@ -340,9 +340,9 @@ transactionSchema.methods.isFailed = function() {
 
 // Virtual for displaying transaction direction
 transactionSchema.virtual('direction').get(function() {
-  if (this.type === 'payment') return 'outgoing';
-  if (this.type === 'withdrawal') return 'outgoing';
-  if (this.type === 'refund') return 'incoming';
+  if (this.type === 'payment') {return 'outgoing';}
+  if (this.type === 'withdrawal') {return 'outgoing';}
+  if (this.type === 'refund') {return 'incoming';}
   return 'unknown';
 });
 
@@ -355,8 +355,8 @@ transactionSchema.virtual('age').get(function() {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
   
-  if (diffMins < 60) return `${diffMins} minutes ago`;
-  if (diffHours < 24) return `${diffHours} hours ago`;
+  if (diffMins < 60) {return `${diffMins} minutes ago`;}
+  if (diffHours < 24) {return `${diffHours} hours ago`;}
   return `${diffDays} days ago`;
 });
 

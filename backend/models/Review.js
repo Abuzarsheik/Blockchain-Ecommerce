@@ -348,7 +348,7 @@ reviewSchema.methods.canEdit = function() {
 
 reviewSchema.methods.getHelpfulnessScore = function() {
     const total = this.helpfulVotes.up + this.helpfulVotes.down;
-    if (total === 0) return 0;
+    if (total === 0) {return 0;}
     return ((this.helpfulVotes.up / total) * 100).toFixed(1);
 };
 

@@ -284,7 +284,7 @@ const validationMiddleware = {
  */
 const sanitizeInput = (req, res, next) => {
   const sanitizeString = (str) => {
-    if (typeof str !== 'string') return str;
+    if (typeof str !== 'string') {return str;}
     
     // Remove potentially dangerous characters
     return str
@@ -295,9 +295,9 @@ const sanitizeInput = (req, res, next) => {
   };
 
   const sanitizeObject = (obj) => {
-    if (typeof obj !== 'object' || obj === null) return obj;
+    if (typeof obj !== 'object' || obj === null) {return obj;}
     
-    for (let key in obj) {
+    for (const key in obj) {
       if (typeof obj[key] === 'string') {
         obj[key] = sanitizeString(obj[key]);
       } else if (typeof obj[key] === 'object') {

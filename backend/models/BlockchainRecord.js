@@ -211,11 +211,11 @@ blockchainRecordSchema.statics.findByUser = function(userId, options = {}) {
     currency
   } = options;
 
-  let query = { userId };
+  const query = { userId };
   
-  if (type) query.type = type;
-  if (status) query.status = status;
-  if (currency) query.currency = currency;
+  if (type) {query.type = type;}
+  if (status) {query.status = status;}
+  if (currency) {query.currency = currency;}
 
   return this.find(query)
     .sort({ recordedAt: -1 })
@@ -247,12 +247,12 @@ blockchainRecordSchema.statics.getVerificationStats = function() {
 blockchainRecordSchema.statics.getCurrencyStats = function(filters = {}) {
   const { startDate, endDate } = filters;
   
-  let matchStage = {};
+  const matchStage = {};
   
   if (startDate || endDate) {
     matchStage.recordedAt = {};
-    if (startDate) matchStage.recordedAt.$gte = new Date(startDate);
-    if (endDate) matchStage.recordedAt.$lte = new Date(endDate);
+    if (startDate) {matchStage.recordedAt.$gte = new Date(startDate);}
+    if (endDate) {matchStage.recordedAt.$lte = new Date(endDate);}
   }
 
   return this.aggregate([
@@ -292,7 +292,7 @@ blockchainRecordSchema.statics.getCurrencyStats = function(filters = {}) {
 blockchainRecordSchema.statics.verifyIntegrity = async function() {
   const records = await this.find().sort({ recordedAt: 1 });
   
-  let integrityReport = {
+  const integrityReport = {
     totalRecords: records.length,
     validRecords: 0,
     invalidRecords: 0,
@@ -364,7 +364,7 @@ blockchainRecordSchema.methods.generateVerificationHash = function(verifierData)
 };
 
 blockchainRecordSchema.methods.getExplorerUrl = function() {
-  if (!this.txHash) return null;
+  if (!this.txHash) {return null;}
   
   const explorerUrls = {
     ethereum: 'https://etherscan.io/tx/',
@@ -400,9 +400,9 @@ blockchainRecordSchema.methods.isVerified = function() {
 blockchainRecordSchema.methods.getVerificationLevel = function() {
   const verifiedCount = this.verificationChain.filter(v => v.status === 'verified').length;
   
-  if (verifiedCount === 0) return 'unverified';
-  if (verifiedCount === 1) return 'basic';
-  if (verifiedCount >= 2) return 'enhanced';
+  if (verifiedCount === 0) {return 'unverified';}
+  if (verifiedCount === 1) {return 'basic';}
+  if (verifiedCount >= 2) {return 'enhanced';}
   
   return 'unknown';
 };
@@ -416,8 +416,8 @@ blockchainRecordSchema.virtual('age').get(function() {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
   
-  if (diffMins < 60) return `${diffMins} minutes ago`;
-  if (diffHours < 24) return `${diffHours} hours ago`;
+  if (diffMins < 60) {return `${diffMins} minutes ago`;}
+  if (diffHours < 24) {return `${diffHours} hours ago`;}
   return `${diffDays} days ago`;
 });
 

@@ -492,7 +492,7 @@ class ShippingService {
         const now = Date.now();
         const limit = this.rateLimits.get(carrier);
         
-        if (!limit) return true;
+        if (!limit) {return true;}
         
         // Check if enough time has passed since rate limit
         return now > limit.resetTime;

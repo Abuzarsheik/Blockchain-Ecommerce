@@ -538,17 +538,17 @@ router.put('/:id', auth, upload.array('images', 5), [
         }
 
         // Update fields
-        if (productRating) review.product_rating = parseInt(productRating);
-        if (productReview) review.product_review = productReview.trim();
-        if (sellerRating) review.seller_rating = parseInt(sellerRating);
-        if (sellerReview) review.seller_review = sellerReview.trim();
+        if (productRating) {review.product_rating = parseInt(productRating);}
+        if (productReview) {review.product_review = productReview.trim();}
+        if (sellerRating) {review.seller_rating = parseInt(sellerRating);}
+        if (sellerReview) {review.seller_review = sellerReview.trim();}
 
         // Update aspects
-        if (aspects.quality) review.aspects.quality = parseInt(aspects.quality);
-        if (aspects.value) review.aspects.value = parseInt(aspects.value);
-        if (aspects.shipping) review.aspects.shipping = parseInt(aspects.shipping);
-        if (aspects.packaging) review.aspects.packaging = parseInt(aspects.packaging);
-        if (aspects.communication) review.aspects.communication = parseInt(aspects.communication);
+        if (aspects.quality) {review.aspects.quality = parseInt(aspects.quality);}
+        if (aspects.value) {review.aspects.value = parseInt(aspects.value);}
+        if (aspects.shipping) {review.aspects.shipping = parseInt(aspects.shipping);}
+        if (aspects.packaging) {review.aspects.packaging = parseInt(aspects.packaging);}
+        if (aspects.communication) {review.aspects.communication = parseInt(aspects.communication);}
 
         // Handle image removal
         if (removeImages && removeImages.length > 0) {

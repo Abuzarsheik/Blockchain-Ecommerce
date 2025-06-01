@@ -83,9 +83,9 @@ router.put('/', auth, [
         };
 
         // Update basic info
-        if (firstName) updateData.firstName = firstName.trim();
-        if (lastName) updateData.lastName = lastName.trim();
-        if (username) updateData.username = username.toLowerCase().trim();
+        if (firstName) {updateData.firstName = firstName.trim();}
+        if (lastName) {updateData.lastName = lastName.trim();}
+        if (username) {updateData.username = username.toLowerCase().trim();}
 
         // Update profile
         if (profile) {

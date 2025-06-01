@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 5000;
 // ===========================================
 
 // Initialize all services
-let serviceStatus = {
+const serviceStatus = {
     database: 'initializing',
     email: 'initializing',
     ipfs: 'initializing',

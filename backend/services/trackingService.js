@@ -377,11 +377,11 @@ class TrackingService {
             const db = require('../config/database');
             const shipment = await db.collection('shipments').findOne({ trackingNumber });
             
-            if (!shipment) return;
+            if (!shipment) {return;}
 
             // Get user email
             const user = await db.collection('users').findOne({ _id: shipment.buyer });
-            if (!user?.email) return;
+            if (!user?.email) {return;}
 
             const emailService = require('./emailService');
             

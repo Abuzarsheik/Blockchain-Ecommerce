@@ -255,14 +255,14 @@ router.get('/records', auth, [
     } = req.query;
 
     // Build query
-    let query = {};
-    if (currency) query.currency = currency;
-    if (type) query.type = type;
+    const query = {};
+    if (currency) {query.currency = currency;}
+    if (type) {query.type = type;}
     
     if (startDate || endDate) {
       query.recordedAt = {};
-      if (startDate) query.recordedAt.$gte = new Date(startDate);
-      if (endDate) query.recordedAt.$lte = new Date(endDate);
+      if (startDate) {query.recordedAt.$gte = new Date(startDate);}
+      if (endDate) {query.recordedAt.$lte = new Date(endDate);}
     }
 
     const skip = (page - 1) * limit;
@@ -455,7 +455,7 @@ router.get('/integrity-check', auth, async (req, res) => {
     // Get all blockchain records
     const records = await BlockchainRecord.find().sort({ recordedAt: 1 });
     
-    let integrityReport = {
+    const integrityReport = {
       totalRecords: records.length,
       validRecords: 0,
       invalidRecords: 0,

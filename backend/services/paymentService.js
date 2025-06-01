@@ -457,7 +457,7 @@ class PaymentService {
       } = options;
 
       const skip = (page - 1) * limit;
-      let query = {};
+      const query = {};
 
       // Check if identifier is user ID or wallet address
       if (identifier.match(/^[0-9a-fA-F]{24}$/)) {
@@ -478,9 +478,9 @@ class PaymentService {
       }
 
       // Add filters
-      if (currency) query.currency = currency;
-      if (type) query.type = type;
-      if (status) query.status = status;
+      if (currency) {query.currency = currency;}
+      if (type) {query.type = type;}
+      if (status) {query.status = status;}
 
       const transactions = await Transaction.find(query)
         .sort({ timestamp: -1 })
@@ -650,12 +650,12 @@ class PaymentService {
     try {
       const { startDate, endDate, currency } = filters;
 
-      let matchStage = { type: 'payment' };
+      const matchStage = { type: 'payment' };
 
       if (startDate || endDate) {
         matchStage.timestamp = {};
-        if (startDate) matchStage.timestamp.$gte = new Date(startDate);
-        if (endDate) matchStage.timestamp.$lte = new Date(endDate);
+        if (startDate) {matchStage.timestamp.$gte = new Date(startDate);}
+        if (endDate) {matchStage.timestamp.$lte = new Date(endDate);}
       }
 
       if (currency) {
@@ -712,7 +712,7 @@ class PaymentService {
    */
   formatAmount(amount, currency) {
     const currencyConfig = SUPPORTED_CURRENCIES[currency];
-    if (!currencyConfig) return amount.toString();
+    if (!currencyConfig) {return amount.toString();}
 
     if (currencyConfig.type === 'native' && currency === 'ETH') {
       return ethers.formatUnits(amount, currencyConfig.decimals);
@@ -730,7 +730,7 @@ class PaymentService {
   isValidAddress(address, currency) {
     try {
       const currencyConfig = SUPPORTED_CURRENCIES[currency];
-      if (!currencyConfig) return false;
+      if (!currencyConfig) {return false;}
 
       // For Ethereum-based currencies, use ethers address validation
       if (currencyConfig.network === 'ethereum') {

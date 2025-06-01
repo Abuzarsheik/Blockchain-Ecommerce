@@ -36,7 +36,7 @@ class DisputeService {
             delivery_timeline: {
                 weight: 20,
                 check: async (dispute, order) => {
-                    if (!order.estimated_delivery) return { result: false, details: 'No delivery estimate', confidence: 50 };
+                    if (!order.estimated_delivery) {return { result: false, details: 'No delivery estimate', confidence: 50 };}
                     
                     const now = new Date();
                     const isLate = now > new Date(order.estimated_delivery);
@@ -676,7 +676,7 @@ class DisputeService {
             };
 
             const notifications = notificationMap[type];
-            if (!notifications) return;
+            if (!notifications) {return;}
 
             if (notifications.buyer) {
                 await notificationService.createNotification({
@@ -721,9 +721,9 @@ class DisputeService {
      * Helper methods
      */
     calculatePriority(disputeData, order) {
-        if (order.total > 1000) return 'high';
-        if (disputeData.category === 'item_not_received') return 'high';
-        if (disputeData.category === 'payment_issue') return 'urgent';
+        if (order.total > 1000) {return 'high';}
+        if (disputeData.category === 'item_not_received') {return 'high';}
+        if (disputeData.category === 'payment_issue') {return 'urgent';}
         return 'medium';
     }
 

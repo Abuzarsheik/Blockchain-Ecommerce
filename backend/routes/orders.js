@@ -86,9 +86,9 @@ router.get('/', auth, [
         const skip = (page - 1) * limit;
 
         // Build query filter
-        const filter = { user_id: req.user.id };
-        if (status) filter.status = status;
-        if (payment_status) filter.payment_status = payment_status;
+        const filter = { userId: req.user.id };
+        if (status) {filter.status = status;}
+        if (payment_status) {filter.payment_status = payment_status;}
         if (tracking_number) {
             filter.$or = [
                 { 'shipping_info.tracking_number': new RegExp(tracking_number, 'i') },
@@ -98,8 +98,7 @@ router.get('/', auth, [
 
         // Get orders with enhanced population
         const orders = await Order.find(filter)
-            .populate('items.product_id', 'name image_url price category')
-            .populate('seller_id', 'firstName lastName businessName')
+            .populate('items.productId', 'name image_url price category')
             .sort({ created_at: -1 })
             .limit(parseInt(limit))
             .skip(skip);
@@ -160,11 +159,10 @@ router.get('/:id', auth, [
 
         const order = await Order.findOne({ 
             _id: orderId, 
-            user_id: req.user.id 
+            userId: req.user.id 
         })
-        .populate('items.product_id', 'name image_url price description category seller_id')
-        .populate('seller_id', 'firstName lastName businessName email phone')
-        .populate('user_id', 'firstName lastName email phone');
+        .populate('items.productId', 'name image_url price description category')
+        .populate('userId', 'firstName lastName email phone');
 
         if (!order) {
             return res.status(404).json({ 
@@ -230,7 +228,7 @@ router.get('/:id/tracking', auth, [
         // Verify order belongs to user
         const order = await Order.findOne({ 
             _id: orderId, 
-            user_id: req.user.id 
+            userId: req.user.id 
         });
 
         if (!order) {
@@ -275,7 +273,7 @@ router.get('/tracking/:trackingNumber', [
         const trackingNumber = req.params.trackingNumber;
 
         const order = await Order.findByTrackingNumber(trackingNumber)
-            .populate('items.product_id', 'name image_url')
+            .populate('items.productId', 'name image_url')
             .select('orderNumber status shipping_info tracking_events shipping_address estimated_delivery delivered_at');
 
         if (!order) {
@@ -392,12 +390,15 @@ router.post('/', auth, [
             calculatedSubtotal += itemTotal;
 
             validatedItems.push({
-                product_id,
+                productId: product_id,
                 name: name || product.name,
-                image: image || product.image_url,
+                image: image || (product.images && product.images[0] ? product.images[0].url : ''),
                 category: category || product.category,
                 quantity,
-                price
+                price: {
+                    amount: price,
+                    currency: 'USD'
+                }
             });
         }
 
@@ -422,29 +423,59 @@ router.post('/', auth, [
         // Create order
         const newOrder = new Order({
             orderNumber: 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase(),
-            user_id: req.user.id,
+            userId: req.user.id,
             items: validatedItems,
-            subtotal: subtotal || calculatedSubtotal,
-            tax,
-            shipping_cost,
-            discount,
-            total: total || (calculatedSubtotal + tax + shipping_cost - discount),
-            payment_method,
-            payment_status: payment_method === 'crypto' ? 'pending' : 'paid',
+            subtotal: {
+                amount: subtotal || calculatedSubtotal,
+                currency: 'USD'
+            },
+            tax: {
+                amount: tax || 0,
+                currency: 'USD'
+            },
+            shippingCost: {
+                amount: shipping_cost || 0,
+                currency: 'USD'
+            },
+            discount: {
+                amount: discount || 0,
+                currency: 'USD'
+            },
+            total: {
+                amount: total || (calculatedSubtotal + (tax || 0) + (shipping_cost || 0) - (discount || 0)),
+                currency: 'USD'
+            },
+            paymentMethod: payment_method,
+            paymentStatus: payment_method === 'crypto' ? 'pending' : 'paid',
             status: 'processing',
-            billing_info,
-            shipping_address: shipping_address || {
+            billingInfo: {
                 firstName: billing_info.firstName,
                 lastName: billing_info.lastName,
-                street: billing_info.address,
-                city: billing_info.city,
-                state: billing_info.state,
-                zipCode: billing_info.zipCode,
-                country: billing_info.country,
-                phone: billing_info.phone
+                email: billing_info.email,
+                phone: billing_info.phone,
+                address: {
+                    street: billing_info.address || billing_info.street,
+                    city: billing_info.city,
+                    state: billing_info.state,
+                    postalCode: billing_info.zipCode || billing_info.postalCode,
+                    country: billing_info.country
+                }
             },
-            estimated_delivery: estimatedDelivery,
-            delivery_preferences: delivery_preferences || {}
+            shippingAddress: {
+                firstName: (shipping_address || billing_info).firstName,
+                lastName: (shipping_address || billing_info).lastName,
+                email: (shipping_address || billing_info).email,
+                phone: (shipping_address || billing_info).phone,
+                address: {
+                    street: (shipping_address || billing_info).address || (shipping_address || billing_info).street,
+                    city: (shipping_address || billing_info).city,
+                    state: (shipping_address || billing_info).state,
+                    postalCode: (shipping_address || billing_info).zipCode || (shipping_address || billing_info).postalCode,
+                    country: (shipping_address || billing_info).country
+                }
+            },
+            estimatedDelivery: estimatedDelivery,
+            deliveryPreferences: delivery_preferences || {}
         });
 
         await newOrder.save();
@@ -489,8 +520,8 @@ router.post('/:id/delivery-confirmation', auth, [
 
         const order = await Order.findOne({ 
             _id: orderId, 
-            user_id: req.user.id 
-        }).populate('seller_id', 'firstName lastName businessName email');
+            userId: req.user.id 
+        }).populate('userId', 'firstName lastName email');
 
         if (!order) {
             return res.status(404).json({ 
@@ -556,10 +587,10 @@ router.put('/:id/status', auth, async (req, res) => {
         }
 
         const order = await Order.findOneAndUpdate(
-            { _id: orderId, user_id: req.user.id },
+            { _id: orderId, userId: req.user.id },
             { payment_status: status, updated_at: new Date() },
             { new: true }
-        ).populate('items.product_id', 'name image_url price');
+        ).populate('items.productId', 'name image_url price');
 
         if (!order) {
             return res.status(404).json({ error: 'Order not found' });
