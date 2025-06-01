@@ -10,7 +10,7 @@ dist/
 .next/
 out/
 
-# Environment variables
+# Environment variables (keep production.env tracked)
 .env
 .env.local
 .env.development.local
@@ -56,4 +56,19 @@ Thumbs.db
 
 # Database
 *.sqlite
-*.db 
+*.db
+
+# Large uploads directory (if you have user uploads)
+uploads/temp/
+uploads/cache/
+
+# Development files that might slow down git
+.eslintcache
+.parcel-cache/
+.cache/
+
+# OS and editor temporary files
+*~
+.fuse_hidden*
+.directory
+.Trash-* 
