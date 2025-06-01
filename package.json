@@ -26,12 +26,8 @@
     "docker:run": "docker run -p 5000:5000 blocmerce"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.3.0",
-    "@pinata/sdk": "^2.1.0",
     "axios": "^1.9.0",
     "bcryptjs": "^2.4.3",
-    "bn.js": "^5.2.2",
-    "colors": "^1.4.0",
     "compression": "^1.7.4",
     "connect-mongo": "^5.1.0",
     "cors": "^2.8.5",
@@ -44,11 +40,8 @@
     "helmet": "^6.2.0",
     "ipfs-http-client": "^56.0.1",
     "jsonwebtoken": "^9.0.0",
-    "lodash": "^4.17.21",
     "mime-types": "^2.1.35",
-    "moment": "^2.29.4",
     "mongoose": "^7.0.0",
-    "morgan": "^1.10.0",
     "multer": "^2.0.0",
     "node-cron": "^3.0.2",
     "nodemailer": "^7.0.3",
@@ -66,10 +59,6 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.23.3",
-    "@babel/preset-env": "^7.23.3",
-    "@babel/preset-react": "^7.22.15",
-    "babel-jest": "^29.7.0",
     "eslint": "^8.53.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-node": "^11.1.0",
