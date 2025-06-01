@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   TrendingUp, 
   BarChart3, 
   PieChart, 
   Calendar,
   Download,
-  Filter,
   RefreshCw,
   Users,
   ShoppingCart,
@@ -13,8 +12,7 @@ import {
   Package,
   AlertTriangle,
   Activity,
-  Target,
-  Globe
+  Target
 } from 'lucide-react';
 import { apiEndpoints } from '../services/api';
 import '../styles/AdminAnalytics.css';
@@ -36,11 +34,7 @@ const AdminAnalytics = () => {
     { key: 'traffic', label: 'Traffic', icon: Activity, color: '#06b6d4' }
   ];
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [selectedMetric, dateRange]);
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -57,7 +51,11 @@ const AdminAnalytics = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedMetric, dateRange]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

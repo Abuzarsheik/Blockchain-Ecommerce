@@ -1,12 +1,12 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { AuthContext } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 
 const ReviewList = ({ reviews: initialReviews, statistics, onReviewUpdate }) => {
-  const { user } = useContext(AuthContext);
+  const { user } = useSelector((state) => state.auth);
   const [reviews, setReviews] = useState(initialReviews || []);
   const [sortBy, setSortBy] = useState('newest');
   const [filterRating, setFilterRating] = useState('all');

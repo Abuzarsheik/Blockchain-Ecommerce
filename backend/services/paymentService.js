@@ -64,9 +64,9 @@ class PaymentService {
 
   async init() {
     try {
-      // Initialize providers for different networks
+      // Initialize providers for different networks (ethers v6 syntax)
       for (const [networkName, config] of Object.entries(NETWORKS)) {
-        this.providers[networkName] = new ethers.providers.JsonRpcProvider(config.rpcUrl);
+        this.providers[networkName] = new ethers.JsonRpcProvider(config.rpcUrl);
       }
 
       // Initialize platform wallet if private key is provided
@@ -334,7 +334,7 @@ class PaymentService {
 
       // Check if platform has sufficient funds (mock check)
       const platformBalance = await this.getPlatformBalance(currency);
-      if (parseFloat(platformBalance) < parseFloat(amount)) {
+      if (parseFloat(platformBalance.balance) < parseFloat(amount)) {
         throw new Error('Insufficient platform funds');
       }
 
@@ -605,56 +605,39 @@ class PaymentService {
   /**
    * Get platform balance for a currency
    * @param {string} currency - Currency symbol
-   * @returns {string} Balance amount
+   * @returns {Object} Balance information
    */
   async getPlatformBalance(currency) {
     try {
+      if (!this.isInitialized) {
+        throw new Error('Payment service not initialized');
+      }
+
+      const currencyConfig = SUPPORTED_CURRENCIES[currency];
+      if (!currencyConfig) {
+        throw new Error(`Unsupported currency: ${currency}`);
+      }
+
       if (!this.platformWallet) {
-        return '0';
+        throw new Error('Platform wallet not configured');
       }
 
-      const network = SUPPORTED_CURRENCIES[currency].network;
-      const provider = this.providers[network];
+      const provider = this.providers[currencyConfig.network];
+      const balance = await provider.getBalance(this.platformWallet.address);
 
-      if (!provider) {
-        return '0';
-      }
-
-      switch (currency) {
-        case 'ETH':
-          const ethBalance = await provider.getBalance(this.platformWallet.address);
-          return ethers.utils.formatEther(ethBalance);
-
-        case 'USDT':
-          if (SUPPORTED_CURRENCIES.USDT.contractAddress) {
-            const erc20ABI = [
-              'function balanceOf(address owner) view returns (uint256)',
-              'function decimals() view returns (uint8)'
-            ];
-
-            const contract = new ethers.Contract(
-              SUPPORTED_CURRENCIES.USDT.contractAddress,
-              erc20ABI,
-              provider
-            );
-
-            const balance = await contract.balanceOf(this.platformWallet.address);
-            const decimals = await contract.decimals();
-            return ethers.utils.formatUnits(balance, decimals);
-          }
-          return '0';
-
-        case 'BTC':
-          // Bitcoin balance would require external API
-          return '0';
-
-        default:
-          return '0';
-      }
-
+      return {
+        success: true,
+        currency,
+        balance: balance.toString(),
+        balanceFormatted: ethers.formatEther(balance)
+      };
     } catch (error) {
       console.error('Get platform balance error:', error);
-      return '0';
+      return {
+        success: false,
+        error: error.message,
+        balance: '0'
+      };
     }
   }
 
@@ -722,40 +705,47 @@ class PaymentService {
   }
 
   /**
-   * Validate cryptocurrency address
-   * @param {string} address - Address to validate
+   * Format amount with proper decimals
+   * @param {string|number} amount - Raw amount
+   * @param {string} currency - Currency symbol
+   * @returns {string} Formatted amount
+   */
+  formatAmount(amount, currency) {
+    const currencyConfig = SUPPORTED_CURRENCIES[currency];
+    if (!currencyConfig) return amount.toString();
+
+    if (currencyConfig.type === 'native' && currency === 'ETH') {
+      return ethers.formatUnits(amount, currencyConfig.decimals);
+    }
+
+    return ethers.formatUnits(amount, currencyConfig.decimals);
+  }
+
+  /**
+   * Validate crypto wallet address
+   * @param {string} address - Wallet address
    * @param {string} currency - Currency type
    * @returns {boolean} Is valid address
    */
   isValidAddress(address, currency) {
     try {
-      if (currency === 'BTC') {
-        // Bitcoin address validation
-        return /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(address) || 
-               /^bc1[a-z0-9]{39,59}$/.test(address);
-      } else {
-        // Ethereum address validation
-        return ethers.utils.isAddress(address);
+      const currencyConfig = SUPPORTED_CURRENCIES[currency];
+      if (!currencyConfig) return false;
+
+      // For Ethereum-based currencies, use ethers address validation
+      if (currencyConfig.network === 'ethereum') {
+        return ethers.isAddress(address);
       }
+
+      // For Bitcoin, implement basic validation (simplified)
+      if (currency === 'BTC') {
+        return /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(address) || /^bc1[a-z0-9]{39,59}$/.test(address);
+      }
+
+      return false;
     } catch (error) {
       return false;
     }
-  }
-
-  /**
-   * Format amount for display
-   * @param {string} amount - Amount to format
-   * @param {string} currency - Currency symbol
-   * @returns {string} Formatted amount
-   */
-  formatAmount(amount, currency) {
-    const currencyInfo = SUPPORTED_CURRENCIES[currency];
-    if (!currencyInfo) return amount;
-
-    const num = parseFloat(amount);
-    if (isNaN(num)) return '0';
-
-    return num.toFixed(currencyInfo.decimals > 4 ? 4 : currencyInfo.decimals);
   }
 
   /**

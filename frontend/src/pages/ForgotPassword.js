@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Mail, ArrowLeft, CheckCircle, Loader, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../services/api';
 import '../styles/Auth.css';
 
 const ForgotPassword = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const [step, setStep] = useState('request'); // 'request', 'sent'
-  const [email, setEmail] = useState(location.state?.email || '');
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [touched, setTouched] = useState(false);
 
@@ -44,34 +43,39 @@ const ForgotPassword = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const emailError = validateEmail(email);
-    setError(emailError);
-    setTouched(true);
-    
-    if (!emailError) {
-      setLoading(true);
-      try {
-        await api.post('/auth/forgot-password', { email });
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
         setStep('sent');
-        toast.success('Password reset instructions sent to your email');
-      } catch (error) {
-        const errorMessage = error.response?.data?.error || 'Failed to send reset email';
-        
-        if (error.response?.status === 429) {
-          toast.error('Too many reset attempts. Please try again later.');
-        } else {
-          // Don't reveal if email exists for security
-          setStep('sent');
-          toast.success('If an account with that email exists, we\'ve sent password reset instructions');
-        }
-      } finally {
-        setLoading(false);
+      } else {
+        setError(data.error || 'Failed to send reset email');
       }
+    } catch (error) {
+      setError('Network error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleResendEmail = async () => {
-    setLoading(true);
+    setIsLoading(true);
     try {
       await api.post('/auth/forgot-password', { email });
       toast.success('Reset email sent again');
@@ -82,7 +86,7 @@ const ForgotPassword = () => {
         toast.success('Reset email sent');
       }
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -130,9 +134,9 @@ const ForgotPassword = () => {
         <button
           type="submit"
           className="submit-button"
-          disabled={loading}
+          disabled={isLoading}
         >
-          {loading ? (
+          {isLoading ? (
             <>
               <Loader className="spinning" size={18} />
               Sending Reset Link...
@@ -185,9 +189,9 @@ const ForgotPassword = () => {
               type="button"
               className="resend-button"
               onClick={handleResendEmail}
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? (
+              {isLoading ? (
                 <>
                   <Loader className="spinning" size={16} />
                   Resending...

@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const ipfsService = require('../services/ipfsService');
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 
 // IPFS Health Check (no auth required)
 router.get('/health', async (req, res) => {
@@ -56,71 +56,64 @@ const storage = multer.diskStorage({
     }
 });
 
+const fileFilter = (req, file, cb) => {
+    // Allow images, videos, and documents
+    const allowedTypes = /jpeg|jpg|png|gif|mp4|mp3|pdf|json|txt/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+        return cb(null, true);
+    } else {
+        cb(new Error('File type not allowed'));
+    }
+};
+
 const upload = multer({
     storage: storage,
     limits: {
         fileSize: 50 * 1024 * 1024 // 50MB limit
     },
-    fileFilter: (req, file, cb) => {
-        // Allow images, videos, and documents
-        const allowedTypes = /jpeg|jpg|png|gif|mp4|mp3|pdf|json|txt/;
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
-
-        if (mimetype && extname) {
-            return cb(null, true);
-        } else {
-            cb(new Error('File type not allowed'));
-        }
-    }
+    fileFilter: fileFilter
 });
 
-// Upload file to IPFS
-router.post('/upload', auth, (req, res, next) => {
-    upload.single('file')(req, res, async (err) => {
-        if (err) {
+// Upload file to IPFS - FIXED VERSION
+router.post('/upload', auth, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
             return res.status(400).json({
                 success: false,
-                error: err.message
+                error: 'No file provided'
             });
+        }
+
+        const result = await ipfsService.uploadFile(req.file.path, {
+            metadata: {
+                originalName: req.file.originalname,
+                uploadedBy: req.user.id,
+                uploadedAt: new Date(),
+                mimetype: req.file.mimetype,
+                size: req.file.size
+            }
+        });
+
+        // Clean up temporary file
+        fs.unlinkSync(req.file.path);
+
+        res.json(result);
+
+    } catch (error) {
+        // Clean up on error
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
         }
         
-        try {
-            if (!req.file) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'No file provided'
-                });
-            }
-
-            const result = await ipfsService.uploadFile(req.file.path, {
-                metadata: {
-                    originalName: req.file.originalname,
-                    uploadedBy: req.user.id,
-                    uploadedAt: new Date(),
-                    mimetype: req.file.mimetype,
-                    size: req.file.size
-                }
-            });
-
-            // Clean up temporary file
-            fs.unlinkSync(req.file.path);
-
-            res.json(result);
-
-        } catch (error) {
-            // Clean up on error
-            if (req.file && fs.existsSync(req.file.path)) {
-                fs.unlinkSync(req.file.path);
-            }
-            
-            console.error('IPFS upload error:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
+        console.error('IPFS upload error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 });
 
 // Upload NFT metadata to IPFS

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import '../styles/SellerDashboard.css';
 
@@ -57,11 +57,7 @@ const SellerDashboard = () => {
         { value: 'other', label: 'Other' }
     ];
 
-    useEffect(() => {
-        fetchProducts();
-    }, [currentPage, searchTerm, statusFilter]);
-
-    const fetchProducts = async () => {
+    const fetchProducts = useCallback(async () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('authToken');
@@ -89,7 +85,11 @@ const SellerDashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentPage, searchTerm, statusFilter]);
+
+    useEffect(() => {
+        fetchProducts();
+    }, [fetchProducts]);
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
@@ -199,7 +199,7 @@ const SellerDashboard = () => {
     };
 
     const handleDelete = async (productId) => {
-        if (window.confirm('Are you sure you want to discontinue this product?')) {
+        if (window.confirm('Are you sure you want to delete this product?')) {
             try {
                 const token = localStorage.getItem('authToken');
                 const response = await fetch(`http://localhost:5000/api/products/${productId}`, {
@@ -216,69 +216,6 @@ const SellerDashboard = () => {
                 console.error('Error deleting product:', error);
             }
         }
-    };
-
-    const updateInventory = async (productId, newQuantity, type, reason) => {
-        try {
-            const token = localStorage.getItem('authToken');
-            const response = await fetch(`http://localhost:5000/api/products/${productId}/inventory`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    quantity: newQuantity,
-                    type,
-                    reason
-                })
-            });
-
-            if (response.ok) {
-                fetchProducts();
-            }
-        } catch (error) {
-            console.error('Error updating inventory:', error);
-        }
-    };
-
-    const addTag = (tag) => {
-        if (tag && !formData.tags.includes(tag)) {
-            setFormData(prev => ({
-                ...prev,
-                tags: [...prev.tags, tag]
-            }));
-        }
-    };
-
-    const removeTag = (index) => {
-        setFormData(prev => ({
-            ...prev,
-            tags: prev.tags.filter((_, i) => i !== index)
-        }));
-    };
-
-    const addSpecification = () => {
-        setFormData(prev => ({
-            ...prev,
-            specifications: [...prev.specifications, { name: '', value: '' }]
-        }));
-    };
-
-    const updateSpecification = (index, field, value) => {
-        setFormData(prev => ({
-            ...prev,
-            specifications: prev.specifications.map((spec, i) => 
-                i === index ? { ...spec, [field]: value } : spec
-            )
-        }));
-    };
-
-    const removeSpecification = (index) => {
-        setFormData(prev => ({
-            ...prev,
-            specifications: prev.specifications.filter((_, i) => i !== index)
-        }));
     };
 
     const getStatusBadge = (status) => {

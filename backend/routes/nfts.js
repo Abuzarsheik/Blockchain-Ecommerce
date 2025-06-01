@@ -39,6 +39,47 @@ const upload = multer({
     }
 });
 
+// NFT Health Check (no auth required) - MOVED TO TOP
+router.get('/health', async (req, res) => {
+    try {
+        const health = {
+            status: 'ok',
+            service: 'NFTs',
+            timestamp: new Date().toISOString(),
+            endpoints: [
+                'GET /api/nfts',
+                'GET /api/nfts/:id',
+                'POST /api/nfts',
+                'PUT /api/nfts/:id',
+                'DELETE /api/nfts/:id'
+            ]
+        };
+
+        // Get some basic stats
+        try {
+            const totalNFTs = await NFT.countDocuments();
+            const activeNFTs = await NFT.countDocuments({ is_active: true });
+            health.stats = {
+                totalNFTs,
+                activeNFTs,
+                message: 'NFT service operational'
+            };
+        } catch (statsError) {
+            health.message = 'NFT service running but stats unavailable';
+            health.warning = statsError.message;
+        }
+
+        res.json(health);
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            service: 'NFTs',
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // @route   GET /api/nfts
 // @desc    Get all NFTs with pagination and filters
 // @access  Public

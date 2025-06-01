@@ -1,11 +1,11 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { AuthContext } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 
 const ReviewForm = ({ order, onReviewSubmitted, onCancel }) => {
-  const { user } = useContext(AuthContext);
+  const { user } = useSelector((state) => state.auth);
   const [formData, setFormData] = useState({
     productRating: 5,
     productReview: '',

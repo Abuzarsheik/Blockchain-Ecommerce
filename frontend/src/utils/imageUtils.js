@@ -2,105 +2,19 @@
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002';
 
-/**
- * Get the full URL for an NFT image
- * @param {string} imagePath - The image path from the NFT data
- * @returns {string} - The full URL to the image
- */
-export const getNFTImageUrl = (imagePath) => {
-  if (!imagePath) {
-    return 'https://via.placeholder.com/400x400?text=NFT+Image';
+// Hash function to create consistent numeric values from strings
+const hashCode = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
   }
-  
-  // If it's already a full URL, return as is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
-  }
-  
-  // If it's an upload path, construct the full URL
-  if (imagePath.startsWith('/uploads/')) {
-    return `${API_BASE_URL}${imagePath}`;
-  }
-  
-  // For other cases, assume it's a relative path
-  return `${API_BASE_URL}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
-};
-
-/**
- * Get the real NFT image URL with fallback to generated image
- * @param {Object} nft - The NFT object
- * @returns {string} - The image URL to use
- */
-export const getRealNFTImage = (nft) => {
-  // Priority 1: Use the actual uploaded image if available
-  if (nft.image_url) {
-    return getNFTImageUrl(nft.image_url);
-  }
-  
-  // Priority 2: Use metadata image if available
-  if (nft.metadata && nft.metadata.image) {
-    return getNFTImageUrl(nft.metadata.image);
-  }
-  
-  // Priority 3: Fall back to generated image
-  return generateNFTImage(nft);
-};
-
-/**
- * Get a placeholder image URL
- * @param {number} width - Image width
- * @param {number} height - Image height
- * @param {string} text - Placeholder text
- * @returns {string} - Placeholder image URL
- */
-export const getPlaceholderImageUrl = (width = 400, height = 400, text = 'No Image') => {
-  return `https://via.placeholder.com/${width}x${height}?text=${encodeURIComponent(text)}`;
-};
-
-/**
- * Handle image error by setting a fallback
- * @param {Event} event - The error event
- * @param {string} fallbackUrl - Optional custom fallback URL
- */
-export const handleImageError = (event, fallbackUrl = null) => {
-  const fallback = fallbackUrl || getPlaceholderImageUrl();
-  event.target.src = fallback;
-};
-
-export default {
-  getNFTImageUrl,
-  getRealNFTImage,
-  getPlaceholderImageUrl,
-  handleImageError
-};
-
-// Utility functions for generating NFT images (fallback when no real image)
-
-export const generateNFTImage = (nft) => {
-  const { name, category, _id } = nft;
-  const seed = name.replace(/\s+/g, '').toLowerCase();
-  const idHash = _id ? _id.slice(-8) : Math.random().toString(36).substr(2, 8);
-  
-  // Different image generation strategies based on category
-  const imageGenerators = {
-    'digital art': () => generateAbstractArt(seed, idHash),
-    'art': () => generateAbstractArt(seed, idHash),
-    'collectibles': () => generatePixelArt(seed),
-    'gaming': () => generateGameAsset(seed, idHash),
-    'music': () => generateMusicVisualization(seed, idHash),
-    'photography': () => generatePhotography(seed, idHash),
-    'sports': () => generateSportsImage(seed, idHash),
-    'utility': () => generateUtilityIcon(seed),
-    'default': () => generateGenericArt(seed, idHash)
-  };
-
-  const generator = imageGenerators[category.toLowerCase()] || imageGenerators.default;
-  return generator();
+  return hash;
 };
 
 const generateAbstractArt = (seed, idHash) => {
   // Use Lorem Picsum with specific seeds for consistent abstract images
-  const imageId = Math.abs(hashCode(seed + idHash)) % 1000 + 1;
   return `https://picsum.photos/seed/${seed}${idHash}/400/400?blur=1&grayscale=0`;
 };
 
@@ -142,15 +56,62 @@ const generateGenericArt = (seed, idHash) => {
   return `https://picsum.photos/seed/${seed}${idHash}/400/400?blur=2`;
 };
 
-// Hash function to create consistent numeric values from strings
-const hashCode = (str) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
+/**
+ * Get the full URL for an NFT image
+ * @param {string} imagePath - The image path from the NFT data
+ * @returns {string} - The full URL to the image
+ */
+export const getNFTImageUrl = (imagePath) => {
+  if (!imagePath) {
+    return 'https://via.placeholder.com/400x400?text=NFT+Image';
   }
-  return hash;
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // If it's an upload path, construct the full URL
+  if (imagePath.startsWith('/uploads/')) {
+    return `${API_BASE_URL}${imagePath}`;
+  }
+  
+  // For other cases, assume it's a relative path
+  return `${API_BASE_URL}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+};
+
+/**
+ * Get a placeholder image URL
+ * @param {number} width - Image width
+ * @param {number} height - Image height
+ * @param {string} text - Placeholder text
+ * @returns {string} - Placeholder image URL
+ */
+export const getPlaceholderImageUrl = (width = 400, height = 400, text = 'No Image') => {
+  return `https://via.placeholder.com/${width}x${height}?text=${encodeURIComponent(text)}`;
+};
+
+// Utility functions for generating NFT images (fallback when no real image)
+export const generateNFTImage = (nft) => {
+  const { name, category, _id } = nft;
+  const seed = name.replace(/\s+/g, '').toLowerCase();
+  const idHash = _id ? _id.slice(-8) : Math.random().toString(36).substr(2, 8);
+  
+  // Different image generation strategies based on category
+  const imageGenerators = {
+    'digital art': () => generateAbstractArt(seed, idHash),
+    'art': () => generateAbstractArt(seed, idHash),
+    'collectibles': () => generatePixelArt(seed),
+    'gaming': () => generateGameAsset(seed, idHash),
+    'music': () => generateMusicVisualization(seed, idHash),
+    'photography': () => generatePhotography(seed, idHash),
+    'sports': () => generateSportsImage(seed, idHash),
+    'utility': () => generateUtilityIcon(seed),
+    'default': () => generateGenericArt(seed, idHash)
+  };
+
+  const generator = imageGenerators[category.toLowerCase()] || imageGenerators.default;
+  return generator();
 };
 
 // Fallback images for when external services fail
@@ -201,4 +162,46 @@ export const createGradientDataURL = (nft) => {
   }
   
   return canvas.toDataURL();
-}; 
+};
+
+/**
+ * Get the real NFT image URL with fallback to generated image
+ * @param {Object} nft - The NFT object
+ * @returns {string} - The image URL to use
+ */
+export const getRealNFTImage = (nft) => {
+  // Priority 1: Use the actual uploaded image if available
+  if (nft.image_url) {
+    return getNFTImageUrl(nft.image_url);
+  }
+  
+  // Priority 2: Use metadata image if available
+  if (nft.metadata && nft.metadata.image) {
+    return getNFTImageUrl(nft.metadata.image);
+  }
+  
+  // Priority 3: Fall back to generated image
+  return generateNFTImage(nft);
+};
+
+/**
+ * Handle image error by setting a fallback
+ * @param {Event} event - The error event
+ * @param {string} fallbackUrl - Optional custom fallback URL
+ */
+export const handleImageError = (event, fallbackUrl = null) => {
+  const fallback = fallbackUrl || getPlaceholderImageUrl();
+  event.target.src = fallback;
+};
+
+const imageUtils = {
+  getNFTImageUrl,
+  getRealNFTImage,
+  getPlaceholderImageUrl,
+  handleImageError,
+  generateNFTImage,
+  getFallbackImage,
+  createGradientDataURL
+};
+
+export default imageUtils; 

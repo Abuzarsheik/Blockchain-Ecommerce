@@ -617,32 +617,45 @@ class NotificationService {
   }
 
   /**
-   * Deliver email notification
+   * Deliver email notification with race condition protection
    * @param {Object} notification - Notification object
    * @param {Object} user - User object
    */
   async deliverEmail(notification, user) {
     try {
-      const subject = notification.title;
       const message = this.formatEmailMessage(notification);
 
-      const result = await emailService.send(
+      const result = await emailService.sendEmail(
         user.email,
-        subject,
+        notification.title,
         message,
         notification.data
       );
 
       if (result.success) {
-        notification.channels.email.emailAddress = user.email;
-        await notification.markAsDelivered('email');
-        console.log(`📧 Email notification delivered to ${user.email}`);
+        // Use atomic update to prevent race condition
+        await Notification.updateOne(
+          { _id: notification._id },
+          { 
+            $set: {
+              'channels.email.delivered': true,
+              'channels.email.deliveredAt': new Date(),
+              'channels.email.emailAddress': user.email
+            }
+          }
+        );
+        
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`📧 Email notification delivered to ${user.email}`);
+        }
       }
 
       return { success: result.success, channel: 'email', messageId: result.messageId };
 
     } catch (error) {
-      console.error('❌ Email notification delivery failed:', error);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('❌ Email notification delivery failed:', error);
+      }
       return { success: false, channel: 'email', error: error.message };
     }
   }

@@ -86,7 +86,7 @@ const CreateNFT = () => {
       formDataToSend.append('image', formData.image);
 
       // Send to backend API
-      const response = await api.post('/nfts', formDataToSend, {
+      await api.post('/nfts', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

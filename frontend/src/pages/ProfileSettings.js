@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
     User, 
     Mail, 
-    Phone, 
     MapPin, 
     Edit3, 
     Camera, 
@@ -11,15 +10,11 @@ import {
     Shield, 
     Bell, 
     Lock, 
-    Eye,
-    EyeOff,
     Save,
     Upload,
-    Check,
     X,
     AlertCircle,
     FileText,
-    CreditCard,
     CheckCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';

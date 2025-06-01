@@ -1,4 +1,14 @@
 import { ethers } from 'ethers';
+
+// Mock ethers for build compatibility
+const ethersMock = {
+  BrowserProvider: class MockBrowserProvider {},
+  formatEther: (value) => value,
+  parseEther: (value) => value,
+  isAddress: (address) => typeof address === 'string' && address.length === 42,
+  Contract: class MockContract {}
+};
+
 import { blockchainService } from './blockchain';
 import { api } from './api';
 
@@ -74,6 +84,10 @@ export const NETWORKS = {
 
 class WalletService {
   constructor() {
+    this.ethereum = window.ethereum;
+    this.web3 = null;
+    this.account = null;
+    this.chainId = null;
     this.connectedWallet = null;
     this.walletType = null;
     this.supportedWallets = [];
@@ -161,18 +175,36 @@ class WalletService {
    * Connect MetaMask wallet
    */
   async connectMetaMask() {
-    if (!window.ethereum || !window.ethereum.isMetaMask) {
-      throw new Error('MetaMask not installed');
+    if (!this.isMetaMaskInstalled()) {
+      throw new Error('MetaMask is not installed');
     }
 
     try {
-      await blockchainService.init();
-      const account = await blockchainService.connectWallet();
+      // Request account access
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      if (accounts.length === 0) {
+        throw new Error('No accounts found');
+      }
+
+      this.account = accounts[0];
       
+      // Get chain ID
+      this.chainId = await window.ethereum.request({
+        method: 'eth_chainId'
+      });
+
+      // Initialize provider
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
       this.connectedWallet = {
-        address: account,
-        type: WALLET_TYPES.METAMASK,
-        name: 'MetaMask'
+        account: this.account,
+        chainId: this.chainId,
+        provider,
+        signer
       };
 
       await this.loadBalances();
@@ -180,7 +212,8 @@ class WalletService {
 
       return this.connectedWallet;
     } catch (error) {
-      throw new Error(`Failed to connect MetaMask: ${error.message}`);
+      console.error('Failed to connect MetaMask:', error);
+      throw error;
     }
   }
 
@@ -188,17 +221,17 @@ class WalletService {
    * Connect Trust Wallet
    */
   async connectTrustWallet() {
-    if (!window.ethereum || !window.ethereum.isTrust) {
+    if (!this.ethereum || !this.ethereum.isTrust) {
       throw new Error('Trust Wallet not installed');
     }
 
     try {
-      const accounts = await window.ethereum.request({
+      const accounts = await this.ethereum.request({
         method: 'eth_requestAccounts'
       });
 
       this.connectedWallet = {
-        address: accounts[0],
+        account: accounts[0],
         type: WALLET_TYPES.TRUST_WALLET,
         name: 'Trust Wallet'
       };
@@ -208,7 +241,8 @@ class WalletService {
 
       return this.connectedWallet;
     } catch (error) {
-      throw new Error(`Failed to connect Trust Wallet: ${error.message}`);
+      console.error('Failed to connect Trust Wallet:', error);
+      throw error;
     }
   }
 
@@ -232,7 +266,7 @@ class WalletService {
       this.balances = {};
 
       // Load ETH balance
-      const ethBalance = await blockchainService.getBalance(this.connectedWallet.address);
+      const ethBalance = await this.getBalance();
       this.balances.ETH = {
         balance: ethBalance,
         currency: SUPPORTED_CURRENCIES.ETH,
@@ -241,9 +275,8 @@ class WalletService {
 
       // Load USDT balance (ERC-20)
       if (SUPPORTED_CURRENCIES.USDT.contractAddress) {
-        const usdtBalance = await this.getERC20Balance(
-          SUPPORTED_CURRENCIES.USDT.contractAddress,
-          this.connectedWallet.address
+        const usdtBalance = await this.getTokenBalance(
+          SUPPORTED_CURRENCIES.USDT.contractAddress
         );
         this.balances.USDT = {
           balance: usdtBalance,
@@ -270,10 +303,15 @@ class WalletService {
   /**
    * Get ERC-20 token balance
    * @param {string} contractAddress - Token contract address
-   * @param {string} walletAddress - Wallet address
    */
-  async getERC20Balance(contractAddress, walletAddress) {
+  async getTokenBalance(contractAddress) {
     try {
+      if (!this.account) {
+        throw new Error('No account connected');
+      }
+
+      const provider = new ethers.BrowserProvider(this.ethereum);
+      
       const erc20ABI = [
         'function balanceOf(address owner) view returns (uint256)',
         'function decimals() view returns (uint8)'
@@ -282,16 +320,16 @@ class WalletService {
       const contract = new ethers.Contract(
         contractAddress,
         erc20ABI,
-        blockchainService.provider
+        provider
       );
 
-      const balance = await contract.balanceOf(walletAddress);
+      const balance = await contract.balanceOf(this.account);
       const decimals = await contract.decimals();
       
-      return ethers.utils.formatUnits(balance, decimals);
+      return ethers.formatUnits(balance, decimals);
     } catch (error) {
       console.error('Failed to get ERC-20 balance:', error);
-      return '0';
+      throw error;
     }
   }
 
@@ -333,10 +371,10 @@ class WalletService {
 
       switch (currency) {
         case 'ETH':
-          transaction = await this.sendETH(recipient, amount);
+          transaction = await this.sendTransaction(recipient, amount);
           break;
         case 'USDT':
-          transaction = await this.sendERC20(
+          transaction = await this.sendTokenTransaction(
             SUPPORTED_CURRENCIES.USDT.contractAddress,
             recipient,
             amount
@@ -352,7 +390,7 @@ class WalletService {
       const transactionRecord = {
         orderId,
         txHash: transaction.hash,
-        from: this.connectedWallet.address,
+        from: this.connectedWallet.account,
         to: recipient,
         amount,
         currency,
@@ -391,21 +429,25 @@ class WalletService {
    * @param {string} to - Recipient address
    * @param {string} amount - Amount in ETH
    */
-  async sendETH(to, amount) {
-    if (!blockchainService.signer) {
-      throw new Error('No signer available');
-    }
-
+  async sendTransaction(to, amount) {
     try {
-      const tx = await blockchainService.signer.sendTransaction({
+      if (!this.account) {
+        throw new Error('No account connected');
+      }
+
+      const provider = new ethers.BrowserProvider(this.ethereum);
+      const signer = await provider.getSigner();
+
+      const tx = await signer.sendTransaction({
         to,
-        value: ethers.utils.parseEther(amount),
+        value: ethers.parseEther(amount),
         gasLimit: 21000
       });
 
       return tx;
     } catch (error) {
-      throw new Error(`ETH transaction failed: ${error.message}`);
+      console.error('Failed to send transaction:', error);
+      throw error;
     }
   }
 
@@ -415,12 +457,15 @@ class WalletService {
    * @param {string} to - Recipient address
    * @param {string} amount - Amount in tokens
    */
-  async sendERC20(contractAddress, to, amount) {
-    if (!blockchainService.signer) {
-      throw new Error('No signer available');
-    }
-
+  async sendTokenTransaction(contractAddress, to, amount) {
     try {
+      if (!this.account) {
+        throw new Error('No account connected');
+      }
+
+      const provider = new ethers.BrowserProvider(this.ethereum);
+      const signer = await provider.getSigner();
+      
       const erc20ABI = [
         'function transfer(address to, uint256 amount) returns (bool)',
         'function decimals() view returns (uint8)'
@@ -429,16 +474,17 @@ class WalletService {
       const contract = new ethers.Contract(
         contractAddress,
         erc20ABI,
-        blockchainService.signer
+        signer
       );
 
       const decimals = await contract.decimals();
-      const tokenAmount = ethers.utils.parseUnits(amount, decimals);
+      const tokenAmount = ethers.parseUnits(amount, decimals);
 
       const tx = await contract.transfer(to, tokenAmount);
       return tx;
     } catch (error) {
-      throw new Error(`ERC-20 transaction failed: ${error.message}`);
+      console.error('Failed to send token transaction:', error);
+      throw error;
     }
   }
 
@@ -538,7 +584,7 @@ class WalletService {
    */
   async getTransactionHistory(address = null) {
     try {
-      const walletAddress = address || this.connectedWallet?.address;
+      const walletAddress = address || this.connectedWallet?.account;
       
       if (!walletAddress) {
         return [];
@@ -567,7 +613,8 @@ class WalletService {
 
       await api.post('/analytics/wallet-connection', {
         walletType: this.connectedWallet.type,
-        address: this.connectedWallet.address,
+        account: this.connectedWallet.account,
+        chainId: this.connectedWallet.chainId,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -585,8 +632,9 @@ class WalletService {
     this.transactionHistory = [];
     
     // Clear blockchain service connection
-    blockchainService.account = null;
-    blockchainService.signer = null;
+    this.account = null;
+    this.chainId = null;
+    this.web3 = null;
 
     localStorage.removeItem('connectedWallet');
     
@@ -608,30 +656,18 @@ class WalletService {
 
   /**
    * Switch network
-   * @param {string} networkName - Network to switch to
+   * @param {string} chainId - Chain ID to switch to
    */
-  async switchNetwork(networkName) {
-    const network = NETWORKS[networkName];
-    if (!network) {
-      throw new Error(`Unsupported network: ${networkName}`);
-    }
-
+  async switchNetwork(chainId) {
     try {
-      await window.ethereum.request({
+      await this.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: network.chainId }]
+        params: [{ chainId }]
       });
-
-      return true;
+      
+      this.chainId = chainId;
     } catch (error) {
-      // If network is not added, add it
-      if (error.code === 4902) {
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [network]
-        });
-        return true;
-      }
+      console.error('Failed to switch network:', error);
       throw error;
     }
   }
@@ -663,7 +699,62 @@ class WalletService {
              /^bc1[a-z0-9]{39,59}$/.test(address);
     } else {
       // Ethereum address validation
-      return blockchainService.isValidAddress(address);
+      return this.ethereum.isAddress(address);
+    }
+  }
+
+  // Check if MetaMask is installed
+  isMetaMaskInstalled() {
+    return typeof window.ethereum !== 'undefined';
+  }
+
+  // Get account balance
+  async getBalance(address = this.account) {
+    try {
+      if (!address) {
+        throw new Error('No address provided');
+      }
+
+      const provider = new ethers.BrowserProvider(this.ethereum);
+      const balance = await provider.getBalance(address);
+      return ethers.formatEther(balance);
+    } catch (error) {
+      console.error('Failed to get balance:', error);
+      throw error;
+    }
+  }
+
+  // Get current account
+  getCurrentAccount() {
+    return this.account;
+  }
+
+  // Get current chain ID
+  getCurrentChainId() {
+    return this.chainId;
+  }
+
+  // Listen for account changes
+  onAccountsChanged(callback) {
+    if (this.ethereum) {
+      this.ethereum.on('accountsChanged', (accounts) => {
+        if (accounts.length === 0) {
+          this.disconnect();
+        } else {
+          this.account = accounts[0];
+        }
+        callback(accounts);
+      });
+    }
+  }
+
+  // Listen for chain changes
+  onChainChanged(callback) {
+    if (this.ethereum) {
+      this.ethereum.on('chainChanged', (chainId) => {
+        this.chainId = chainId;
+        callback(chainId);
+      });
     }
   }
 }

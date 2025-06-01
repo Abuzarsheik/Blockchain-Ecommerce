@@ -7,6 +7,44 @@ const notificationService = require('../services/notificationService');
 const { body, param, query, validationResult } = require('express-validator');
 const trackingService = require('../services/trackingService');
 
+// Tracking Health Check (no auth required) - MOVED TO TOP
+router.get('/health', async (req, res) => {
+    try {
+        const health = {
+            status: 'ok',
+            service: 'Tracking',
+            timestamp: new Date().toISOString(),
+            endpoints: [
+                'GET /api/tracking/:trackingNumber',
+                'POST /api/tracking/create',
+                'PUT /api/tracking/:trackingNumber',
+                'POST /api/tracking/webhook'
+            ]
+        };
+
+        // Test tracking service
+        try {
+            const serviceStatus = await trackingService.getServiceStatus();
+            health.stats = {
+                ...serviceStatus,
+                message: 'Tracking service operational'
+            };
+        } catch (statsError) {
+            health.message = 'Tracking service running but stats unavailable';
+            health.warning = statsError.message;
+        }
+
+        res.json(health);
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            service: 'Tracking',
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 /**
  * @route   GET /api/tracking/:trackingNumber
  * @desc    Track shipment by tracking number (public)

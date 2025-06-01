@@ -1,0 +1,16 @@
+@echo off
+echo Starting Blocmerce Full Stack Application...
+echo.
+echo Starting Backend Server...
+start "Blocmerce Backend" cmd /k "node server.js"
+timeout /t 3 /nobreak > nul
+echo.
+echo Starting Frontend...
+start "Blocmerce Frontend" cmd /k "cd frontend && npm start"
+echo.
+echo Both servers are starting...
+echo Backend: http://localhost:5000
+echo Frontend: http://localhost:3000
+echo.
+echo Press any key to close this window...
+pause > nul 

@@ -16,8 +16,8 @@ class EscrowService {
 
     async init() {
         try {
-            // Initialize provider
-            this.provider = new ethers.providers.JsonRpcProvider(
+            // Initialize provider (ethers v6 syntax)
+            this.provider = new ethers.JsonRpcProvider(
                 process.env.RPC_URL || 'http://localhost:8545'
             );
 
@@ -60,7 +60,7 @@ class EscrowService {
             const productHash = this.generateProductHash(orderData);
 
             // Convert price to wei (assuming price is in ETH)
-            const amountInWei = ethers.utils.parseEther(orderData.total.toString());
+            const amountInWei = ethers.parseEther(orderData.total.toString());
 
             // Estimate gas for the transaction
             const gasEstimate = await this.contract.estimateGas.createEscrow(
@@ -72,7 +72,7 @@ class EscrowService {
             );
 
             const gasPrice = await this.provider.getGasPrice();
-            const gasCost = gasEstimate.mul(gasPrice);
+            const gasCost = gasEstimate * gasPrice;
 
             return {
                 success: true,
@@ -84,7 +84,7 @@ class EscrowService {
                     estimatedGas: gasEstimate.toString(),
                     gasPrice: gasPrice.toString(),
                     gasCost: gasCost.toString(),
-                    gasCostInETH: ethers.utils.formatEther(gasCost)
+                    gasCostInETH: ethers.formatEther(gasCost)
                 },
                 contractAddress: this.contract.address,
                 buyerAddress,
@@ -121,14 +121,14 @@ class EscrowService {
                     buyer: escrow.buyer,
                     seller: escrow.seller,
                     amount: escrow.amount.toString(),
-                    amountInETH: ethers.utils.formatEther(escrow.amount),
+                    amountInETH: ethers.formatEther(escrow.amount),
                     platformFee: escrow.platformFee.toString(),
-                    platformFeeInETH: ethers.utils.formatEther(escrow.platformFee),
+                    platformFeeInETH: ethers.formatEther(escrow.platformFee),
                     state: this.getEscrowStateName(escrow.state),
                     stateValue: escrow.state,
-                    createdAt: new Date(escrow.createdAt.toNumber() * 1000),
-                    deliveryDeadline: new Date(escrow.deliveryDeadline.toNumber() * 1000),
-                    disputeDeadline: new Date(escrow.disputeDeadline.toNumber() * 1000),
+                    createdAt: new Date(Number(escrow.createdAt) * 1000),
+                    deliveryDeadline: new Date(Number(escrow.deliveryDeadline) * 1000),
+                    disputeDeadline: new Date(Number(escrow.disputeDeadline) * 1000),
                     productHash: escrow.productHash,
                     trackingInfo: escrow.trackingInfo,
                     sellerConfirmed: escrow.sellerConfirmed,
@@ -463,7 +463,7 @@ class EscrowService {
                 buyer,
                 seller,
                 amount: amount.toString(),
-                amountInETH: ethers.utils.formatEther(amount),
+                amountInETH: ethers.formatEther(amount),
                 transactionHash: event.transactionHash,
                 blockNumber: event.blockNumber
             });
@@ -507,7 +507,7 @@ class EscrowService {
                 escrowId: escrowId.toString(),
                 recipient,
                 amount: amount.toString(),
-                amountInETH: ethers.utils.formatEther(amount),
+                amountInETH: ethers.formatEther(amount),
                 transactionHash: event.transactionHash,
                 blockNumber: event.blockNumber
             });
@@ -612,10 +612,10 @@ class EscrowService {
                 stats: {
                     totalEscrows: escrowCounter.toString(),
                     platformFeeRate: platformFeeRate.toString(),
-                    platformFeePercentage: (platformFeeRate.toNumber() / 100).toFixed(2) + '%',
-                    defaultDeliveryPeriod: Math.floor(defaultDeliveryPeriod.toNumber() / 86400) + ' days',
-                    disputePeriod: Math.floor(disputePeriod.toNumber() / 86400) + ' days',
-                    autoReleaseTimeout: Math.floor(autoReleaseTimeout.toNumber() / 86400) + ' days',
+                    platformFeePercentage: (Number(platformFeeRate) / 100).toFixed(2) + '%',
+                    defaultDeliveryPeriod: Math.floor(Number(defaultDeliveryPeriod) / 86400) + ' days',
+                    disputePeriod: Math.floor(Number(disputePeriod) / 86400) + ' days',
+                    autoReleaseTimeout: Math.floor(Number(autoReleaseTimeout) / 86400) + ' days',
                     contractAddress: this.contract.address
                 }
             };

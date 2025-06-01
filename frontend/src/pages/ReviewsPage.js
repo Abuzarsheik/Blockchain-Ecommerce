@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { AuthContext } from '../contexts/AuthContext';
 import { api } from '../services/api';
 import ReviewForm from '../components/Reviews/ReviewForm';
 import ReviewList from '../components/Reviews/ReviewList';
 
 const ReviewsPage = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('eligible');
   const [eligibleOrders, setEligibleOrders] = useState([]);
   const [myReviews, setMyReviews] = useState([]);

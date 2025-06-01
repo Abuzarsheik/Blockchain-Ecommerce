@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { Package, Calendar, DollarSign, Eye, ArrowRight, Truck, ExternalLink } from 'lucide-react';
+import { Package, Calendar, DollarSign, Eye, Truck, ExternalLink } from 'lucide-react';
 import { fetchOrders } from '../store/slices/ordersSlice';
 import LoadingSpinner from '../components/LoadingSpinner';
 import OrderTracking from '../components/OrderTracking';

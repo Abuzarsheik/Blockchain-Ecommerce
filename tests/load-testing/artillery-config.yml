@@ -1,0 +1,109 @@
+# 🛡️ SAFE LOAD TESTING CONFIGURATION
+# Artillery.js load testing for Blocmerce NFT Marketplace
+# This tests performance without affecting the operational system
+
+config:
+  target: 'http://localhost:5000'
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 5
+      name: "Warm-up phase"
+    
+    # Gradual ramp-up
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 50
+      name: "Gradual load increase"
+    
+    # Sustained load test
+    - duration: 120
+      arrivalRate: 50
+      name: "Sustained load test"
+    
+    # Spike test
+    - duration: 30
+      arrivalRate: 100
+      name: "Spike test"
+    
+    # Cool down
+    - duration: 30
+      arrivalRate: 10
+      name: "Cool down"
+
+  defaults:
+    headers:
+      User-Agent: "Blocmerce-LoadTest/1.0"
+      Content-Type: "application/json"
+  
+  # Processor for custom logic
+  processor: "./load-test-processor.js"
+
+scenarios:
+  # Test API health endpoints (safe, read-only)
+  - name: "Health Check Load Test"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/health"
+          capture:
+            - json: "$.status"
+              as: "healthStatus"
+      - get:
+          url: "/api/health/database"
+      - think: 1
+
+  # Test NFT browsing (safe, read-only)
+  - name: "NFT Browsing Load Test"
+    weight: 25
+    flow:
+      - get:
+          url: "/api/nfts"
+          qs:
+            page: "{{ $randomInt(1, 10) }}"
+            limit: "20"
+      - get:
+          url: "/api/nfts/categories"
+      - think: 2
+
+  # Test user authentication verification (safe)
+  - name: "Auth Verification Load Test"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/auth/verify"
+          headers:
+            Authorization: "Bearer invalid-token-for-testing"
+      - think: 1
+
+  # Test order system health (safe, read-only)
+  - name: "Order System Load Test"
+    weight: 15
+    flow:
+      - get:
+          url: "/api/orders/health"
+      - get:
+          url: "/api/tracking/health"
+      - think: 1
+
+  # Test IPFS system health (safe)
+  - name: "IPFS System Load Test"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/ipfs/health"
+      - think: 2
+
+# Performance thresholds and metrics
+expect:
+  - statusCode: 200
+  - contentType: json
+  - maxResponseTime: 5000  # 5 seconds max response time
+  - minResponseTime: 10    # Minimum 10ms (sanity check)
+
+# Reporting configuration
+reporting:
+  - type: json
+    output: "./tests/load-testing/results/test-results-{{ timestamp }}.json"
+  - type: html
+    output: "./tests/load-testing/results/test-report-{{ timestamp }}.html" 

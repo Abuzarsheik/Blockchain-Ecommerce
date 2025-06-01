@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Smartphone, Copy, CheckCircle, AlertCircle, Loader, Download, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-toastify';

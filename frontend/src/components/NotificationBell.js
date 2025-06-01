@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Badge } from './ui/Badge';
-import { AuthContext } from '../contexts/AuthContext';
-import { api } from '../services/api';
+import { useSelector } from 'react-redux';
 import NotificationCenter from './NotificationCenter';
 
 const NotificationBell = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useSelector((state) => state.auth);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);

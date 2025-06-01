@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
-import { AuthContext } from '../contexts/AuthContext';
 import { walletService, WALLET_TYPES, SUPPORTED_CURRENCIES } from '../services/walletService';
 import { api } from '../services/api';
 
 const WalletManager = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useSelector((state) => state.auth);
   const [walletInfo, setWalletInfo] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [transactions, setTransactions] = useState([]);

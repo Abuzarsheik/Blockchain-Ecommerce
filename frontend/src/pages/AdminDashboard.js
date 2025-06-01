@@ -1,21 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, 
-  ShoppingCart, 
-  Package, 
-  AlertTriangle, 
   TrendingUp, 
-  Activity,
-  Calendar,
   DollarSign,
+  Package,
   Shield,
-  Clock,
-  CheckCircle,
-  XCircle,
+  Activity,
   User,
-  Settings,
-  Database,
-  BarChart3
+  ShoppingCart,
+  AlertTriangle,
+  CheckCircle,
+  BarChart3,
+  Settings
 } from 'lucide-react';
 import { apiEndpoints } from '../services/api';
 import '../styles/AdminDashboard.css';
@@ -28,11 +24,7 @@ const AdminDashboard = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [selectedPeriod]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -50,7 +42,11 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

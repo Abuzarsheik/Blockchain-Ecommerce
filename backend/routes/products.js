@@ -2,6 +2,7 @@ const express = require('express');
 const Product = require('../models/Product');
 const { auth, adminAuth, optionalAuth } = require('../middleware/auth');
 const User = require('../models/User');
+const { getCategoryOptions } = require('../config/constants');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -45,20 +46,7 @@ const upload = multer({
 
 // GET /api/products/categories - Get available categories
 router.get('/categories', (req, res) => {
-    const categories = [
-        { value: 'electronics', label: 'Electronics' },
-        { value: 'clothing', label: 'Clothing & Fashion' },
-        { value: 'home-garden', label: 'Home & Garden' },
-        { value: 'sports', label: 'Sports & Outdoors' },
-        { value: 'books', label: 'Books & Media' },
-        { value: 'beauty', label: 'Beauty & Personal Care' },
-        { value: 'toys', label: 'Toys & Games' },
-        { value: 'automotive', label: 'Automotive' },
-        { value: 'jewelry', label: 'Jewelry & Accessories' },
-        { value: 'art-collectibles', label: 'Art & Collectibles' },
-        { value: 'other', label: 'Other' }
-    ];
-    
+    const categories = getCategoryOptions();
     res.json({ categories });
 });
 
@@ -168,7 +156,7 @@ router.get('/', optionalAuth, async (req, res) => {
             verified
         } = req.query;
 
-        const skip = (page - 1) * limit;
+        const skip = Math.max(0, (page - 1) * limit);
 
         // Build query filter
         const filter = { status: 'active' }; // Only show active products
@@ -184,7 +172,7 @@ router.get('/', optionalAuth, async (req, res) => {
                 { name: searchRegex },
                 { description: searchRegex },
                 { shortDescription: searchRegex },
-                { tags: { $in: [searchRegex] } },
+                { tags: searchRegex },
                 { 'inventory.sku': searchRegex }
             ];
 
@@ -271,11 +259,17 @@ router.get('/', optionalAuth, async (req, res) => {
 
         // Add computed fields to products
         const enhancedProducts = filteredProducts.map(product => {
-            const productObj = product.toObject();
-            productObj.isLowStock = product.isLowStock();
-            productObj.canSell = product.canSell();
-            productObj.availableQuantity = productObj.inventory.quantity - productObj.inventory.reserved;
-            return productObj;
+            try {
+                const productObj = product.toObject();
+                productObj.isLowStock = product.isLowStock ? product.isLowStock() : false;
+                productObj.canSell = product.canSell ? product.canSell() : true;
+                productObj.availableQuantity = productObj.inventory?.quantity ? 
+                    (productObj.inventory.quantity - (productObj.inventory.reserved || 0)) : 0;
+                return productObj;
+            } catch (productError) {
+                console.error('Error processing product:', productError);
+                return product.toObject();
+            }
         });
 
         res.json({
@@ -351,7 +345,7 @@ router.get('/:id/inventory-history', auth, async (req, res) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        if (product.seller.toString() !== req.user.id) {
+        if (product.seller.toString() !== req.user.id.toString()) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
 
@@ -444,7 +438,10 @@ router.get('/:id', async (req, res) => {
 
         res.json({ product });
     } catch (error) {
-        console.error('Get product error:', error);
+        // Environment-aware logging
+        if (process.env.NODE_ENV !== 'production') {
+            console.error('Get product error:', error);
+        }
         if (error.name === 'CastError' && error.path === '_id') {
             return res.status(400).json({ error: 'Invalid product ID format' });
         }
@@ -489,6 +486,13 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
             });
         }
 
+        // Additional price validation
+        if (price < 0) {
+            return res.status(400).json({ 
+                error: 'Price must be a positive number' 
+            });
+        }
+
         // Handle image uploads
         const images = [];
         if (req.files && req.files.length > 0) {
@@ -511,9 +515,9 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
             discountPercentage: discountPercentage ? parseFloat(discountPercentage) : 0,
             category,
             subcategory,
-            tags: tags ? JSON.parse(tags) : [],
+            tags: tags ? (typeof tags === 'string' ? JSON.parse(tags) : tags) : [],
             images,
-            specifications: specifications ? JSON.parse(specifications) : {},
+            specifications: specifications ? (typeof specifications === 'string' ? JSON.parse(specifications) : specifications) : {},
             status,
             seller: req.user.id,
             inventory: {
@@ -526,7 +530,7 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
             },
             shipping: {
                 weight: weight ? parseFloat(weight) : 0,
-                dimensions: dimensions ? JSON.parse(dimensions) : { length: 0, width: 0, height: 0 },
+                dimensions: dimensions ? (typeof dimensions === 'string' ? JSON.parse(dimensions) : dimensions) : { length: 0, width: 0, height: 0 },
                 freeShipping: freeShipping === 'true',
                 shippingCost: shippingCost ? parseFloat(shippingCost) : 0
             },
@@ -543,7 +547,7 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
         if (quantity > 0) {
             product.inventoryHistory.push({
                 date: new Date(),
-                type: 'initial',
+                type: 'stock_in',
                 quantity: parseInt(quantity),
                 previousQuantity: 0,
                 newQuantity: parseInt(quantity),
@@ -566,13 +570,18 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
 // PUT /api/products/:id - Update product
 router.put('/:id', auth, upload.array('newImages', 5), async (req, res) => {
     try {
+        // Validate ObjectId format first
+        if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid product ID format' });
+        }
+        
         const product = await Product.findById(req.params.id);
         
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        if (product.seller.toString() !== req.user.id) {
+        if (product.seller.toString() !== req.user.id.toString()) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
 
@@ -603,7 +612,7 @@ router.put('/:id', auth, upload.array('newImages', 5), async (req, res) => {
         
         // Remove specified images
         if (removeImages) {
-            const toRemove = JSON.parse(removeImages);
+            const toRemove = typeof removeImages === 'string' ? JSON.parse(removeImages) : removeImages;
             images = images.filter((img, index) => !toRemove.includes(index));
         }
 
@@ -623,35 +632,39 @@ router.put('/:id', auth, upload.array('newImages', 5), async (req, res) => {
             images[0].isPrimary = true;
         }
 
-        // Update product fields
-        const updateData = {
-            name: name || product.name,
-            description: description || product.description,
-            shortDescription: shortDescription || product.shortDescription,
-            price: price ? parseFloat(price) : product.price,
-            originalPrice: originalPrice ? parseFloat(originalPrice) : product.originalPrice,
-            discountPercentage: discountPercentage ? parseFloat(discountPercentage) : product.discountPercentage,
-            category: category || product.category,
-            subcategory: subcategory || product.subcategory,
-            tags: tags ? JSON.parse(tags) : product.tags,
-            images,
-            specifications: specifications ? JSON.parse(specifications) : product.specifications,
-            status: status || product.status,
-            shipping: {
-                ...product.shipping,
-                weight: weight ? parseFloat(weight) : product.shipping.weight,
-                dimensions: dimensions ? JSON.parse(dimensions) : product.shipping.dimensions,
-                freeShipping: freeShipping !== undefined ? freeShipping === 'true' : product.shipping.freeShipping,
-                shippingCost: shippingCost ? parseFloat(shippingCost) : product.shipping.shippingCost
-            },
-            seo: {
-                metaTitle: metaTitle || product.seo.metaTitle,
-                metaDescription: metaDescription || product.seo.metaDescription,
-                slug: product.seo.slug // Keep existing slug
-            }
-        };
+        // Update product fields safely
+        if (name) product.name = name;
+        if (description) product.description = description;
+        if (shortDescription) product.shortDescription = shortDescription;
+        if (price) product.price = parseFloat(price);
+        if (originalPrice) product.originalPrice = parseFloat(originalPrice);
+        if (discountPercentage !== undefined) product.discountPercentage = parseFloat(discountPercentage);
+        if (category) product.category = category;
+        if (subcategory) product.subcategory = subcategory;
+        if (tags) product.tags = typeof tags === 'string' ? JSON.parse(tags) : tags;
+        if (specifications) product.specifications = typeof specifications === 'string' ? JSON.parse(specifications) : specifications;
+        if (status) product.status = status;
+        
+        // Update images
+        product.images = images;
+        
+        // Update shipping safely
+        if (weight) product.shipping.weight = parseFloat(weight);
+        if (dimensions) {
+            const parsedDimensions = typeof dimensions === 'string' ? JSON.parse(dimensions) : dimensions;
+            product.shipping.dimensions = {
+                length: parsedDimensions.length || 0,
+                width: parsedDimensions.width || 0,
+                height: parsedDimensions.height || 0
+            };
+        }
+        if (freeShipping !== undefined) product.shipping.freeShipping = freeShipping === 'true';
+        if (shippingCost) product.shipping.shippingCost = parseFloat(shippingCost);
+        
+        // Update SEO
+        if (metaTitle) product.seo.metaTitle = metaTitle;
+        if (metaDescription) product.seo.metaDescription = metaDescription;
 
-        Object.assign(product, updateData);
         await product.save();
 
         res.json({ 
@@ -673,7 +686,7 @@ router.put('/:id/inventory', auth, async (req, res) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        if (product.seller.toString() !== req.user.id) {
+        if (product.seller.toString() !== req.user.id.toString()) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
 
@@ -728,7 +741,13 @@ router.delete('/:id', auth, async (req, res) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
-        if (product.seller.toString() !== req.user.id) {
+        // Check if user is the product owner or an admin
+        const user = await User.findById(req.user.id);
+        
+        const isOwner = product.seller.toString() === req.user.id.toString();
+        const isAdmin = user && user.role === 'admin';
+        
+        if (!isOwner && !isAdmin) {
             return res.status(403).json({ error: 'Unauthorized' });
         }
 

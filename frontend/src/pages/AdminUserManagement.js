@@ -1,25 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Users, 
+  User, 
   Search, 
   Filter, 
-  ChevronDown,
+  Shield, 
+  Ban, 
+  CheckCircle, 
   Eye,
-  Lock,
-  Unlock,
-  Shield,
-  CheckCircle,
-  XCircle,
-  Clock,
-  AlertTriangle,
-  User,
-  Mail,
-  Phone,
   Calendar,
-  MoreVertical,
-  Edit,
-  Ban,
-  RefreshCw
+  Clock,
+  XCircle,
+  AlertTriangle,
+  ChevronDown,
+  RefreshCw,
+  Unlock,
+  Edit
 } from 'lucide-react';
 import { apiEndpoints } from '../services/api';
 import '../styles/AdminUserManagement.css';
@@ -28,59 +23,52 @@ const AdminUserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterRole, setFilterRole] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
-  
-  // Filters and search
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [verificationFilter, setVerificationFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('created_at');
-  const [sortOrder, setSortOrder] = useState('desc');
-  
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const usersPerPage = 20;
-
-  // UI state
-  const [showFilters, setShowFilters] = useState(false);
   const [loadingActions, setLoadingActions] = useState({});
 
-  useEffect(() => {
-    fetchUsers();
-  }, [currentPage, searchTerm, statusFilter, roleFilter, verificationFilter, sortBy, sortOrder]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const params = {
+      const params = new URLSearchParams({
         page: currentPage,
-        limit: usersPerPage,
-        sortBy,
-        sortOrder
-      };
+        limit: 20,
+        search: searchTerm,
+        status: filterStatus !== 'all' ? filterStatus : '',
+        role: filterRole !== 'all' ? filterRole : ''
+      });
 
-      if (searchTerm) params.search = searchTerm;
-      if (statusFilter !== 'all') params.status = statusFilter;
-      if (roleFilter) params.role = roleFilter;
-      if (verificationFilter !== 'all') params.verification = verificationFilter;
+      const response = await fetch(`/api/admin/users?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
 
-      const response = await apiEndpoints.getUsers(params);
-      setUsers(response.data.users);
-      setTotalPages(response.data.pagination.total_pages);
-      setTotalUsers(response.data.pagination.total_users);
-    } catch (err) {
-      console.error('Failed to fetch users:', err);
-      setError(err.response?.data?.error || 'Failed to load users');
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.users || []);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        setError('Failed to fetch users');
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      setError('Failed to fetch users');
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, filterStatus, filterRole]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleUserAction = async (userId, action, data = {}) => {
     try {
@@ -191,11 +179,8 @@ const AdminUserManagement = () => {
 
   const resetFilters = () => {
     setSearchTerm('');
-    setStatusFilter('all');
-    setRoleFilter('');
-    setVerificationFilter('all');
-    setSortBy('created_at');
-    setSortOrder('desc');
+    setFilterStatus('all');
+    setFilterRole('all');
     setCurrentPage(1);
   };
 
@@ -223,7 +208,7 @@ const AdminUserManagement = () => {
           <div className="header-stats">
             <div className="stat-item">
               <span className="stat-label">Total Users</span>
-              <span className="stat-value">{totalUsers.toLocaleString()}</span>
+              <span className="stat-value">{users.length.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -257,7 +242,7 @@ const AdminUserManagement = () => {
               <div className="filters-grid">
                 <div className="filter-group">
                   <label>Status</label>
-                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -267,39 +252,11 @@ const AdminUserManagement = () => {
 
                 <div className="filter-group">
                   <label>Role</label>
-                  <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-                    <option value="">All Roles</option>
+                  <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+                    <option value="all">All Roles</option>
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
                     <option value="moderator">Moderator</option>
-                  </select>
-                </div>
-
-                <div className="filter-group">
-                  <label>Verification</label>
-                  <select value={verificationFilter} onChange={(e) => setVerificationFilter(e.target.value)}>
-                    <option value="all">All Verification</option>
-                    <option value="verified">Verified</option>
-                    <option value="unverified">Unverified</option>
-                    <option value="pending">Pending</option>
-                  </select>
-                </div>
-
-                <div className="filter-group">
-                  <label>Sort By</label>
-                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                    <option value="created_at">Join Date</option>
-                    <option value="lastLogin">Last Login</option>
-                    <option value="firstName">First Name</option>
-                    <option value="email">Email</option>
-                  </select>
-                </div>
-
-                <div className="filter-group">
-                  <label>Order</label>
-                  <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-                    <option value="desc">Descending</option>
-                    <option value="asc">Ascending</option>
                   </select>
                 </div>
               </div>
@@ -438,7 +395,7 @@ const AdminUserManagement = () => {
             {/* Pagination */}
             <div className="pagination">
               <div className="pagination-info">
-                Showing {((currentPage - 1) * usersPerPage) + 1} to {Math.min(currentPage * usersPerPage, totalUsers)} of {totalUsers} users
+                Showing {((currentPage - 1) * 20) + 1} to {Math.min(currentPage * 20, users.length)} of {users.length} users
               </div>
               
               <div className="pagination-controls">

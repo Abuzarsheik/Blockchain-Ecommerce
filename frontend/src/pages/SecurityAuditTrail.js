@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Shield, 
   Search, 
@@ -10,24 +10,16 @@ import {
   XCircle,
   Clock,
   User,
-  Calendar,
   FileText,
   Activity,
   Settings,
   Database,
   Lock,
-  Unlock,
   RefreshCw,
   Archive,
   Flag,
   Code,
-  Cpu,
-  Globe,
-  Server,
-  HardDrive,
-  Network,
   Zap,
-  Target,
   ChevronDown,
   ChevronRight,
   ExternalLink
@@ -92,11 +84,7 @@ const SecurityAuditTrail = () => {
     'critical'
   ];
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab, currentPage, searchTerm, actionFilter, severityFilter, dateRange, userFilter]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -131,6 +119,10 @@ const SecurityAuditTrail = () => {
           setTotalPages(eventsResponse.data.pagination.total_pages);
           setTotalItems(eventsResponse.data.pagination.total_items);
           break;
+          
+        default:
+          // Default case for unknown tab
+          break;
       }
     } catch (err) {
       console.error('Failed to fetch audit data:', err);
@@ -138,7 +130,11 @@ const SecurityAuditTrail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, currentPage, searchTerm, actionFilter, severityFilter, dateRange, userFilter]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleExportAuditLog = async () => {
     try {

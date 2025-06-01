@@ -1,4 +1,16 @@
 const mongoose = require('mongoose');
+const { 
+  imageSchema, 
+  ratingSchema, 
+  dimensionsSchema, 
+  weightSchema,
+  commonSchemaOptions 
+} = require('./shared/schemas');
+const { 
+  PRODUCT_CATEGORY_ENUM, 
+  PRODUCT_STATUS, 
+  INVENTORY_TYPES 
+} = require('../config/constants');
 
 const productSchema = new mongoose.Schema({
     // Basic Product Information
@@ -39,19 +51,7 @@ const productSchema = new mongoose.Schema({
     category: {
         type: String,
         required: true,
-        enum: [
-            'electronics',
-            'clothing',
-            'home-garden',
-            'sports',
-            'books',
-            'beauty',
-            'toys',
-            'automotive',
-            'jewelry',
-            'art-collectibles',
-            'other'
-        ]
+        enum: PRODUCT_CATEGORY_ENUM
     },
     subcategory: {
         type: String,
@@ -62,21 +62,8 @@ const productSchema = new mongoose.Schema({
         trim: true
     }],
     
-    // Images and Media
-    images: [{
-        url: {
-            type: String,
-            required: true
-        },
-        alt: {
-            type: String,
-            default: ''
-        },
-        isPrimary: {
-            type: Boolean,
-            default: false
-        }
-    }],
+    // Images and Media - Using shared schema
+    images: [imageSchema],
     
     // Inventory Management
     inventory: {
@@ -125,11 +112,11 @@ const productSchema = new mongoose.Schema({
         required: true
     },
     
-    // Product Status
+    // Product Status - Using centralized constants
     status: {
         type: String,
-        enum: ['draft', 'active', 'inactive', 'out_of_stock', 'discontinued'],
-        default: 'draft'
+        enum: Object.values(PRODUCT_STATUS),
+        default: PRODUCT_STATUS.DRAFT
     },
     
     // Product Specifications
@@ -144,17 +131,10 @@ const productSchema = new mongoose.Schema({
         }
     }],
     
-    // Shipping Information
+    // Shipping Information - Using shared schemas
     shipping: {
-        weight: {
-            type: Number,
-            min: 0
-        },
-        dimensions: {
-            length: Number,
-            width: Number,
-            height: Number
-        },
+        weight: weightSchema,
+        dimensions: dimensionsSchema,
         freeShipping: {
             type: Boolean,
             default: false
@@ -177,19 +157,8 @@ const productSchema = new mongoose.Schema({
         }
     },
     
-    // Reviews and Ratings
-    rating: {
-        average: {
-            type: Number,
-            default: 0,
-            min: 0,
-            max: 5
-        },
-        count: {
-            type: Number,
-            default: 0
-        }
-    },
+    // Reviews and Ratings - Using shared schema
+    rating: ratingSchema,
     
     // Sales Metrics
     sales: {
@@ -207,7 +176,7 @@ const productSchema = new mongoose.Schema({
         }
     },
     
-    // Inventory History
+    // Inventory History - Using centralized constants
     inventoryHistory: [{
         date: {
             type: Date,
@@ -215,25 +184,15 @@ const productSchema = new mongoose.Schema({
         },
         type: {
             type: String,
-            enum: ['stock_in', 'stock_out', 'adjustment', 'sale', 'return', 'damage']
+            enum: Object.values(INVENTORY_TYPES)
         },
         quantity: Number,
         previousQuantity: Number,
         newQuantity: Number,
         reason: String,
         reference: String // Order ID, adjustment ID, etc.
-    }],
-    
-    // Timestamps
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+    }]
+}, commonSchemaOptions);
 
 // Indexes for better performance
 productSchema.index({ seller: 1, status: 1 });
@@ -268,9 +227,9 @@ productSchema.pre('save', function(next) {
     // Update available inventory
     this.inventory.available = Math.max(0, this.inventory.quantity - this.inventory.reserved);
     
-    // Update status based on inventory
-    if (this.inventory.trackInventory && this.availableInventory === 0) {
-        this.status = 'out_of_stock';
+    // Update status based on inventory (but don't override discontinued status)
+    if (this.inventory.trackInventory && this.availableInventory === 0 && this.status !== PRODUCT_STATUS.DISCONTINUED) {
+        this.status = PRODUCT_STATUS.OUT_OF_STOCK;
     }
     
     next();
@@ -284,7 +243,7 @@ productSchema.methods.updateInventory = function(quantity, type, reason, referen
     // Add to inventory history
     this.inventoryHistory.push({
         type: type,
-        quantity: type === 'stock_in' ? quantity - previousQuantity : previousQuantity - quantity,
+        quantity: type === INVENTORY_TYPES.STOCK_IN ? quantity - previousQuantity : previousQuantity - quantity,
         previousQuantity: previousQuantity,
         newQuantity: this.inventory.quantity,
         reason: reason,

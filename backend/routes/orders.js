@@ -8,6 +8,46 @@ const { body, param, query, validationResult } = require('express-validator');
 
 const router = express.Router();
 
+// Orders Health Check (no auth required) - MOVED TO TOP
+router.get('/health', async (req, res) => {
+    try {
+        const health = {
+            status: 'ok',
+            service: 'Orders',
+            timestamp: new Date().toISOString(),
+            endpoints: [
+                'GET /api/orders',
+                'GET /api/orders/:id',
+                'POST /api/orders',
+                'PUT /api/orders/:id'
+            ]
+        };
+
+        // Get some basic stats
+        try {
+            const totalOrders = await Order.countDocuments();
+            const pendingOrders = await Order.countDocuments({ status: 'pending' });
+            health.stats = {
+                totalOrders,
+                pendingOrders,
+                message: 'Orders service operational'
+            };
+        } catch (statsError) {
+            health.message = 'Orders service running but stats unavailable';
+            health.warning = statsError.message;
+        }
+
+        res.json(health);
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            service: 'Orders',
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 /**
  * @route   GET /api/orders
  * @desc    Get user orders with enhanced filtering
@@ -303,16 +343,17 @@ router.post('/', auth, [
             });
         }
 
-        const { 
-            items, 
+        const {
+            items,
             subtotal,
             tax = 0,
             shipping_cost = 0,
             discount = 0,
             total,
-            payment_method = 'card',
-            shipping_address, 
+            payment_method,
             billing_info,
+            shipping_address,
+            shippingAddress,
             delivery_preferences
         } = req.body;
 
@@ -327,6 +368,14 @@ router.post('/', auth, [
                 return res.status(400).json({ 
                     success: false,
                     error: 'Each item must have product_id, quantity, and price' 
+                });
+            }
+
+            // Validate ObjectId format first
+            if (!product_id.match(/^[0-9a-fA-F]{24}$/)) {
+                return res.status(400).json({ 
+                    success: false,
+                    error: `Invalid product ID format: ${product_id}` 
                 });
             }
 
@@ -352,12 +401,27 @@ router.post('/', auth, [
             });
         }
 
+        // Validate shipping address if provided
+        const shippingAddr = shipping_address || shippingAddress;
+        if (shippingAddr) {
+            const requiredShippingFields = ['street', 'city', 'postalCode', 'country'];
+            const missingFields = requiredShippingFields.filter(field => !shippingAddr[field]);
+            
+            if (missingFields.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Missing required shipping address fields: ${missingFields.join(', ')}`
+                });
+            }
+        }
+
         // Set estimated delivery date (7 days from now)
         const estimatedDelivery = new Date();
         estimatedDelivery.setDate(estimatedDelivery.getDate() + 7);
 
         // Create order
         const newOrder = new Order({
+            orderNumber: 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase(),
             user_id: req.user.id,
             items: validatedItems,
             subtotal: subtotal || calculatedSubtotal,

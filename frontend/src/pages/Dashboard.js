@@ -12,11 +12,14 @@ import {
   Plus,
   ArrowRight
 } from 'lucide-react';
+import DataVisualizationDashboard from '../components/DataVisualization';
+import { usePersonalization } from '../utils/personalization';
 import '../styles/Dashboard.css';
 
 const Dashboard = () => {
   const { user, isAuthenticated } = useSelector(state => state.auth);
   const { items } = useSelector(state => state.cart);
+  const { insights } = usePersonalization();
 
   // Mock data for demonstration
   const dashboardStats = {
@@ -25,6 +28,23 @@ const Dashboard = () => {
     nftsOwned: 18,
     watchlistItems: 5
   };
+
+  // Mock data for visualization
+  const mockNFTData = [
+    { name: 'Art', value: 45, color: '#8b5cf6' },
+    { name: 'Music', value: 25, color: '#06b6d4' },
+    { name: 'Gaming', value: 20, color: '#10b981' },
+    { name: 'Photography', value: 10, color: '#f59e0b' }
+  ];
+
+  const mockSalesData = [
+    { month: 'Jan', sales: 1200, purchases: 800 },
+    { month: 'Feb', sales: 1900, purchases: 1200 },
+    { month: 'Mar', sales: 1500, purchases: 900 },
+    { month: 'Apr', sales: 2200, purchases: 1500 },
+    { month: 'May', sales: 1800, purchases: 1100 },
+    { month: 'Jun', sales: 2500, purchases: 1800 }
+  ];
 
   const recentOrders = [
     {
@@ -104,6 +124,16 @@ const Dashboard = () => {
               <span className="stat-label">Watchlist</span>
             </div>
           </div>
+        </div>
+
+        {/* Data Visualization Dashboard */}
+        <div className="dashboard-section">
+          <h2>Your Analytics</h2>
+          <DataVisualizationDashboard 
+            userInsights={insights}
+            nftData={mockNFTData}
+            salesData={mockSalesData}
+          />
         </div>
 
         <div className="dashboard-content">

@@ -1,3 +1,177 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: User authentication and authorization endpoints
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     RegisterRequest:
+ *       type: object
+ *       required:
+ *         - firstName
+ *         - lastName
+ *         - username
+ *         - email
+ *         - password
+ *         - userType
+ *       properties:
+ *         firstName:
+ *           type: string
+ *           description: User's first name
+ *           example: John
+ *         lastName:
+ *           type: string
+ *           description: User's last name
+ *           example: Doe
+ *         username:
+ *           type: string
+ *           minLength: 3
+ *           maxLength: 20
+ *           description: Unique username
+ *           example: johndoe123
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: User's email address
+ *           example: john@example.com
+ *         password:
+ *           type: string
+ *           minLength: 8
+ *           description: Password with uppercase, lowercase, number and special character
+ *           example: SecurePass123!
+ *         userType:
+ *           type: string
+ *           enum: [buyer, seller]
+ *           description: Type of user account
+ *           example: buyer
+ *         wallet_address:
+ *           type: string
+ *           description: Optional crypto wallet address
+ *           example: 0x742d35Cc6634C0532925a3b8D7b9E9865c13a8C4
+ */
+
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterRequest'
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User registered successfully
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *                 token:
+ *                   type: string
+ *                   description: JWT authentication token
+ *       400:
+ *         description: Validation error or user already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Too many registration attempts
+ */
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: john@example.com
+ *               password:
+ *                 type: string
+ *                 example: SecurePass123!
+ *               twoFactorCode:
+ *                 type: string
+ *                 description: 2FA code if enabled
+ *                 example: 123456
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Login successful
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *                 token:
+ *                   type: string
+ *       400:
+ *         description: Invalid credentials or validation error
+ *       429:
+ *         description: Too many login attempts
+ */
+
+/**
+ * @swagger
+ * /api/auth/health:
+ *   get:
+ *     summary: Check authentication service health
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: Service health status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 service:
+ *                   type: string
+ *                   example: Authentication
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                 stats:
+ *                   type: object
+ *                   properties:
+ *                     totalUsers:
+ *                       type: number
+ *                     message:
+ *                       type: string
+ */
+
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const speakeasy = require('speakeasy');
@@ -12,20 +186,64 @@ const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
-// Rate limiting
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // Limit each IP to 5 requests per windowMs
-    message: { error: 'Too many authentication attempts, please try again later.' },
-    standardHeaders: true,
-    legacyHeaders: false,
+// Auth Health Check (no auth required)
+router.get('/health', async (req, res) => {
+    try {
+        const health = {
+            status: 'ok',
+            service: 'Authentication',
+            timestamp: new Date().toISOString(),
+            endpoints: [
+                'POST /api/auth/register',
+                'POST /api/auth/login',
+                'POST /api/auth/logout',
+                'POST /api/auth/forgot-password',
+                'POST /api/auth/reset-password',
+                'GET /api/auth/verify'
+            ]
+        };
+
+        // Test database connection
+        try {
+            const userCount = await User.countDocuments();
+            health.stats = {
+                totalUsers: userCount,
+                message: 'Authentication service operational'
+            };
+        } catch (dbError) {
+            health.warning = 'Database connection issue';
+            health.stats = { message: 'Auth service running but database unreachable' };
+        }
+
+        res.json(health);
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            service: 'Authentication',
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
 });
 
-const passwordResetLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3, // Limit each IP to 3 password reset requests per hour
-    message: { error: 'Too many password reset attempts, please try again later.' },
-});
+// Rate limiting (disabled in test environment)
+const authLimiter = process.env.NODE_ENV === 'test' 
+  ? (req, res, next) => next() // No-op in test environment
+  : rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 5, // Limit each IP to 5 requests per windowMs
+      message: { error: 'Too many authentication attempts, please try again later.' },
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+
+const passwordResetLimiter = process.env.NODE_ENV === 'test'
+  ? (req, res, next) => next() // No-op in test environment  
+  : rateLimit({
+      windowMs: 60 * 60 * 1000, // 1 hour
+      max: 3, // Limit each IP to 3 password reset requests per hour
+      message: { error: 'Too many password reset attempts, please try again later.' },
+    });
 
 // Helper function to get client IP
 const getClientIP = (req) => {
@@ -284,7 +502,9 @@ router.post('/login', authLimiter, loginValidation, async (req, res) => {
 
         // Send login notification if enabled
         if (user.security.loginNotifications) {
-            await emailService.sendLoginNotification(user, ipAddress, userAgent, null);
+            // TODO: Implement sendLoginNotification in emailService
+            // await emailService.sendLoginNotification(user, ipAddress, userAgent, null);
+            console.log('📧 [DEV MODE] Login notification would be sent to:', user.email);
         }
 
         // Get device info for security alert

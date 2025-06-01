@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
@@ -11,11 +11,9 @@ import {
   Clock,
   Tag,
   Zap,
-  MoreHorizontal,
   Trash2,
   Edit,
-  AlertTriangle,
-  X
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { api } from '../services/api';
@@ -34,24 +32,17 @@ const NFTDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
+  const [likesCount, setLikesCount] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchNFT();
-  }, [id]);
-
-  const fetchNFT = async () => {
+  const fetchNFT = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get(`/nfts/${id}`);
       setNft(response.data.nft);
-      setLikeCount(response.data.nft.like_count || 0);
-      // Check if current user has liked this NFT
-      if (user && response.data.nft.liked_by) {
-        setIsLiked(response.data.nft.liked_by.includes(user.userId));
-      }
+      setIsLiked(response.data.isLiked || false);
+      setLikesCount(response.data.likesCount || 0);
       setError(null);
     } catch (error) {
       console.error('Failed to fetch NFT:', error);
@@ -60,7 +51,13 @@ const NFTDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchNFT();
+    }
+  }, [id, fetchNFT]);
 
   const handleLike = async () => {
     if (!isAuthenticated) {
@@ -72,7 +69,7 @@ const NFTDetail = () => {
     try {
       await api.post(`/nfts/${id}/like`);
       setIsLiked(!isLiked);
-      setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+      setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
       toast.success(isLiked ? 'NFT unliked!' : 'NFT liked!');
     } catch (error) {
       console.error('Like error:', error);
@@ -117,7 +114,7 @@ const NFTDetail = () => {
     try {
       setIsDeleting(true);
       
-      const response = await api.delete(`/nfts/${id}`);
+      await api.delete(`/nfts/${id}`);
       
       toast.success('NFT deleted successfully!');
       navigate('/catalog');
@@ -177,6 +174,22 @@ const NFTDetail = () => {
     nft.creator_id.toString() === user.id?.toString() ||
     nft.creator_id.toString() === user._id?.toString()
   );
+
+  const handlePurchase = async () => {
+    try {
+      await api.post(`/nfts/${id}/purchase`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // Handle successful purchase
+      navigate('/profile/collection');
+    } catch (error) {
+      toast.error('Purchase failed');
+    }
+  };
 
   if (loading) {
     return (
@@ -305,7 +318,7 @@ const NFTDetail = () => {
             </div>
             <div className="stat-item">
               <Heart size={16} />
-              <span>{likeCount} likes</span>
+              <span>{likesCount} likes</span>
             </div>
           </div>
         </div>
@@ -370,7 +383,7 @@ const NFTDetail = () => {
                   <ShoppingCart size={20} />
                   Add to Cart
                 </button>
-                <button className="btn-primary buy-now">
+                <button className="btn-primary buy-now" onClick={handlePurchase}>
                   <Zap size={20} />
                   Buy Now
                 </button>

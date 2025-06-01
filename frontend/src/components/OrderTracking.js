@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Package, 
   Truck, 
@@ -21,13 +21,7 @@ const OrderTracking = ({ orderId, trackingNumber, onClose }) => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (orderId || trackingNumber) {
-      fetchTrackingData();
-    }
-  }, [orderId, trackingNumber]);
-
-  const fetchTrackingData = async (isRefresh = false) => {
+  const fetchTrackingData = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) {
         setRefreshing(true);
@@ -59,7 +53,13 @@ const OrderTracking = ({ orderId, trackingNumber, onClose }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [orderId, trackingNumber]);
+
+  useEffect(() => {
+    if (orderId || trackingNumber) {
+      fetchTrackingData();
+    }
+  }, [orderId, trackingNumber, fetchTrackingData]);
 
   const getStatusIcon = (status) => {
     switch (status?.toLowerCase()) {

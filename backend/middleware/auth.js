@@ -40,7 +40,10 @@ const auth = async (req, res, next) => {
         };
         next();
     } catch (error) {
-        console.error('Auth middleware error:', error);
+        // Use proper logging instead of console.error in production
+        if (process.env.NODE_ENV !== 'production') {
+            console.error('Auth middleware error:', error);
+        }
         
         if (error.name === 'JsonWebTokenError') {
             return res.status(401).json({ error: 'Invalid token.' });
@@ -87,17 +90,62 @@ const optionalAuth = async (req, res, next) => {
 // Admin auth middleware
 const adminAuth = async (req, res, next) => {
     try {
-        await auth(req, res, () => {});
+        const token = req.header('Authorization')?.replace('Bearer ', '');
         
-        // Check if user is admin (you can modify this logic)
-        const user = await User.findById(req.user.userId || req.user.id);
+        if (!token) {
+            return res.status(401).json({ error: 'Access denied. No token provided.' });
+        }
 
-        if (!user || user.role !== 'admin') {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // Get user from database
+        const user = await User.findById(decoded.userId).select('-password_hash');
+
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid token. User not found.' });
+        }
+
+        // Check if user is active
+        if (!user.isActive) {
+            return res.status(401).json({ error: 'Account is deactivated.' });
+        }
+
+        // Check if user is locked
+        if (user.isLocked) {
+            return res.status(423).json({ error: 'Account is temporarily locked.' });
+        }
+
+        // Check if user is admin
+        if (user.role !== 'admin') {
             return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
         }
 
+        req.user = { 
+            userId: user._id, 
+            id: user._id, // For backward compatibility
+            email: user.email, 
+            wallet_address: user.wallet_address,
+            userType: user.userType,
+            role: user.role,
+            isVerified: user.isVerified,
+            emailVerified: user.emailVerification?.isVerified || false
+        };
+        
         next();
     } catch (error) {
+        // Use proper logging instead of console.error in production
+        if (process.env.NODE_ENV !== 'production') {
+            console.error('Admin auth middleware error:', error);
+        }
+        
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ error: 'Invalid token.' });
+        }
+        
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ error: 'Token expired.' });
+        }
+        
         res.status(500).json({ error: 'Admin authentication failed.' });
     }
 };

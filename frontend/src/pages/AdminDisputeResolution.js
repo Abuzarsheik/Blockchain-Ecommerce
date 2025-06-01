@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   AlertTriangle, 
   Search, 
@@ -11,7 +11,6 @@ import {
   User,
   Package,
   DollarSign,
-  Calendar,
   FileText,
   Download,
   Upload,
@@ -22,7 +21,6 @@ import {
   Shield,
   Scale,
   Gavel,
-  Archive,
   Flag,
   Users
 } from 'lucide-react';
@@ -38,12 +36,11 @@ const AdminDisputeResolution = () => {
   
   // Filters and search
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('created_at');
-  const [sortOrder, setSortOrder] = useState('desc');
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -100,11 +97,7 @@ const AdminDisputeResolution = () => {
     'urgent'
   ];
 
-  useEffect(() => {
-    fetchDisputes();
-  }, [currentPage, searchTerm, statusFilter, categoryFilter, priorityFilter, assigneeFilter, sortBy, sortOrder]);
-
-  const fetchDisputes = async () => {
+  const fetchDisputes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -113,11 +106,11 @@ const AdminDisputeResolution = () => {
         page: currentPage,
         limit: disputesPerPage,
         sortBy,
-        sortOrder
+        sortOrder: 'desc'
       };
 
       if (searchTerm) params.search = searchTerm;
-      if (statusFilter !== 'all') params.status = statusFilter;
+      if (filterStatus !== 'all') params.status = filterStatus;
       if (categoryFilter !== 'all') params.category = categoryFilter;
       if (priorityFilter !== 'all') params.priority = priorityFilter;
       if (assigneeFilter !== 'all') params.assignee = assigneeFilter;
@@ -132,7 +125,11 @@ const AdminDisputeResolution = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, filterStatus, categoryFilter, priorityFilter, assigneeFilter, sortBy]);
+
+  useEffect(() => {
+    fetchDisputes();
+  }, [fetchDisputes]);
 
   const handleDisputeAction = async (disputeId, action, data = {}) => {
     try {
@@ -364,7 +361,7 @@ const AdminDisputeResolution = () => {
               <div className="filters-grid">
                 <div className="filter-group">
                   <label>Status</label>
-                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                     <option value="all">All Statuses</option>
                     {disputeStatuses.map(status => (
                       <option key={status} value={status}>
@@ -413,7 +410,7 @@ const AdminDisputeResolution = () => {
                 <button 
                   onClick={() => {
                     setSearchTerm('');
-                    setStatusFilter('all');
+                    setFilterStatus('all');
                     setCategoryFilter('all');
                     setPriorityFilter('all');
                     setAssigneeFilter('all');

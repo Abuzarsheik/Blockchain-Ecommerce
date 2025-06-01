@@ -1,16 +1,23 @@
 const mongoose = require('mongoose');
+const { 
+  addressSchema, 
+  deviceInfoSchema, 
+  auditTrailSchema, 
+  contactInfoSchema,
+  ratingSchema,
+  commonSchemaOptions 
+} = require('./shared/schemas');
+const { 
+  USER_TYPES, 
+  USER_ROLES, 
+  KYC_STATUS, 
+  DOCUMENT_TYPES 
+} = require('../config/constants');
 
 const userSchema = new mongoose.Schema({
-    firstName: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    lastName: {
-        type: String,
-        required: true,
-        trim: true
-    },
+    // Basic Contact Information - Using shared schema
+    ...contactInfoSchema.obj,
+    
     username: {
         type: String,
         required: true,
@@ -19,32 +26,26 @@ const userSchema = new mongoose.Schema({
         minlength: 3,
         maxlength: 20
     },
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true
-    },
     password_hash: {
         type: String,
         required: true
     },
     userType: {
         type: String,
-        enum: ['buyer', 'seller'],
+        enum: Object.values(USER_TYPES),
         required: true,
-        default: 'buyer'
+        default: USER_TYPES.BUYER
     },
     role: {
         type: String,
-        enum: ['user', 'admin', 'moderator'],
-        default: 'user'
+        enum: Object.values(USER_ROLES),
+        default: USER_ROLES.USER
     },
     wallet_address: {
         type: String,
         default: null
     },
+    
     // 2FA and Security Fields
     twoFactorAuth: {
         isEnabled: {
@@ -67,6 +68,7 @@ const userSchema = new mongoose.Schema({
             default: null
         }
     },
+    
     // Password Reset Fields
     passwordReset: {
         token: {
@@ -82,6 +84,7 @@ const userSchema = new mongoose.Schema({
             default: 0
         }
     },
+    
     // Email Verification
     emailVerification: {
         isVerified: {
@@ -97,6 +100,7 @@ const userSchema = new mongoose.Schema({
             default: null
         }
     },
+    
     // Login Tracking
     loginAttempts: {
         count: {
@@ -112,16 +116,17 @@ const userSchema = new mongoose.Schema({
             default: null
         }
     },
+    
+    // Login History - Using shared device info schema
     loginHistory: [{
         timestamp: {
             type: Date,
             default: Date.now
         },
-        ipAddress: String,
-        userAgent: String,
-        location: String,
+        ...deviceInfoSchema.obj,
         success: Boolean
     }],
+    
     // Security Settings
     security: {
         ipWhitelist: [String],
@@ -142,7 +147,8 @@ const userSchema = new mongoose.Schema({
             default: 7 // days
         }
     },
-    // Seller-specific fields
+    
+    // Seller-specific fields - Using shared rating schema
     sellerProfile: {
         storeName: {
             type: String,
@@ -156,12 +162,7 @@ const userSchema = new mongoose.Schema({
             type: Boolean,
             default: false
         },
-        rating: {
-            type: Number,
-            default: 0,
-            min: 0,
-            max: 5
-        },
+        rating: ratingSchema,
         totalSales: {
             type: Number,
             default: 0
@@ -173,12 +174,13 @@ const userSchema = new mongoose.Schema({
             max: 100
         }
     },
-    // KYC Verification System
+    
+    // KYC Verification System - Using centralized constants
     kyc: {
         status: {
             type: String,
-            enum: ['pending', 'in_review', 'approved', 'rejected', 'expired'],
-            default: 'pending'
+            enum: Object.values(KYC_STATUS),
+            default: KYC_STATUS.NOT_STARTED
         },
         level: {
             type: String,
@@ -206,7 +208,8 @@ const userSchema = new mongoose.Schema({
             type: String,
             default: null
         },
-        // Personal Information
+        
+        // Personal Information - Using shared address schema
         personalInfo: {
             dateOfBirth: {
                 type: Date,
@@ -224,13 +227,7 @@ const userSchema = new mongoose.Schema({
                 type: String,
                 default: null
             },
-            address: {
-                street: { type: String, default: null },
-                city: { type: String, default: null },
-                state: { type: String, default: null },
-                postalCode: { type: String, default: null },
-                country: { type: String, default: null }
-            },
+            address: addressSchema,
             occupation: {
                 type: String,
                 default: null
@@ -241,13 +238,14 @@ const userSchema = new mongoose.Schema({
                 default: 'employment'
             }
         },
-        // Document Verification
+        
+        // Document Verification - Using centralized document types
         documents: {
             identity: {
                 type: {
                     type: String,
-                    enum: ['passport', 'national_id', 'drivers_license'],
-                    default: 'national_id'
+                    enum: Object.values(DOCUMENT_TYPES.IDENTITY),
+                    default: DOCUMENT_TYPES.IDENTITY.NATIONAL_ID
                 },
                 documentNumber: {
                     type: String,
@@ -281,8 +279,8 @@ const userSchema = new mongoose.Schema({
             proofOfAddress: {
                 type: {
                     type: String,
-                    enum: ['utility_bill', 'bank_statement', 'rental_agreement', 'government_letter'],
-                    default: 'utility_bill'
+                    enum: Object.values(DOCUMENT_TYPES.PROOF_OF_ADDRESS),
+                    default: DOCUMENT_TYPES.PROOF_OF_ADDRESS.UTILITY_BILL
                 },
                 issueDate: {
                     type: Date,
@@ -312,6 +310,7 @@ const userSchema = new mongoose.Schema({
                 }
             }
         },
+        
         // Risk Assessment
         riskAssessment: {
             score: {
@@ -335,6 +334,7 @@ const userSchema = new mongoose.Schema({
                 default: null
             }
         },
+        
         // Compliance Checks
         compliance: {
             sanctionsList: {
@@ -383,31 +383,10 @@ const userSchema = new mongoose.Schema({
                 }
             }
         },
-        // Verification History
-        history: [{
-            action: {
-                type: String,
-                enum: ['submitted', 'approved', 'rejected', 'expired', 'updated', 'document_uploaded'],
-                required: true
-            },
-            timestamp: {
-                type: Date,
-                default: Date.now
-            },
-            performedBy: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'User',
-                default: null
-            },
-            notes: {
-                type: String,
-                default: null
-            },
-            metadata: {
-                type: mongoose.Schema.Types.Mixed,
-                default: null
-            }
-        }],
+        
+        // Verification History - Using shared audit trail schema
+        history: [auditTrailSchema],
+        
         // Transaction Limits
         transactionLimits: {
             daily: {
@@ -424,6 +403,7 @@ const userSchema = new mongoose.Schema({
             }
         }
     },
+    
     // Enhanced Profile Fields
     profile: {
         avatar: {
@@ -487,6 +467,7 @@ const userSchema = new mongoose.Schema({
             }
         }
     },
+    
     isActive: {
         type: Boolean,
         default: true
@@ -507,7 +488,7 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
-});
+}, commonSchemaOptions);
 
 // Update the updated_at field before saving
 userSchema.pre('save', function(next) {
@@ -594,7 +575,7 @@ userSchema.methods.updateKycStatus = function(status, reviewedBy = null, reason 
     if (reason) this.kyc.rejectionReason = reason;
     
     // Set expiry date for approved KYC (1 year from approval)
-    if (status === 'approved') {
+    if (status === KYC_STATUS.APPROVED) {
         this.kyc.expiryDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
         this.isVerified = true;
     }
@@ -604,7 +585,7 @@ userSchema.methods.updateKycStatus = function(status, reviewedBy = null, reason 
         action: status,
         timestamp: new Date(),
         performedBy: reviewedBy,
-        notes: reason,
+        details: reason,
         metadata: { status, reason }
     });
     
@@ -624,7 +605,7 @@ userSchema.methods.addKycDocument = function(documentType, documentData) {
     this.kyc.history.push({
         action: 'document_uploaded',
         timestamp: new Date(),
-        notes: `${documentType} document uploaded`,
+        details: `${documentType} document uploaded`,
         metadata: { documentType, ...documentData }
     });
     
@@ -672,7 +653,7 @@ userSchema.virtual('isKycExpired').get(function() {
 
 // Virtual to check if KYC is approved and valid
 userSchema.virtual('isKycApproved').get(function() {
-    return this.kyc.status === 'approved' && !this.isKycExpired;
+    return this.kyc.status === KYC_STATUS.APPROVED && !this.isKycExpired;
 });
 
 // Virtual to get KYC completion percentage

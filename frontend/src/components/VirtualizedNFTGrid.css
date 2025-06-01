@@ -1,0 +1,140 @@
+/* Virtualized NFT Grid Styles */
+.virtualized-nft-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.virtualized-grid {
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+}
+
+.virtualized-grid::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.virtualized-grid::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.virtualized-grid::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.virtualized-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+.virtualized-card {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.virtualized-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Empty State */
+.empty-nft-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  min-height: 400px;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.6;
+}
+
+.empty-nft-grid h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.empty-nft-grid p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+/* Load More Trigger */
+.load-more-trigger {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  min-height: 100px;
+}
+
+.loading-more {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Performance Optimizations */
+.virtualized-nft-container * {
+  will-change: transform;
+}
+
+/* Smooth scrolling behavior */
+.virtualized-grid {
+  scroll-behavior: smooth;
+}
+
+/* Focus states for accessibility */
+.virtualized-card:focus-within {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+  border-radius: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .virtualized-nft-container {
+    padding: 0 1rem;
+  }
+  
+  .empty-nft-grid {
+    padding: 2rem 1rem;
+    min-height: 300px;
+  }
+  
+  .empty-icon {
+    font-size: 3rem;
+  }
+  
+  .empty-nft-grid h3 {
+    font-size: 1.25rem;
+  }
+} 

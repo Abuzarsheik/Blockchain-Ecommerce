@@ -133,9 +133,9 @@ class GasOptimizationService {
             
             return {
                 source: 'etherscan',
-                slow: ethers.utils.parseUnits(response.data.result.SafeGasPrice, 'gwei'),
-                standard: ethers.utils.parseUnits(response.data.result.StandardGasPrice, 'gwei'),
-                fast: ethers.utils.parseUnits(response.data.result.FastGasPrice, 'gwei')
+                slow: ethers.parseUnits(response.data.result.SafeGasPrice, 'gwei'),
+                standard: ethers.parseUnits(response.data.result.StandardGasPrice, 'gwei'),
+                fast: ethers.parseUnits(response.data.result.FastGasPrice, 'gwei')
             };
         } catch (error) {
             console.warn('Etherscan gas fetch failed:', error.message);
@@ -153,9 +153,9 @@ class GasOptimizationService {
             
             return {
                 source: 'provider',
-                slow: gasPrice.mul(80).div(100),     // 20% below
-                standard: gasPrice,                   // Current price
-                fast: gasPrice.mul(120).div(100)     // 20% above
+                slow: gasPrice * 80n / 100n,     // 20% below
+                standard: gasPrice,               // Current price
+                fast: gasPrice * 120n / 100n     // 20% above
             };
         } catch (error) {
             console.warn('Provider gas fetch failed:', error.message);
@@ -170,32 +170,32 @@ class GasOptimizationService {
         if (url.includes('ethgasstation')) {
             return {
                 source: 'ethgasstation',
-                slow: ethers.utils.parseUnits((data.safeLow / 10).toString(), 'gwei'),
-                standard: ethers.utils.parseUnits((data.average / 10).toString(), 'gwei'),
-                fast: ethers.utils.parseUnits((data.fast / 10).toString(), 'gwei')
+                slow: ethers.parseUnits((data.safeLow / 10).toString(), 'gwei'),
+                standard: ethers.parseUnits((data.average / 10).toString(), 'gwei'),
+                fast: ethers.parseUnits((data.fast / 10).toString(), 'gwei')
             };
         } else if (url.includes('matic.network')) {
             return {
                 source: 'polygon',
-                slow: ethers.utils.parseUnits(data.safeLow.maxFee.toString(), 'gwei'),
-                standard: ethers.utils.parseUnits(data.standard.maxFee.toString(), 'gwei'),
-                fast: ethers.utils.parseUnits(data.fast.maxFee.toString(), 'gwei')
+                slow: ethers.parseUnits(data.safeLow.maxFee.toString(), 'gwei'),
+                standard: ethers.parseUnits(data.standard.maxFee.toString(), 'gwei'),
+                fast: ethers.parseUnits(data.fast.maxFee.toString(), 'gwei')
             };
         } else if (url.includes('bscscan')) {
             return {
                 source: 'bscscan',
-                slow: ethers.utils.parseUnits(data.result.SafeGasPrice, 'gwei'),
-                standard: ethers.utils.parseUnits(data.result.StandardGasPrice, 'gwei'),
-                fast: ethers.utils.parseUnits(data.result.FastGasPrice, 'gwei')
+                slow: ethers.parseUnits(data.result.SafeGasPrice, 'gwei'),
+                standard: ethers.parseUnits(data.result.StandardGasPrice, 'gwei'),
+                fast: ethers.parseUnits(data.result.FastGasPrice, 'gwei')
             };
         }
 
         // Generic format
         return {
             source: 'generic',
-            slow: ethers.utils.parseUnits('1', 'gwei'),
-            standard: ethers.utils.parseUnits('2', 'gwei'),
-            fast: ethers.utils.parseUnits('3', 'gwei')
+            slow: ethers.parseUnits('1', 'gwei'),
+            standard: ethers.parseUnits('2', 'gwei'),
+            fast: ethers.parseUnits('3', 'gwei')
         };
     }
 
@@ -204,23 +204,23 @@ class GasOptimizationService {
      */
     aggregateGasData(results) {
         const aggregated = {
-            slow: ethers.BigNumber.from(0),
-            standard: ethers.BigNumber.from(0),
-            fast: ethers.BigNumber.from(0),
+            slow: 0n,
+            standard: 0n,
+            fast: 0n,
             count: results.length
         };
 
         results.forEach(result => {
-            aggregated.slow = aggregated.slow.add(result.slow);
-            aggregated.standard = aggregated.standard.add(result.standard);
-            aggregated.fast = aggregated.fast.add(result.fast);
+            aggregated.slow = aggregated.slow + result.slow;
+            aggregated.standard = aggregated.standard + result.standard;
+            aggregated.fast = aggregated.fast + result.fast;
         });
 
         // Calculate averages
         return {
-            slow: aggregated.slow.div(aggregated.count),
-            standard: aggregated.standard.div(aggregated.count),
-            fast: aggregated.fast.div(aggregated.count),
+            slow: aggregated.slow / BigInt(aggregated.count),
+            standard: aggregated.standard / BigInt(aggregated.count),
+            fast: aggregated.fast / BigInt(aggregated.count),
             sources: results.map(r => r.source)
         };
     }
@@ -232,15 +232,15 @@ class GasOptimizationService {
         const basePrice = gasData.standard;
         
         return {
-            immediate: gasData.fast.mul(115).div(100),  // +15% for immediate
+            immediate: gasData.fast * 115n / 100n,  // +15% for immediate
             fast: gasData.fast,
             standard: gasData.standard,
             slow: gasData.slow,
-            batch: gasData.slow.mul(90).div(100),       // -10% for batch
+            batch: gasData.slow * 90n / 100n,       // -10% for batch
             
             // Additional estimates
-            veryFast: gasData.fast.mul(130).div(100),
-            verySlow: gasData.slow.mul(80).div(100)
+            veryFast: gasData.fast * 130n / 100n,
+            verySlow: gasData.slow * 80n / 100n
         };
     }
 
@@ -279,15 +279,15 @@ class GasOptimizationService {
             const gasData = await this.getOptimizedGasPrice(network, priority);
             const gasLimit = this.estimateGasLimit(transactionType);
             
-            const totalCost = gasData.gasPrice.mul(gasLimit);
+            const totalCost = gasData.gasPrice * BigInt(gasLimit);
             
             return {
                 success: true,
                 gasPrice: gasData.gasPrice,
                 gasLimit,
                 totalCost,
-                costInEth: ethers.utils.formatEther(totalCost),
-                costInGwei: ethers.utils.formatUnits(totalCost, 'gwei'),
+                costInEth: ethers.formatEther(totalCost),
+                costInGwei: ethers.formatUnits(totalCost, 'gwei'),
                 network,
                 priority
             };
@@ -396,7 +396,7 @@ class GasOptimizationService {
                 prices.push({
                     timestamp: new Date(),
                     price: gasData.gasPrice,
-                    gwei: ethers.utils.formatUnits(gasData.gasPrice, 'gwei')
+                    gwei: ethers.formatUnits(gasData.gasPrice, 'gwei')
                 });
 
                 if (Date.now() - startTime >= duration) {
@@ -450,9 +450,9 @@ class GasOptimizationService {
      */
     getProvider(network) {
         const providers = {
-            ethereum: new ethers.providers.JsonRpcProvider(process.env.ETH_RPC_URL),
-            polygon: new ethers.providers.JsonRpcProvider(process.env.POLYGON_RPC_URL),
-            bsc: new ethers.providers.JsonRpcProvider(process.env.BSC_RPC_URL)
+            ethereum: new ethers.JsonRpcProvider(process.env.ETH_RPC_URL),
+            polygon: new ethers.JsonRpcProvider(process.env.POLYGON_RPC_URL),
+            bsc: new ethers.JsonRpcProvider(process.env.BSC_RPC_URL)
         };
 
         return providers[network.toLowerCase()] || providers.ethereum;
@@ -463,9 +463,9 @@ class GasOptimizationService {
      */
     getFallbackGasPrice(network) {
         const fallbacks = {
-            ethereum: ethers.utils.parseUnits('20', 'gwei'),
-            polygon: ethers.utils.parseUnits('30', 'gwei'),
-            bsc: ethers.utils.parseUnits('5', 'gwei')
+            ethereum: ethers.parseUnits('20', 'gwei'),
+            polygon: ethers.parseUnits('30', 'gwei'),
+            bsc: ethers.parseUnits('5', 'gwei')
         };
 
         const gasPrice = fallbacks[network.toLowerCase()] || fallbacks.ethereum;
@@ -474,9 +474,9 @@ class GasOptimizationService {
             success: true,
             gasPrice,
             estimates: {
-                slow: gasPrice.mul(80).div(100),
+                slow: gasPrice * 80n / 100n,
                 standard: gasPrice,
-                fast: gasPrice.mul(120).div(100)
+                fast: gasPrice * 120n / 100n
             },
             network,
             priority: 'fallback',

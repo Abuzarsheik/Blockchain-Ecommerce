@@ -66,8 +66,10 @@ export const cleanCartItems = (items) => {
   return items.filter(validateCartItem);
 };
 
-export default {
+const cartUtils = {
   migrateCartData,
   validateCartItem,
   cleanCartItems
-}; 
+};
+
+export default cartUtils; 

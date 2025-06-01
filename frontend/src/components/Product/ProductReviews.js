@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { AuthContext } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import ReviewList from '../Reviews/ReviewList';
 import SellerResponseForm from '../Reviews/SellerResponseForm';
 
 const ProductReviews = ({ productId, sellerId }) => {
-  const { user } = useContext(AuthContext);
+  const { user } = useSelector((state) => state.auth);
   const [reviews, setReviews] = useState([]);
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
