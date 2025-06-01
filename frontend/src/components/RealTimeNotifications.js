@@ -1,20 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Bell, 
-  X, 
-  CheckCircle, 
-  AlertCircle, 
-  Info, 
-  Zap,
-  Star,
-  TrendingUp,
-  Heart,
-  ShoppingCart,
-  Users,
-  Check
-} from 'lucide-react';
-import { useSelector } from 'react-redux';
 import './RealTimeNotifications.css';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, Bell, Check, Info, ShoppingCart, Heart, Users, TrendingUp, Star } from 'lucide-react';
 
 const NOTIFICATION_TYPES = {
   SUCCESS: 'success',
@@ -29,23 +15,15 @@ const NOTIFICATION_TYPES = {
 };
 
 const NOTIFICATION_ICONS = {
-  [NOTIFICATION_TYPES.SUCCESS]: CheckCircle,
-  [NOTIFICATION_TYPES.WARNING]: AlertCircle,
+  [NOTIFICATION_TYPES.SUCCESS]: Check,
+  [NOTIFICATION_TYPES.WARNING]: Info,
   [NOTIFICATION_TYPES.INFO]: Info,
-  [NOTIFICATION_TYPES.ERROR]: AlertCircle,
+  [NOTIFICATION_TYPES.ERROR]: Info,
   [NOTIFICATION_TYPES.SALE]: ShoppingCart,
   [NOTIFICATION_TYPES.LIKE]: Heart,
   [NOTIFICATION_TYPES.FOLLOW]: Users,
   [NOTIFICATION_TYPES.PRICE_ALERT]: TrendingUp,
   [NOTIFICATION_TYPES.NEW_NFT]: Star
-};
-
-const SOUND_EFFECTS = {
-  [NOTIFICATION_TYPES.SUCCESS]: '/sounds/success.mp3',
-  [NOTIFICATION_TYPES.SALE]: '/sounds/sale.mp3',
-  [NOTIFICATION_TYPES.LIKE]: '/sounds/like.mp3',
-  [NOTIFICATION_TYPES.PRICE_ALERT]: '/sounds/alert.mp3',
-  [NOTIFICATION_TYPES.NEW_NFT]: '/sounds/new-item.mp3'
 };
 
 const RealTimeNotifications = () => {
@@ -58,70 +36,54 @@ const RealTimeNotifications = () => {
     desktopEnabled: true,
     emailEnabled: false
   });
-  
-  const audioRef = useRef(null);
-  const wsRef = useRef(null);
-  const { user, isAuthenticated } = useSelector(state => state.auth);
 
-  // Mock real-time notifications for demo
-  const mockNotifications = [
-    {
-      id: 1,
-      type: NOTIFICATION_TYPES.SALE,
-      title: 'NFT Sold!',
-      message: 'Your "Digital Dreams #42" sold for 2.5 ETH',
-      timestamp: new Date(),
-      priority: 'high',
-      actionUrl: '/orders/123',
-      avatar: '/images/nft-placeholder.jpg'
-    },
-    {
-      id: 2,
-      type: NOTIFICATION_TYPES.LIKE,
-      title: 'New Like',
-      message: 'Someone liked your "Cosmic Cat" NFT',
-      timestamp: new Date(Date.now() - 300000),
-      priority: 'medium',
-      avatar: '/images/user-avatar.jpg'
-    },
-    {
-      id: 3,
-      type: NOTIFICATION_TYPES.PRICE_ALERT,
-      title: 'Price Alert',
-      message: 'CryptoPunks floor price dropped 15%',
-      timestamp: new Date(Date.now() - 600000),
-      priority: 'high',
-      actionUrl: '/catalog?category=cryptopunks'
+  const addNotification = useCallback((notification) => {
+    setNotifications(prev => [notification, ...prev]);
+    setUnreadCount(prev => prev + 1);
+
+    // Play sound effect
+    if (settings.soundEnabled) {
+      // Sound implementation would go here
     }
-  ];
 
-  // Initialize WebSocket connection for real-time updates
+    // Vibration effect
+    if (settings.vibrationEnabled && navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]);
+    }
+
+    // Desktop notification
+    if (settings.desktopEnabled && Notification.permission === 'granted') {
+      new Notification(notification.title, {
+        body: notification.message,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico'
+      });
+    }
+
+    // Auto-remove after 10 seconds for non-priority notifications
+    if (notification.priority !== 'high') {
+      setTimeout(() => {
+        removeNotification(notification.id);
+      }, 10000);
+    }
+  }, [settings]);
+
+  const simulateRealTimeNotifications = useCallback(() => {
+    // Mock real-time notifications
+    const interval = setInterval(() => {
+      if (Math.random() > 0.7) { // 30% chance of notification
+        addNotification(generateMockNotification());
+      }
+    }, 10000); // Every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [addNotification]);
+
   useEffect(() => {
-    if (!isAuthenticated) return;
-
-    // Mock WebSocket connection
-    const connectWebSocket = () => {
-      // In a real app, you'd connect to your WebSocket server
-      // wsRef.current = new WebSocket(`ws://localhost:8080/notifications/${user.id}`);
-      
-      // Mock real-time notifications
-      const interval = setInterval(() => {
-        if (Math.random() > 0.7) { // 30% chance of notification
-          addNotification(generateMockNotification());
-        }
-      }, 10000); // Every 10 seconds
-
-      return () => clearInterval(interval);
-    };
-
-    const cleanup = connectWebSocket();
+    const cleanup = simulateRealTimeNotifications();
     
-    // Load initial notifications
-    setNotifications(mockNotifications);
-    setUnreadCount(mockNotifications.length);
-
     return cleanup;
-  }, [isAuthenticated, user]);
+  }, [simulateRealTimeNotifications]);
 
   const generateMockNotification = () => {
     const types = Object.values(NOTIFICATION_TYPES);
@@ -164,44 +126,6 @@ const RealTimeNotifications = () => {
     };
   };
 
-  const addNotification = useCallback((notification) => {
-    setNotifications(prev => [notification, ...prev]);
-    setUnreadCount(prev => prev + 1);
-
-    // Play sound effect
-    if (settings.soundEnabled && SOUND_EFFECTS[notification.type]) {
-      playSound(SOUND_EFFECTS[notification.type]);
-    }
-
-    // Vibration effect
-    if (settings.vibrationEnabled && navigator.vibrate) {
-      navigator.vibrate([200, 100, 200]);
-    }
-
-    // Desktop notification
-    if (settings.desktopEnabled && Notification.permission === 'granted') {
-      new Notification(notification.title, {
-        body: notification.message,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico'
-      });
-    }
-
-    // Auto-remove after 10 seconds for non-priority notifications
-    if (notification.priority !== 'high') {
-      setTimeout(() => {
-        removeNotification(notification.id);
-      }, 10000);
-    }
-  }, [settings]);
-
-  const playSound = (soundFile) => {
-    if (audioRef.current) {
-      audioRef.current.src = soundFile;
-      audioRef.current.play().catch(e => console.log('Sound play failed:', e));
-    }
-  };
-
   const removeNotification = (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
@@ -215,11 +139,6 @@ const RealTimeNotifications = () => {
 
   const markAllAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    setUnreadCount(0);
-  };
-
-  const clearAll = () => {
-    setNotifications([]);
     setUnreadCount(0);
   };
 
@@ -251,53 +170,6 @@ const RealTimeNotifications = () => {
       requestNotificationPermission();
     }
   }, [settings.desktopEnabled]);
-
-  const NotificationItem = ({ notification }) => {
-    const IconComponent = NOTIFICATION_ICONS[notification.type] || Info;
-    
-    return (
-      <div 
-        className={`notification-item ${notification.type} ${notification.isRead ? 'read' : 'unread'} priority-${notification.priority}`}
-        onClick={() => markAsRead(notification.id)}
-      >
-        <div className="notification-icon">
-          <IconComponent size={20} />
-        </div>
-        
-        <div className="notification-content">
-          <div className="notification-header">
-            <h4 className="notification-title">{notification.title}</h4>
-            <span className="notification-time">{formatTimestamp(notification.timestamp)}</span>
-          </div>
-          <p className="notification-message">{notification.message}</p>
-          
-          {notification.actionUrl && (
-            <button className="notification-action">View Details</button>
-          )}
-        </div>
-
-        {notification.avatar && (
-          <img 
-            src={notification.avatar} 
-            alt="Avatar" 
-            className="notification-avatar"
-          />
-        )}
-
-        <button 
-          className="notification-close"
-          onClick={(e) => {
-            e.stopPropagation();
-            removeNotification(notification.id);
-          }}
-        >
-          <X size={16} />
-        </button>
-
-        {!notification.isRead && <div className="unread-indicator" />}
-      </div>
-    );
-  };
 
   return (
     <div className="real-time-notifications">

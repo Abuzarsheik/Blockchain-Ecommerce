@@ -1,8 +1,8 @@
+import '../styles/Footer.css';
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
 import { Twitter, Github, MessageCircle, Mail } from 'lucide-react';
-import '../styles/Footer.css';
+import { useSelector } from 'react-redux';
 
 const Footer = () => {
   const { user, isAuthenticated } = useSelector(state => state.auth);

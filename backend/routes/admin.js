@@ -1,15 +1,16 @@
-const express = require('express');
-const router = express.Router();
-const { adminAuth } = require('../middleware/auth');
-const User = require('../models/User');
+const Dispute = require('../models/Dispute');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
-const Dispute = require('../models/Dispute');
-const Transaction = require('../models/Transaction');
 const Review = require('../models/Review');
+const Transaction = require('../models/Transaction');
+const User = require('../models/User');
 const disputeService = require('../services/disputeService');
+const express = require('express');
 const notificationService = require('../services/notificationService');
+const { adminAuth } = require('../middleware/auth');
 const { body, param, query, validationResult } = require('express-validator');
+
+const router = express.Router();
 
 // ============== ADMIN DASHBOARD ==============
 
@@ -150,7 +151,7 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get admin dashboard stats error:', error);
+        logger.error('Get admin dashboard stats error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get dashboard statistics'
@@ -262,7 +263,7 @@ router.get('/dashboard/activity', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Get admin activity error:', error);
+        logger.error('Get admin activity error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get platform activity'
@@ -374,7 +375,7 @@ router.get('/users', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Get users error:', error);
+        logger.error('Get users error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get users'
@@ -445,7 +446,7 @@ router.get('/users/:id', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Get user details error:', error);
+        logger.error('Get user details error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get user details'
@@ -526,7 +527,7 @@ router.put('/users/:id', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Update user error:', error);
+        logger.error('Update user error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to update user'
@@ -586,7 +587,7 @@ router.post('/users/:id/unlock', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Unlock user error:', error);
+        logger.error('Unlock user error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to unlock user'
@@ -646,7 +647,7 @@ router.get('/kyc/pending', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Get pending KYC error:', error);
+        logger.error('Get pending KYC error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get pending KYC applications'
@@ -722,7 +723,7 @@ router.post('/kyc/:userId/review', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Review KYC error:', error);
+        logger.error('Review KYC error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to review KYC application'
@@ -778,7 +779,7 @@ router.get('/audit-logs', adminAuth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get audit logs error:', error);
+        logger.error('Get audit logs error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch audit logs'
@@ -806,7 +807,7 @@ router.get('/audit-logs/export', adminAuth, async (req, res) => {
         res.send(csvData);
 
     } catch (error) {
-        console.error('Export audit logs error:', error);
+        logger.error('Export audit logs error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to export audit logs'
@@ -840,7 +841,7 @@ router.get('/smart-contracts', adminAuth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get smart contracts error:', error);
+        logger.error('Get smart contracts error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch smart contracts'
@@ -869,7 +870,7 @@ router.post('/smart-contracts/:id/audit', adminAuth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Request contract audit error:', error);
+        logger.error('Request contract audit error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to request contract audit'
@@ -911,7 +912,7 @@ router.get('/security-events', adminAuth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get security events error:', error);
+        logger.error('Get security events error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch security events'
@@ -973,7 +974,7 @@ router.get('/analytics', adminAuth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get analytics error:', error);
+        logger.error('Get analytics error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch analytics'

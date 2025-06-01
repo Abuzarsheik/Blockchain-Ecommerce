@@ -1,3 +1,4 @@
+  const crypto = require('crypto');
 const mongoose = require('mongoose');
 
 const blockchainRecordSchema = new mongoose.Schema({
@@ -334,7 +335,6 @@ blockchainRecordSchema.statics.verifyIntegrity = async function() {
 };
 
 blockchainRecordSchema.statics.generateMerkleRoot = function(data) {
-  const crypto = require('crypto');
   const combined = data.join('|');
   return crypto.createHash('sha256').update(combined).digest('hex');
 };
@@ -354,7 +354,6 @@ blockchainRecordSchema.methods.addVerification = function(verifierData) {
 };
 
 blockchainRecordSchema.methods.generateVerificationHash = function(verifierData) {
-  const crypto = require('crypto');
   const data = {
     txHash: this.txHash,
     verifier: verifierData.verifier,

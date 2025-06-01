@@ -1,8 +1,8 @@
 const User = require('../models/User');
+const crypto = require('crypto');
+const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
 
 class KYCService {
     constructor() {
@@ -121,7 +121,7 @@ class KYCService {
             };
 
         } catch (error) {
-            console.error('KYC submission error:', error);
+            logger.error('KYC submission error:', error);
             throw error;
         }
     }
@@ -156,7 +156,7 @@ class KYCService {
             return true;
 
         } catch (error) {
-            console.error('Automated verification error:', error);
+            logger.error('Automated verification error:', error);
             throw error;
         }
     }
@@ -178,7 +178,7 @@ class KYCService {
             };
 
         } catch (error) {
-            console.error('KYC review error:', error);
+            logger.error('KYC review error:', error);
             throw error;
         }
     }
@@ -228,7 +228,7 @@ class KYCService {
             };
 
         } catch (error) {
-            console.error('Document upload error:', error);
+            logger.error('Document upload error:', error);
             throw error;
         }
     }
@@ -248,7 +248,7 @@ class KYCService {
             return isMatch ? 'match' : 'clear';
 
         } catch (error) {
-            console.error('Sanctions list check error:', error);
+            logger.error('Sanctions list check error:', error);
             return 'clear'; // Default to clear on error
         }
     }
@@ -268,7 +268,7 @@ class KYCService {
             return isMatch ? 'match' : 'clear';
 
         } catch (error) {
-            console.error('PEP list check error:', error);
+            logger.error('PEP list check error:', error);
             return 'clear'; // Default to clear on error
         }
     }
@@ -289,7 +289,7 @@ class KYCService {
             return hasAdverseMedia ? 'match' : 'clear';
 
         } catch (error) {
-            console.error('Adverse media check error:', error);
+            logger.error('Adverse media check error:', error);
             return 'clear'; // Default to clear on error
         }
     }
@@ -355,7 +355,7 @@ class KYCService {
             };
 
         } catch (error) {
-            console.error('KYC statistics error:', error);
+            logger.error('KYC statistics error:', error);
             throw error;
         }
     }
@@ -383,7 +383,7 @@ class KYCService {
             };
 
         } catch (error) {
-            console.error('Get pending applications error:', error);
+            logger.error('Get pending applications error:', error);
             throw error;
         }
     }

@@ -1,6 +1,7 @@
+import '../styles/ProductDetail.css';
+import BlockchainVerification from '../components/BlockchainVerification';
+import LoadingSpinner from '../components/LoadingSpinner';
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
 import { 
   ArrowLeft, 
   Heart, 
@@ -17,12 +18,11 @@ import {
   Award,
   TrendingUp
 } from 'lucide-react';
-import { fetchProductById } from '../store/slices/productsSlice';
 import { addToCart } from '../store/slices/cartSlice';
+import { fetchProductById } from '../store/slices/productsSlice';
 import { toast } from 'react-toastify';
-import LoadingSpinner from '../components/LoadingSpinner';
-import BlockchainVerification from '../components/BlockchainVerification';
-import '../styles/ProductDetail.css';
+import { useDispatch, useSelector } from 'react-redux';
+import { useParams, useNavigate } from 'react-router-dom';
 
 const ProductDetail = () => {
   const { id } = useParams();

@@ -1,9 +1,9 @@
-import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
-import cartReducer from './slices/cartSlice';
-import productsReducer from './slices/productsSlice';
-import ordersReducer from './slices/ordersSlice';
 import blockchainReducer from './slices/blockchainSlice';
+import cartReducer from './slices/cartSlice';
+import ordersReducer from './slices/ordersSlice';
+import productsReducer from './slices/productsSlice';
+import { configureStore } from '@reduxjs/toolkit';
 
 export const store = configureStore({
   reducer: {

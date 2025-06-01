@@ -5,7 +5,6 @@ const EnhancedNavigation = () => {
   const location = useLocation();
   
   // DEBUG: Console log to verify component is loading
-  console.log('🎯 SIMPLIFIED EnhancedNavigation component is rendering!', { location: location.pathname });
   
   return (
     <>

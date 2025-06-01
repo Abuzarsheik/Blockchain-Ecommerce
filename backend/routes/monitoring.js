@@ -1,7 +1,8 @@
 const express = require('express');
-const router = express.Router();
-const { monitor } = require('../middleware/monitoring');
 const { adminAuth } = require('../middleware/auth');
+const { monitor } = require('../middleware/monitoring');
+
+const router = express.Router();
 
 /**
  * @swagger
@@ -349,7 +350,7 @@ function generateDashboardHTML() {
                 updateErrorLog(metrics.errors);
                 
             } catch (error) {
-                console.error('Error fetching metrics:', error);
+                logger.error('Error fetching metrics:', error);
                 document.getElementById('systemStatus').textContent = 'Error';
                 document.getElementById('systemStatus').className = 'metric-value status-error';
             }

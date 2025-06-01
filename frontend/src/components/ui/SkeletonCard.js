@@ -1,5 +1,5 @@
-import React from 'react';
 import './SkeletonCard.css';
+import React from 'react';
 
 const SkeletonCard = ({ variant = 'nft' }) => {
   if (variant === 'list') {

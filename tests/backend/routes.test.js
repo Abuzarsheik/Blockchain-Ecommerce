@@ -677,7 +677,7 @@ describe('🔥 COMPREHENSIVE API ROUTES TEST SUITE', () => {
 
     it('should reject requests with large payloads', async () => {
       const largePayload = {
-        data: 'x'.repeat(10 * 1024 * 1024) // 10MB of data
+        data: 'x'.repeat(60 * 1024 * 1024) // 60MB of data (exceeds test server's 50MB limit)
       };
 
       const response = await request(app)

@@ -1,7 +1,7 @@
+import '../styles/theme.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FixedSizeGrid as Grid } from 'react-window';
 import { Heart, ShoppingCart, Eye, Star, Zap } from 'lucide-react';
-import '../styles/theme.css';
 
 const OptimizedNFTGrid = ({ 
   nfts = [], 

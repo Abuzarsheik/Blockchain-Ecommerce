@@ -1,6 +1,12 @@
+import '../styles/OrderDetail.css';
+import LoadingSpinner from '../components/LoadingSpinner';
+import OrderTracking from '../components/OrderTracking';
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { fetchOrderById } from '../store/slices/ordersSlice';
+import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
 import { useDispatch, useSelector } from 'react-redux';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+
 import { 
   Package, 
   Calendar, 
@@ -17,11 +23,6 @@ import {
   Phone,
   ExternalLink
 } from 'lucide-react';
-import { fetchOrderById } from '../store/slices/ordersSlice';
-import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
-import LoadingSpinner from '../components/LoadingSpinner';
-import OrderTracking from '../components/OrderTracking';
-import '../styles/OrderDetail.css';
 
 const OrderDetail = () => {
   const { orderId } = useParams();

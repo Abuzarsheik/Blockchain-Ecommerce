@@ -1,6 +1,7 @@
 const compression = require('compression');
-// const redis = require('redis'); // Removed - Redis dependency was uninstalled
 const crypto = require('crypto');
+
+// const redis = require('redis'); // Removed - Redis dependency was uninstalled
 
 // Mock Redis client for optimization middleware
 const mockRedisClient = {
@@ -39,7 +40,6 @@ class ApiOptimizer {
         if (this.cacheConfig.enableRedis) {
             try {
                 this.redisClient = mockRedisClient;
-                console.log('✅ Redis cache connected');
             } catch (error) {
                 console.warn('⚠️ Redis unavailable, using in-memory cache:', error.message);
             }
@@ -86,7 +86,7 @@ class ApiOptimizer {
 
                 next();
             } catch (error) {
-                console.error('Cache middleware error:', error);
+                logger.error('Cache middleware error:', error);
                 next();
             }
         };
@@ -201,7 +201,6 @@ class ApiOptimizer {
     queryOptimizationMiddleware() {
         return (req, res, next) => {
             // Parse and optimize query parameters
-            const optimizedQuery = this.optimizeQueryParams(req.query);
             req.optimizedQuery = optimizedQuery;
 
             // Add lean query helper for mongoose
@@ -328,7 +327,6 @@ class ApiOptimizer {
             '/api/stats/public'
         ];
 
-        console.log('🔥 Warming cache for popular routes...');
 
         for (const route of popularRoutes) {
             try {
@@ -371,7 +369,7 @@ class ApiOptimizer {
                     }
                 }
             } catch (error) {
-                console.error('Redis clear error:', error);
+                logger.error('Redis clear error:', error);
             }
         }
 

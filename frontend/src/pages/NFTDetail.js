@@ -1,6 +1,6 @@
+import '../styles/NFTDetail.css';
+import LoadingSpinner from '../components/LoadingSpinner';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
 import { 
   ArrowLeft, 
   Heart, 
@@ -15,12 +15,13 @@ import {
   Edit,
   AlertTriangle
 } from 'lucide-react';
-import { toast } from 'react-toastify';
-import { api } from '../services/api';
 import { addToCart } from '../store/slices/cartSlice';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { api } from '../services/api';
 import { getNFTImageUrl } from '../utils/imageUtils';
-import '../styles/NFTDetail.css';
+import { toast } from 'react-toastify';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { logger } from '../utils/logger';
 
 const NFTDetail = () => {
   const { id } = useParams();
@@ -45,7 +46,7 @@ const NFTDetail = () => {
       setLikesCount(response.data.likesCount || 0);
       setError(null);
     } catch (error) {
-      console.error('Failed to fetch NFT:', error);
+      logger.error('Failed to fetch NFT:', error);
       setError('Failed to load NFT details');
       toast.error('Failed to load NFT details');
     } finally {
@@ -72,7 +73,7 @@ const NFTDetail = () => {
       setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
       toast.success(isLiked ? 'NFT unliked!' : 'NFT liked!');
     } catch (error) {
-      console.error('Like error:', error);
+      logger.error('Like error:', error);
       toast.error('Failed to like NFT');
     }
   };
@@ -119,7 +120,7 @@ const NFTDetail = () => {
       toast.success('NFT deleted successfully!');
       navigate('/catalog');
     } catch (error) {
-      console.error('Delete error:', error);
+      logger.error('Delete error:', error);
       
       if (error.response?.status === 401) {
         toast.error('Authentication failed. Please log in again.');

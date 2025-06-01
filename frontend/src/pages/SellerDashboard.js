@@ -1,6 +1,7 @@
+import '../styles/SellerDashboard.css';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import '../styles/SellerDashboard.css';
+import { logger } from '../utils/logger';
 
 const SellerDashboard = () => {
     const { user } = useSelector(state => state.auth);
@@ -81,7 +82,7 @@ const SellerDashboard = () => {
                 setStats(data.stats);
             }
         } catch (error) {
-            console.error('Error fetching products:', error);
+            logger.error('Error fetching products:', error);
         } finally {
             setLoading(false);
         }
@@ -135,7 +136,7 @@ const SellerDashboard = () => {
                 fetchProducts();
             }
         } catch (error) {
-            console.error('Error saving product:', error);
+            logger.error('Error saving product:', error);
         }
     };
 
@@ -213,7 +214,7 @@ const SellerDashboard = () => {
                     fetchProducts();
                 }
             } catch (error) {
-                console.error('Error deleting product:', error);
+                logger.error('Error deleting product:', error);
             }
         }
     };

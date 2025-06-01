@@ -1,10 +1,10 @@
-const express = require('express');
-const { auth, adminAuth } = require('../middleware/auth');
 const Dispute = require('../models/Dispute');
 const disputeService = require('../services/disputeService');
-const { body, param, query, validationResult } = require('express-validator');
+const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const { auth, adminAuth } = require('../middleware/auth');
+const { body, param, query, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -90,7 +90,7 @@ router.post('/', auth, [
         });
 
     } catch (error) {
-        console.error('Create dispute error:', error);
+        logger.error('Create dispute error:', error);
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to create dispute'
@@ -142,7 +142,7 @@ router.get('/my-disputes', auth, [
         });
 
     } catch (error) {
-        console.error('Get user disputes error:', error);
+        logger.error('Get user disputes error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get disputes'
@@ -190,7 +190,7 @@ router.get('/check-eligibility/:orderId', auth, [
         });
 
     } catch (error) {
-        console.error('Check dispute eligibility error:', error);
+        logger.error('Check dispute eligibility error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to check eligibility'
@@ -249,7 +249,7 @@ router.get('/:id', auth, [
         });
 
     } catch (error) {
-        console.error('Get dispute error:', error);
+        logger.error('Get dispute error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get dispute details'
@@ -305,7 +305,7 @@ router.post('/:id/evidence', auth, upload.array('files', 10), [
         });
 
     } catch (error) {
-        console.error('Add evidence error:', error);
+        logger.error('Add evidence error:', error);
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to add evidence'
@@ -341,7 +341,7 @@ router.post('/:id/messages', auth, [
         });
 
     } catch (error) {
-        console.error('Add message error:', error);
+        logger.error('Add message error:', error);
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to add message'
@@ -399,7 +399,7 @@ router.get('/admin/dashboard', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Get admin disputes error:', error);
+        logger.error('Get admin disputes error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get admin disputes'
@@ -436,7 +436,7 @@ router.post('/:id/assign', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Assign dispute error:', error);
+        logger.error('Assign dispute error:', error);
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to assign dispute'
@@ -487,7 +487,7 @@ router.post('/:id/resolve', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Admin resolve dispute error:', error);
+        logger.error('Admin resolve dispute error:', error);
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to resolve dispute'
@@ -534,7 +534,7 @@ router.put('/:id/admin-notes', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Update admin notes error:', error);
+        logger.error('Update admin notes error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to update admin notes'
@@ -576,7 +576,7 @@ router.get('/admin/statistics', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Get dispute statistics error:', error);
+        logger.error('Get dispute statistics error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get dispute statistics'
@@ -627,7 +627,7 @@ router.post('/:id/escalate', auth, [
         });
 
     } catch (error) {
-        console.error('Escalate dispute error:', error);
+        logger.error('Escalate dispute error:', error);
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to escalate dispute'

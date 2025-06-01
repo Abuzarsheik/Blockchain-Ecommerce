@@ -1,25 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
     User, 
     Mail, 
     MapPin, 
-    Edit3, 
-    Camera, 
-    Wallet, 
     Shield, 
     Bell, 
+    Save, 
+    Camera, 
+    Edit3,
+    Wallet, 
     Lock, 
-    Save,
     Upload,
     X,
     AlertCircle,
     FileText,
     CheckCircle
 } from 'lucide-react';
-import { toast } from 'react-toastify';
-import { api } from '../services/api';
 import '../styles/ProfileSettings.css';
+import { api } from '../services/api';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+import { logger } from '../utils/logger';
 
 const ProfileSettings = () => {
     const navigate = useNavigate();
@@ -130,7 +131,7 @@ const ProfileSettings = () => {
             setProfile(profileRes.data.user);
             setKyc(kycRes.data.kyc);
         } catch (error) {
-            console.error('Error loading profile:', error);
+            logger.error('Error loading profile:', error);
             toast.error('Failed to load profile information');
         } finally {
             setLoading(false);
@@ -144,7 +145,7 @@ const ProfileSettings = () => {
             await api.put('/profile', profile);
             toast.success('Profile updated successfully!');
         } catch (error) {
-            console.error('Error updating profile:', error);
+            logger.error('Error updating profile:', error);
             toast.error(error.response?.data?.error || 'Failed to update profile');
         } finally {
             setSaving(false);
@@ -178,7 +179,7 @@ const ProfileSettings = () => {
 
             toast.success('Avatar updated successfully!');
         } catch (error) {
-            console.error('Error uploading avatar:', error);
+            logger.error('Error uploading avatar:', error);
             toast.error('Failed to upload avatar');
         }
     };
@@ -191,7 +192,7 @@ const ProfileSettings = () => {
             toast.success('Personal information saved successfully!');
             setKycStep('documents');
         } catch (error) {
-            console.error('Error saving personal info:', error);
+            logger.error('Error saving personal info:', error);
             toast.error(error.response?.data?.error || 'Failed to save personal information');
         } finally {
             setSaving(false);
@@ -215,7 +216,7 @@ const ProfileSettings = () => {
             }));
             setKycStep('review');
         } catch (error) {
-            console.error('Error uploading documents:', error);
+            logger.error('Error uploading documents:', error);
             toast.error(error.response?.data?.error || 'Failed to upload documents');
         } finally {
             setUploadingFiles(false);
@@ -229,7 +230,7 @@ const ProfileSettings = () => {
             toast.success('KYC application submitted for review!');
             loadUserProfile(); // Reload to get updated status
         } catch (error) {
-            console.error('Error submitting KYC:', error);
+            logger.error('Error submitting KYC:', error);
             toast.error(error.response?.data?.error || 'Failed to submit KYC application');
         } finally {
             setSaving(false);

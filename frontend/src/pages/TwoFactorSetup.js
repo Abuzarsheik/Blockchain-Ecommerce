@@ -1,9 +1,9 @@
+import '../styles/Auth.css';
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import { Shield, Smartphone, Copy, CheckCircle, AlertCircle, Loader, Download, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-toastify';
-import api from '../services/api';
-import '../styles/Auth.css';
+import { useNavigate } from 'react-router-dom';
 
 const TwoFactorSetup = () => {
   const navigate = useNavigate();

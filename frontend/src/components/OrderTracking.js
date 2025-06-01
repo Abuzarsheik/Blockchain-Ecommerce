@@ -1,5 +1,7 @@
+import '../styles/OrderTracking.css';
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
+
   Package, 
   Truck, 
   MapPin, 
@@ -13,7 +15,6 @@ import {
   Mail,
   User
 } from 'lucide-react';
-import '../styles/OrderTracking.css';
 
 const OrderTracking = ({ orderId, trackingNumber, onClose }) => {
   const [trackingData, setTrackingData] = useState(null);

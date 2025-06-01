@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { Eye, EyeOff, Loader, Shield, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
-import { toast } from 'react-toastify';
-import { loginUser, verify2FA, clearError } from '../store/slices/authSlice';
 import '../styles/Auth.css';
+import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff, Loader, Shield, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { loginUser, verify2FA, clearError } from '../store/slices/authSlice';
+import { toast } from 'react-toastify';
+import { useDispatch, useSelector } from 'react-redux';
+import { logger } from '../utils/logger';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -130,7 +131,7 @@ const Login = () => {
           }
         } catch (error) {
           // Additional specific error handling beyond Redux
-          console.error('Login error:', error);
+          logger.error('Login error:', error);
           
           // Handle specific error cases that might not be caught by Redux
           if (typeof error === 'string') {
@@ -166,7 +167,7 @@ const Login = () => {
             navigate(from, { replace: true });
           }, 1500);
         } catch (error) {
-          console.error('2FA verification error:', error);
+          logger.error('2FA verification error:', error);
           // Error is already handled by Redux and the useEffect
         }
       }

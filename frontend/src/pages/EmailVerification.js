@@ -1,9 +1,9 @@
+import '../styles/Auth.css';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import api from '../services/api';
 import { CheckCircle, XCircle, Loader, Mail } from 'lucide-react';
 import { toast } from 'react-toastify';
-import api from '../services/api';
-import '../styles/Auth.css';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const EmailVerification = () => {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
+import '../styles/ProductFilters.css';
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Verified, DollarSign, Tag } from 'lucide-react';
-import '../styles/ProductFilters.css';
 
 const ProductFilters = ({ 
   categories, 

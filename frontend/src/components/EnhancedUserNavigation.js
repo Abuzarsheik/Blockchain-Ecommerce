@@ -1,50 +1,35 @@
+import './EnhancedNavigation.css';
+import IntelligentSearch from './IntelligentSearch';
 import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import RealTimeNotifications from './RealTimeNotifications';
+import WishlistSystem from './WishlistSystem';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { logout } from '../store/slices/authSlice';
 import { useSelector, useDispatch } from 'react-redux';
-import { 
-  Home, 
-  ShoppingBag, 
-  User, 
-  Search, 
-  Menu, 
-  X,
-  Heart,
+import {
+  User,
   Settings,
   LogOut,
-  ChevronDown,
-  Plus,
-  BarChart3,
-  Users,
-  Shield,
+  Bell,
+  Search,
+  Home,
+  ShoppingCart,
+  Heart,
   Package,
   CreditCard,
-  Truck,
-  Star,
-  Bell,
+  Shield,
   HelpCircle,
-  DollarSign,
-  Eye,
-  Edit,
-  FileText,
-  Gavel,
-  Archive,
+  Menu,
+  X,
+  ChevronDown,
+  Star,
   TrendingUp,
   Activity,
-  Database,
-  Lock,
-  UserCheck,
-  AlertTriangle,
+  MapPin,
+  Mail,
   CheckCircle,
-  Clock,
-  Filter,
-  Download,
   MoreHorizontal
 } from 'lucide-react';
-import { logout } from '../store/slices/authSlice';
-import IntelligentSearch from './IntelligentSearch';
-import WishlistSystem from './WishlistSystem';
-import RealTimeNotifications from './RealTimeNotifications';
-import './EnhancedNavigation.css';
 
 const EnhancedUserNavigation = memo(() => {
   const location = useLocation();
@@ -59,12 +44,11 @@ const EnhancedUserNavigation = memo(() => {
   const userRole = user?.role || user?.userType || 'buyer';
   const isAdmin = userRole === 'admin' || user?.isAdmin;
   const isSeller = userRole === 'seller' || user?.isSeller;
-  const isBuyer = userRole === 'buyer' || (!isAdmin && !isSeller);
 
   // Base navigation items for all users
   const baseNavItems = useMemo(() => [
     { label: 'Home', path: '/', icon: Home },
-    { label: 'NFT Marketplace', path: '/catalog', icon: ShoppingBag },
+    { label: 'NFT Marketplace', path: '/catalog', icon: ShoppingCart },
     { label: 'Products', path: '/products', icon: Package },
     { label: 'About', path: '/about', icon: User },
   ], []);
@@ -73,34 +57,34 @@ const EnhancedUserNavigation = memo(() => {
   const buyerNavItems = useMemo(() => [
     { label: 'Search', path: '/search', icon: Search, category: 'Discovery' },
     { label: 'Wishlist', path: '/wishlist', icon: Heart, category: 'Collections' },
-    { label: 'Shopping Cart', path: '/cart', icon: ShoppingBag, category: 'Shopping' },
-    { label: 'Order History', path: '/orders', icon: Truck, category: 'Orders' },
+    { label: 'Shopping Cart', path: '/cart', icon: ShoppingCart, category: 'Shopping' },
+    { label: 'Order History', path: '/orders', icon: ShoppingCart, category: 'Orders' },
     { label: 'Reviews', path: '/reviews', icon: Star, category: 'Feedback' },
   ], []);
 
   // Seller-specific navigation items
   const sellerNavItems = useMemo(() => [
-    { label: 'Seller Dashboard', path: '/seller-dashboard', icon: BarChart3, category: 'Management' },
-    { label: 'Create NFT', path: '/create-nft', icon: Plus, category: 'Creation' },
+    { label: 'Seller Dashboard', path: '/seller-dashboard', icon: TrendingUp, category: 'Management' },
+    { label: 'Create NFT', path: '/create-nft', icon: ShoppingCart, category: 'Creation' },
     { label: 'My Listings', path: '/seller/listings', icon: Package, category: 'Inventory' },
     { label: 'Sales Analytics', path: '/seller/analytics', icon: TrendingUp, category: 'Analytics' },
-    { label: 'Customer Orders', path: '/seller/orders', icon: Truck, category: 'Orders' },
-    { label: 'Revenue Tracking', path: '/seller/revenue', icon: DollarSign, category: 'Finance' },
+    { label: 'Customer Orders', path: '/seller/orders', icon: ShoppingCart, category: 'Orders' },
+    { label: 'Revenue Tracking', path: '/seller/revenue', icon: CreditCard, category: 'Finance' },
     { label: 'Customer Reviews', path: '/seller/reviews', icon: Star, category: 'Feedback' },
-    { label: 'Profile Verification', path: '/seller/verification', icon: UserCheck, category: 'Verification' },
+    { label: 'Profile Verification', path: '/seller/verification', icon: Shield, category: 'Verification' },
   ], []);
 
   // Admin-specific navigation items
   const adminNavItems = useMemo(() => [
-    { label: 'Admin Dashboard', path: '/admin/dashboard', icon: BarChart3, category: 'Overview' },
-    { label: 'User Management', path: '/admin/users', icon: Users, category: 'Users' },
-    { label: 'Content Moderation', path: '/admin/moderation', icon: Eye, category: 'Content' },
+    { label: 'Admin Dashboard', path: '/admin/dashboard', icon: TrendingUp, category: 'Overview' },
+    { label: 'User Management', path: '/admin/users', icon: User, category: 'Users' },
+    { label: 'Content Moderation', path: '/admin/moderation', icon: Mail, category: 'Content' },
     { label: 'Transaction Monitor', path: '/admin/transactions', icon: CreditCard, category: 'Finance' },
-    { label: 'Dispute Resolution', path: '/admin/disputes', icon: Gavel, category: 'Support' },
+    { label: 'Dispute Resolution', path: '/admin/disputes', icon: MapPin, category: 'Support' },
     { label: 'System Analytics', path: '/admin/analytics', icon: Activity, category: 'Analytics' },
     { label: 'Security Audit', path: '/admin/security', icon: Shield, category: 'Security' },
     { label: 'Platform Settings', path: '/admin/settings', icon: Settings, category: 'Configuration' },
-    { label: 'Revenue Reports', path: '/admin/revenue', icon: DollarSign, category: 'Finance' },
+    { label: 'Revenue Reports', path: '/admin/revenue', icon: CreditCard, category: 'Finance' },
     { label: 'System Health', path: '/admin/health', icon: Activity, category: 'Monitoring' },
   ], []);
 
@@ -108,7 +92,7 @@ const EnhancedUserNavigation = memo(() => {
   const commonUserMenuItems = useMemo(() => [
     { label: 'My Profile', path: '/profile', icon: User, category: 'Account' },
     { label: 'Account Settings', path: '/profile-settings', icon: Settings, category: 'Account' },
-    { label: 'Security Settings', path: '/security', icon: Lock, category: 'Security' },
+    { label: 'Security Settings', path: '/security', icon: Shield, category: 'Security' },
     { label: 'Notifications', path: '/notifications', icon: Bell, category: 'Preferences' },
     { label: 'Help & Support', path: '/help', icon: HelpCircle, category: 'Support' },
   ], []);
@@ -125,7 +109,7 @@ const EnhancedUserNavigation = memo(() => {
     const items = [...commonUserMenuItems];
     
     if (isAuthenticated) {
-      items.unshift({ label: 'Dashboard', path: '/dashboard', icon: BarChart3, category: 'Quick Access' });
+      items.unshift({ label: 'Dashboard', path: '/dashboard', icon: TrendingUp, category: 'Quick Access' });
       
       if (isSeller) {
         items.splice(1, 0, { label: 'Seller Dashboard', path: '/seller-dashboard', icon: TrendingUp, category: 'Quick Access' });
@@ -146,21 +130,21 @@ const EnhancedUserNavigation = memo(() => {
     if (isAuthenticated) {
       if (isSeller) {
         actions.push(
-          { label: 'Create NFT', path: '/create-nft', icon: Plus, color: 'primary' },
-          { label: 'View Sales', path: '/seller/analytics', icon: BarChart3, color: 'success' }
+          { label: 'Create NFT', path: '/create-nft', icon: ShoppingCart, color: 'primary' },
+          { label: 'View Sales', path: '/seller/analytics', icon: TrendingUp, color: 'success' }
         );
       }
       
       if (isAdmin) {
         actions.push(
-          { label: 'User Management', path: '/admin/users', icon: Users, color: 'warning' },
+          { label: 'User Management', path: '/admin/users', icon: User, color: 'warning' },
           { label: 'System Monitor', path: '/admin/analytics', icon: Activity, color: 'info' }
         );
       }
       
       // Common actions for all authenticated users
       actions.push(
-        { label: 'Orders', path: '/orders', icon: Truck, color: 'secondary' },
+        { label: 'Orders', path: '/orders', icon: ShoppingCart, color: 'secondary' },
         { label: 'Support', path: '/help', icon: HelpCircle, color: 'muted' }
       );
     }
@@ -280,7 +264,7 @@ const EnhancedUserNavigation = memo(() => {
               className={`nav-link create-nft-link ${location.pathname === '/create-nft' ? 'active' : ''}`}
               aria-label="Create new NFT"
             >
-              <Plus size={18} aria-hidden="true" />
+              <ShoppingCart size={18} aria-hidden="true" />
               <span>Create NFT</span>
             </Link>
           )}
@@ -360,7 +344,7 @@ const EnhancedUserNavigation = memo(() => {
           {/* Cart (for buyers) */}
           {isAuthenticated && !isAdmin && (
             <Link to="/cart" className="cart-link" aria-label="Shopping cart">
-              <ShoppingBag size={18} aria-hidden="true" />
+              <ShoppingCart size={18} aria-hidden="true" />
             </Link>
           )}
 
@@ -620,7 +604,7 @@ const EnhancedUserNavigation = memo(() => {
                   onClick={() => setMobileMenuOpen(false)}
                   role="menuitem"
                 >
-                  <Plus size={20} aria-hidden="true" />
+                  <ShoppingCart size={20} aria-hidden="true" />
                   <span>Sign Up</span>
                 </Link>
               </>

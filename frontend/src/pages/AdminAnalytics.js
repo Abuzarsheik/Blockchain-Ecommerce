@@ -1,8 +1,9 @@
+import '../styles/AdminAnalytics.css';
 import React, { useState, useEffect, useCallback } from 'react';
+import { apiEndpoints } from '../services/api';
 import { 
   TrendingUp, 
   BarChart3, 
-  PieChart, 
   Calendar,
   Download,
   RefreshCw,
@@ -12,10 +13,10 @@ import {
   Package,
   AlertTriangle,
   Activity,
-  Target
+  Target,
+  PieChart
 } from 'lucide-react';
-import { apiEndpoints } from '../services/api';
-import '../styles/AdminAnalytics.css';
+import { logger } from '../utils/logger';
 
 const AdminAnalytics = () => {
   const [analytics, setAnalytics] = useState(null);
@@ -46,7 +47,7 @@ const AdminAnalytics = () => {
 
       setAnalytics(response.data);
     } catch (err) {
-      console.error('Failed to fetch analytics:', err);
+      logger.error('Failed to fetch analytics:', err);
       setError(err.response?.data?.error || 'Failed to load analytics');
     } finally {
       setLoading(false);
@@ -80,7 +81,7 @@ const AdminAnalytics = () => {
       link.click();
       link.remove();
     } catch (err) {
-      console.error('Failed to export report:', err);
+      logger.error('Failed to export report:', err);
       alert('Failed to export report');
     }
   };

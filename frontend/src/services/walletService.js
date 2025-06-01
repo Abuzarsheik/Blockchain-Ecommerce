@@ -1,10 +1,10 @@
-import { ethers } from 'ethers';
-
-import { blockchainService } from './blockchain';
 import { api } from './api';
+import { blockchainService } from './blockchain';
+import { ethers } from 'ethers';
+import { logger } from '../utils/logger';
 
 // Mock ethers for build compatibility
-const ethersMock = {
+const mockEthers = {
   BrowserProvider: class MockBrowserProvider {},
   formatEther: (value) => value,
   parseEther: (value) => value,
@@ -103,10 +103,8 @@ class WalletService {
     try {
       await this.detectAvailableWallets();
       this.isInitialized = true;
-      console.log('✅ Wallet service initialized');
-      console.log('📱 Available wallets:', this.supportedWallets);
     } catch (error) {
-      console.error('❌ Failed to initialize wallet service:', error);
+      logger.error('❌ Failed to initialize wallet service:', error);
     }
   }
 
@@ -166,7 +164,7 @@ class WalletService {
           throw new Error(`Unsupported wallet type: ${walletType}`);
       }
     } catch (error) {
-      console.error('Failed to connect wallet:', error);
+      logger.error('Failed to connect wallet:', error);
       throw error;
     }
   }
@@ -212,7 +210,7 @@ class WalletService {
 
       return this.connectedWallet;
     } catch (error) {
-      console.error('Failed to connect MetaMask:', error);
+      logger.error('Failed to connect MetaMask:', error);
       throw error;
     }
   }
@@ -241,7 +239,7 @@ class WalletService {
 
       return this.connectedWallet;
     } catch (error) {
-      console.error('Failed to connect Trust Wallet:', error);
+      logger.error('Failed to connect Trust Wallet:', error);
       throw error;
     }
   }
@@ -295,7 +293,7 @@ class WalletService {
 
       return this.balances;
     } catch (error) {
-      console.error('Failed to load balances:', error);
+      logger.error('Failed to load balances:', error);
       throw error;
     }
   }
@@ -328,7 +326,7 @@ class WalletService {
       
       return ethers.formatUnits(balance, decimals);
     } catch (error) {
-      console.error('Failed to get ERC-20 balance:', error);
+      logger.error('Failed to get ERC-20 balance:', error);
       throw error;
     }
   }
@@ -350,7 +348,7 @@ class WalletService {
       const price = mockPrices[currency] || 0;
       return parseFloat(amount) * price;
     } catch (error) {
-      console.error('Failed to get USD value:', error);
+      logger.error('Failed to get USD value:', error);
       return 0;
     }
   }
@@ -419,7 +417,7 @@ class WalletService {
       };
 
     } catch (error) {
-      console.error('Payment processing failed:', error);
+      logger.error('Payment processing failed:', error);
       throw error;
     }
   }
@@ -446,7 +444,7 @@ class WalletService {
 
       return tx;
     } catch (error) {
-      console.error('Failed to send transaction:', error);
+      logger.error('Failed to send transaction:', error);
       throw error;
     }
   }
@@ -483,7 +481,7 @@ class WalletService {
       const tx = await contract.transfer(to, tokenAmount);
       return tx;
     } catch (error) {
-      console.error('Failed to send token transaction:', error);
+      logger.error('Failed to send token transaction:', error);
       throw error;
     }
   }
@@ -520,7 +518,7 @@ class WalletService {
         transaction: transactionRecord
       };
     } catch (error) {
-      console.error('Withdrawal processing failed:', error);
+      logger.error('Withdrawal processing failed:', error);
       throw error;
     }
   }
@@ -551,7 +549,7 @@ class WalletService {
 
       return transaction;
     } catch (error) {
-      console.error('Failed to record transaction:', error);
+      logger.error('Failed to record transaction:', error);
       // Don't throw here as the transaction might still be valid
     }
   }
@@ -574,7 +572,7 @@ class WalletService {
 
       return transaction;
     } catch (error) {
-      console.error('Failed to update transaction:', error);
+      logger.error('Failed to update transaction:', error);
     }
   }
 
@@ -596,7 +594,7 @@ class WalletService {
 
       return this.transactionHistory;
     } catch (error) {
-      console.error('Failed to get transaction history:', error);
+      logger.error('Failed to get transaction history:', error);
       
       // Fallback to local storage
       const stored = localStorage.getItem('walletTransactions');
@@ -618,7 +616,7 @@ class WalletService {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Failed to record wallet connection:', error);
+      logger.error('Failed to record wallet connection:', error);
     }
   }
 
@@ -638,7 +636,6 @@ class WalletService {
 
     localStorage.removeItem('connectedWallet');
     
-    console.log('🔌 Wallet disconnected');
   }
 
   /**
@@ -667,7 +664,7 @@ class WalletService {
       
       this.chainId = chainId;
     } catch (error) {
-      console.error('Failed to switch network:', error);
+      logger.error('Failed to switch network:', error);
       throw error;
     }
   }
@@ -719,7 +716,7 @@ class WalletService {
       const balance = await provider.getBalance(address);
       return ethers.formatEther(balance);
     } catch (error) {
-      console.error('Failed to get balance:', error);
+      logger.error('Failed to get balance:', error);
       throw error;
     }
   }

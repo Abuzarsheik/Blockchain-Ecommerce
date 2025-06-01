@@ -1,12 +1,11 @@
+import React from 'react';
+
 /**
  * 🌍 INTERNATIONALIZATION FRAMEWORK
  * Multi-language support for Blocmerce NFT Marketplace
  * Zero risk implementation - works independently
  */
 
-import React from 'react';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
 
 // Simple i18n implementation without external dependencies
 class SimpleI18n {
@@ -26,7 +25,6 @@ class SimpleI18n {
         // Detect browser language
         this.detectLanguage();
         
-        console.log('🌍 Internationalization framework initialized');
         console.log(`📍 Current language: ${this.currentLanguage}`);
     }
 
@@ -44,7 +42,6 @@ class SimpleI18n {
             const frTranslations = await import('./locales/fr.json');
             this.translations.fr = frTranslations.default || frTranslations;
 
-            console.log('✅ Translations loaded for:', Object.keys(this.translations));
         } catch (error) {
             console.warn('⚠️ Error loading translations:', error);
             // Fallback to basic English translations

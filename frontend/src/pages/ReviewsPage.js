@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { api } from '../services/api';
 import ReviewForm from '../components/Reviews/ReviewForm';
-import ReviewList from '../components/Reviews/ReviewList';
+import { api } from '../services/api';
+import { useSelector } from 'react-redux';
+// import { useParams, useNavigate } from 'react-router-dom';
+// import { toast } from 'react-toastify';
+import { Button } from '../components/ui/Button';
+import { logger } from '../utils/logger';
+import { Badge } from '../components/ui/Badge';
+// import { Star, Filter, Search, Calendar, User } from 'lucide-react';
 
 const ReviewsPage = () => {
   const { user } = useSelector((state) => state.auth);
@@ -31,7 +34,7 @@ const ReviewsPage = () => {
         setEligibleOrders(response.data.orders);
       }
     } catch (error) {
-      console.error('Failed to load eligible orders:', error);
+      logger.error('Failed to load eligible orders:', error);
     } finally {
       setLoading(false);
     }
@@ -44,7 +47,7 @@ const ReviewsPage = () => {
         setMyReviews(response.data.reviews);
       }
     } catch (error) {
-      console.error('Failed to load my reviews:', error);
+      logger.error('Failed to load my reviews:', error);
     }
   };
 

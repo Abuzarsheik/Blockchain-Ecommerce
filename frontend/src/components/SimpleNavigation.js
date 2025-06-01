@@ -1,5 +1,10 @@
+import './SimpleNavigation.css';
+import IntelligentSearch from './IntelligentSearch';
 import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
+import RealTimeNotifications from './RealTimeNotifications';
+import WishlistSystem from './WishlistSystem';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { logout } from '../store/slices/authSlice';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
   Home, 
@@ -13,11 +18,6 @@ import {
   LogOut,
   ChevronDown
 } from 'lucide-react';
-import { logout } from '../store/slices/authSlice';
-import IntelligentSearch from './IntelligentSearch';
-import WishlistSystem from './WishlistSystem';
-import RealTimeNotifications from './RealTimeNotifications';
-import './SimpleNavigation.css';
 
 // Custom hook for debounced search
 const useDebounce = (value, delay) => {

@@ -1,14 +1,15 @@
-const express = require('express');
-// const { query } = require('../config/database'); // Temporarily disabled
-const { auth, optionalAuth } = require('../middleware/auth');
-const Review = require('../models/Review');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const Review = require('../models/Review');
 const User = require('../models/User');
-const notificationService = require('../services/notificationService');
-const { body, param, query, validationResult } = require('express-validator');
+const express = require('express');
 const multer = require('multer');
+const notificationService = require('../services/notificationService');
 const path = require('path');
+const { auth, optionalAuth } = require('../middleware/auth');
+const { body, param, query, validationResult } = require('express-validator');
+
+// const { query } = require('../config/database'); // Temporarily disabled
 
 const router = express.Router();
 
@@ -146,7 +147,7 @@ router.get('/product/:productId', optionalAuth, [
         });
 
     } catch (error) {
-        console.error('Get product reviews error:', error);
+        logger.error('Get product reviews error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get reviews',
@@ -217,7 +218,7 @@ router.get('/seller/:sellerId', optionalAuth, [
         });
 
     } catch (error) {
-        console.error('Get seller reviews error:', error);
+        logger.error('Get seller reviews error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get seller reviews',
@@ -272,7 +273,7 @@ router.get('/user/my-reviews', auth, [
         });
 
     } catch (error) {
-        console.error('Get user reviews error:', error);
+        logger.error('Get user reviews error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get user reviews',
@@ -312,7 +313,7 @@ router.get('/eligible-orders', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get eligible orders error:', error);
+        logger.error('Get eligible orders error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to get eligible orders',
@@ -465,7 +466,7 @@ router.post('/', auth, upload.array('images', 5), [
                 }
             });
         } catch (notifError) {
-            console.error('Failed to send review notification:', notifError);
+            logger.error('Failed to send review notification:', notifError);
         }
 
         res.status(201).json({
@@ -475,7 +476,7 @@ router.post('/', auth, upload.array('images', 5), [
         });
 
     } catch (error) {
-        console.error('Create review error:', error);
+        logger.error('Create review error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to create review',
@@ -580,7 +581,7 @@ router.put('/:id', auth, upload.array('images', 5), [
         });
 
     } catch (error) {
-        console.error('Update review error:', error);
+        logger.error('Update review error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to update review',
@@ -647,7 +648,7 @@ router.post('/:id/response', auth, [
                 }
             });
         } catch (notifError) {
-            console.error('Failed to send response notification:', notifError);
+            logger.error('Failed to send response notification:', notifError);
         }
 
         res.json({
@@ -657,7 +658,7 @@ router.post('/:id/response', auth, [
         });
 
     } catch (error) {
-        console.error('Add seller response error:', error);
+        logger.error('Add seller response error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to add response',
@@ -721,7 +722,7 @@ router.post('/:id/helpful', auth, [
         });
 
     } catch (error) {
-        console.error('Vote helpful error:', error);
+        logger.error('Vote helpful error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to record vote',
@@ -781,7 +782,7 @@ router.post('/:id/report', auth, [
         });
 
     } catch (error) {
-        console.error('Report review error:', error);
+        logger.error('Report review error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to report review',
@@ -841,7 +842,7 @@ router.delete('/:id', auth, [
         });
 
     } catch (error) {
-        console.error('Delete review error:', error);
+        logger.error('Delete review error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to delete review',
@@ -862,7 +863,7 @@ async function updateProductRating(productId) {
 
         await Product.findByIdAndUpdate(productId, updateData);
     } catch (error) {
-        console.error('Failed to update product rating:', error);
+        logger.error('Failed to update product rating:', error);
     }
 }
 

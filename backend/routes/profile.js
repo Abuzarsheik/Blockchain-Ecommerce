@@ -1,12 +1,12 @@
-const express = require('express');
-const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
-const { auth, adminAuth } = require('../middleware/auth');
-const kycService = require('../services/kycService');
 const emailService = require('../services/emailService');
+const express = require('express');
+const fs = require('fs');
+const kycService = require('../services/kycService');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const { auth, adminAuth } = require('../middleware/auth');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -21,7 +21,13 @@ router.get('/', auth, async (req, res) => {
             .select('-password_hash -twoFactorAuth.secret -passwordReset -emailVerification.token');
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         res.json({
@@ -50,8 +56,14 @@ router.get('/', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get profile error:', error);
-        res.status(500).json({ error: 'Failed to get user profile' });
+        logger.error('Get profile error:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -123,7 +135,13 @@ router.put('/', auth, [
         ).select('-password_hash -twoFactorAuth.secret');
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         res.json({
@@ -141,11 +159,23 @@ router.put('/', auth, [
         });
 
     } catch (error) {
-        console.error('Update profile error:', error);
+        logger.error('Update profile error:', error);
         if (error.code === 11000) {
-            return res.status(400).json({ error: 'Username already exists' });
+            return res.status(409).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
         }
-        res.status(500).json({ error: 'Failed to update profile' });
+      });
+        }
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -180,7 +210,13 @@ const avatarUpload = multer({
 router.post('/avatar', auth, avatarUpload.single('avatar'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ error: 'No avatar file uploaded' });
+            return res.status(400).json({
+                success: false,
+                error: {
+                    message: 'No avatar file uploaded',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         const avatarPath = `/uploads/avatars/${req.file.filename}`;
@@ -198,8 +234,8 @@ router.post('/avatar', auth, avatarUpload.single('avatar'), async (req, res) => 
         });
 
     } catch (error) {
-        console.error('Avatar upload error:', error);
-        res.status(500).json({ error: 'Failed to upload avatar' });
+        logger.error('Avatar upload error:', error);
+        res.status(500).json({ error: error.message || 'Failed to upload avatar' });
     }
 });
 
@@ -214,7 +250,13 @@ router.get('/kyc', auth, async (req, res) => {
             .select('kyc firstName lastName email');
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         // Don't expose sensitive document paths in response
@@ -256,8 +298,8 @@ router.get('/kyc', auth, async (req, res) => {
         res.json({ kyc: kycInfo });
 
     } catch (error) {
-        console.error('Get KYC info error:', error);
-        res.status(500).json({ error: 'Failed to get KYC information' });
+        logger.error('Get KYC info error:', error);
+        res.status(500).json({ error: error.message || 'Failed to get KYC information' });
     }
 });
 
@@ -284,12 +326,24 @@ router.post('/kyc/personal-info', auth, [
         // Validate age (must be 18+)
         const age = new Date().getFullYear() - new Date(personalInfo.dateOfBirth).getFullYear();
         if (age < 18) {
-            return res.status(400).json({ error: 'You must be at least 18 years old to complete KYC verification' });
+            return res.status(400).json({
+                success: false,
+                error: {
+                    message: 'You must be at least 18 years old to complete KYC verification',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         const user = await User.findById(req.user.id);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         // Update personal information
@@ -302,8 +356,14 @@ router.post('/kyc/personal-info', auth, [
         });
 
     } catch (error) {
-        console.error('KYC personal info error:', error);
-        res.status(500).json({ error: 'Failed to save personal information' });
+        logger.error('KYC personal info error:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -321,7 +381,13 @@ router.post('/kyc/documents', auth, kycService.getUploadMiddleware(), async (req
         } = req.body;
 
         if (!req.files || Object.keys(req.files).length === 0) {
-            return res.status(400).json({ error: 'No documents uploaded' });
+            return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         const result = await kycService.uploadDocuments(req.user.id, req.files);
@@ -347,7 +413,7 @@ router.post('/kyc/documents', auth, kycService.getUploadMiddleware(), async (req
         res.json(result);
 
     } catch (error) {
-        console.error('KYC document upload error:', error);
+        logger.error('KYC document upload error:', error);
         res.status(500).json({ error: error.message || 'Failed to upload documents' });
     }
 });
@@ -357,7 +423,13 @@ router.post('/kyc/submit', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         // Check if application is complete
@@ -377,7 +449,7 @@ router.post('/kyc/submit', auth, async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('KYC submission error:', error);
+        logger.error('KYC submission error:', error);
         res.status(500).json({ error: error.message || 'Failed to submit KYC application' });
     }
 });
@@ -390,14 +462,26 @@ router.get('/kyc/history', auth, async (req, res) => {
             .populate('kyc.history.performedBy', 'firstName lastName email');
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         res.json({ history: user.kyc.history });
 
     } catch (error) {
-        console.error('Get KYC history error:', error);
-        res.status(500).json({ error: 'Failed to get KYC history' });
+        logger.error('Get KYC history error:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -415,8 +499,14 @@ router.get('/kyc/admin/pending', adminAuth, async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('Get pending KYC applications error:', error);
-        res.status(500).json({ error: 'Failed to get pending applications' });
+        logger.error('Get pending KYC applications error:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -427,8 +517,14 @@ router.get('/kyc/admin/statistics', adminAuth, async (req, res) => {
         res.json(stats);
 
     } catch (error) {
-        console.error('Get KYC statistics error:', error);
-        res.status(500).json({ error: 'Failed to get KYC statistics' });
+        logger.error('Get KYC statistics error:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -462,7 +558,7 @@ router.post('/kyc/admin/review/:userId', adminAuth, [
         res.json(result);
 
     } catch (error) {
-        console.error('KYC review error:', error);
+        logger.error('KYC review error:', error);
         res.status(500).json({ error: error.message || 'Failed to review KYC application' });
     }
 });
@@ -478,7 +574,13 @@ router.get('/kyc/admin/application/:userId', adminAuth, async (req, res) => {
             .populate('kyc.history.performedBy', 'firstName lastName email');
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         res.json({
@@ -492,8 +594,14 @@ router.get('/kyc/admin/application/:userId', adminAuth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get KYC application error:', error);
-        res.status(500).json({ error: 'Failed to get KYC application' });
+        logger.error('Get KYC application error:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 

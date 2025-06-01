@@ -1,8 +1,8 @@
+import '../styles/NotFound.css';
 import React from 'react';
+import { Home, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Home, Search } from 'lucide-react';
-import '../styles/NotFound.css';
 
 const NotFound = () => {
   const { user, isAuthenticated } = useSelector(state => state.auth);

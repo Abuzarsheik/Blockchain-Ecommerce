@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { X, Verified, ExternalLink, Clock, User, Hash } from 'lucide-react';
-import { verifyProductOnChain, getProductHistory } from '../store/slices/blockchainSlice';
-import LoadingSpinner from './LoadingSpinner';
 import '../styles/BlockchainVerification.css';
+import LoadingSpinner from './LoadingSpinner';
+import React, { useState, useEffect } from 'react';
+import { X, Verified, ExternalLink, Clock, User, Hash } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { verifyProductOnChain, getProductHistory } from '../store/slices/blockchainSlice';
 
 const BlockchainVerification = ({ productId, onClose }) => {
   const dispatch = useDispatch();

@@ -1,6 +1,5 @@
+import '../styles/Checkout.css';
 import React, { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import { 
   CreditCard, 
   Wallet, 
@@ -9,10 +8,12 @@ import {
   Shield,
   Info
 } from 'lucide-react';
-import { toast } from 'react-toastify';
 import { clearCart } from '../store/slices/cartSlice';
 import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
-import '../styles/Checkout.css';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { logger } from '../utils/logger';
 
 const Checkout = () => {
   const [step, setStep] = useState(1);
@@ -234,7 +235,7 @@ const Checkout = () => {
       }, 3000);
       
     } catch (error) {
-      console.error('Order creation failed:', error);
+      logger.error('Order creation failed:', error);
       toast.error(error.message || 'Payment failed. Please try again.');
     } finally {
       setIsProcessing(false);

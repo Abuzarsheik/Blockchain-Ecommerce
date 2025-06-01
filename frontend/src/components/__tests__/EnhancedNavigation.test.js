@@ -1,13 +1,12 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import { BrowserRouter } from 'react-router-dom';
-import { configureStore } from '@reduxjs/toolkit';
 import '@testing-library/jest-dom';
-
 import EnhancedNavigation from '../EnhancedNavigation';
+import React from 'react';
 import authSlice from '../../store/slices/authSlice';
 import cartSlice from '../../store/slices/cartSlice';
+import { BrowserRouter } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 // Mock store setup
 const createMockStore = (initialState = {}) => {
@@ -94,9 +93,9 @@ describe('EnhancedNavigation', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Dashboard')).toBeInTheDocument();
-        expect(screen.getByText('Profile')).toBeInTheDocument();
-        expect(screen.getByText('Logout')).toBeInTheDocument();
       });
+      expect(screen.getByText('Profile')).toBeInTheDocument();
+      expect(screen.getByText('Logout')).toBeInTheDocument();
     });
 
     it('should show admin menu for admin users', () => {

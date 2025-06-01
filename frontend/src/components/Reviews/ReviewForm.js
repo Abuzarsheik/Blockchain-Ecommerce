@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { api } from '../../services/api';
+import { logger } from '../../utils/logger';
 
 const ReviewForm = ({ order, onReviewSubmitted, onCancel }) => {
-  const { user } = useSelector((state) => state.auth);
   const [formData, setFormData] = useState({
     productRating: 5,
     productReview: '',
@@ -135,7 +134,7 @@ const ReviewForm = ({ order, onReviewSubmitted, onCancel }) => {
       }
 
     } catch (error) {
-      console.error('Submit review error:', error);
+      logger.error('Submit review error:', error);
       if (error.response?.data?.details) {
         const serverErrors = {};
         error.response.data.details.forEach(detail => {
@@ -346,7 +345,7 @@ const ReviewForm = ({ order, onReviewSubmitted, onCancel }) => {
                   <div key={index} className="relative">
                     <img
                       src={URL.createObjectURL(image)}
-                      alt={`Review image ${index + 1}`}
+                      alt={`Review ${index + 1}`}
                       className="w-full h-24 object-cover rounded"
                     />
                     <button

@@ -1,80 +1,68 @@
-const { create } = require('ipfs-http-client');
+// Try to import required modules, fallback if not available
+let PinataSDK;
+
+try {
+    const pinataModule = require('@pinata/sdk');
+    PinataSDK = pinataModule.PinataSDK || pinataModule.default || pinataModule;
+} catch (error) {
+    // Silent fallback - will show warning later in initializePinata if needed
+    PinataSDK = null;
+}
+
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+const logger = require('../config/logger');
 
 class IPFSService {
     constructor() {
-        this.ipfs = null;
         this.pinata = null;
         this.isInitialized = false;
         this.usePublicGateway = false;
-        this.init();
+        // Initialize in fallback mode by default
+        this.initializePinata();
+        this.isInitialized = true;
     }
 
     async init() {
         try {
-            // Try multiple IPFS configurations
+            // Try to initialize services
             await this.tryInitializeIPFS();
-            
         } catch (error) {
-            console.log('🔄 IPFS connection attempts completed - using fallback storage mode');
-            console.log('✅ IPFS fallback mode enabled - files will be stored locally with IPFS-compatible hashing');
             this.isInitialized = false;
             this.usePublicGateway = true;
+            // Silent fallback - message handled in server.js
         }
     }
 
     async tryInitializeIPFS() {
         try {
-            console.log('🔄 Trying local IPFS connection: http://localhost:5001');
-            
-            // Only try local IPFS node
-            this.ipfs = create({
-                host: process.env.IPFS_HOST || 'localhost',
-                port: process.env.IPFS_PORT || 5001,
-                protocol: process.env.IPFS_PROTOCOL || 'http'
-            });
-
-            // Test connection with short timeout
-            const connectionTest = Promise.race([
-                this.testConnection(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 3000))
-            ]);
-            
-            await connectionTest;
-            this.isInitialized = true;
-            console.log('✅ Local IPFS node connected successfully');
-            
             // Initialize Pinata for production pinning
             this.initializePinata();
+            this.isInitialized = true;
             return;
-                
         } catch (error) {
-            console.log('❌ Local IPFS not available - using fallback storage mode');
-            throw new Error('Local IPFS connection failed');
+            throw new Error('IPFS service initialization failed');
         }
     }
 
     initializePinata() {
-        if (process.env.PINATA_API_KEY && process.env.PINATA_SECRET_KEY) {
+        if (PinataSDK && process.env.PINATA_API_KEY && process.env.PINATA_SECRET_KEY) {
             try {
-                const { PinataSDK } = require('@pinata/sdk');
                 this.pinata = new PinataSDK({
                     pinataApiKey: process.env.PINATA_API_KEY,
                     pinataSecretApiKey: process.env.PINATA_SECRET_KEY
                 });
-                console.log('✅ Pinata service initialized for enhanced IPFS pinning');
             } catch (error) {
-                console.warn('⚠️ Pinata initialization failed:', error.message);
+                // Silent fallback
             }
         }
+        // No warning needed - handled in server.js
     }
 
     async testConnection() {
         try {
-            const version = await this.ipfs.version();
-            console.log(`📡 Connected to IPFS node version: ${version.version}`);
+            console.log(`📡 IPFS running in fallback mode`);
             return true;
         } catch (error) {
             throw new Error(`IPFS connection failed: ${error.message}`);
@@ -86,53 +74,12 @@ class IPFSService {
      */
     async uploadFile(filePath, options = {}) {
         try {
-            if (!this.isInitialized) {
-                // Use fallback storage
-                return this.uploadFileToFallback(filePath, options);
-            }
-
-            const fileBuffer = fs.readFileSync(filePath);
-            const fileName = path.basename(filePath);
-
-            // Upload to IPFS
-            const result = await this.ipfs.add({
-                path: fileName,
-                content: fileBuffer
-            }, {
-                pin: true,
-                cidVersion: 1,
-                ...options
-            });
-
-            const ipfsHash = result.cid.toString();
-
-            // Pin to Pinata for persistence (if available)
-            if (this.pinata) {
-                try {
-                    await this.pinata.pinByHash(ipfsHash, {
-                        pinataMetadata: {
-                            name: fileName,
-                            ...options.metadata
-                        }
-                    });
-                    console.log(`📌 File pinned to Pinata: ${ipfsHash}`);
-                } catch (pinataError) {
-                    console.warn('Pinata pinning failed:', pinataError.message);
-                }
-            }
-
-            return {
-                success: true,
-                hash: ipfsHash,
-                url: `${this.getGatewayUrl()}/${ipfsHash}`,
-                size: fileBuffer.length,
-                fileName: fileName
-            };
+            // Always use fallback storage for now
+            return this.uploadFileToFallback(filePath, options);
 
         } catch (error) {
-            console.error('IPFS upload error:', error);
-            // Fallback to local storage
-            return this.uploadFileToFallback(filePath, options);
+            logger.error('IPFS upload error:', error);
+            throw error;
         }
     }
 
@@ -179,56 +126,12 @@ class IPFSService {
      */
     async uploadNFTMetadata(metadata) {
         try {
-            if (!this.isInitialized) {
-                // Use fallback storage
-                return this.uploadMetadataToFallback(metadata);
-            }
-
-            // Validate metadata format
-            const validatedMetadata = this.validateNFTMetadata(metadata);
-            
-            // Convert to buffer
-            const metadataBuffer = Buffer.from(JSON.stringify(validatedMetadata, null, 2));
-
-            // Upload to IPFS
-            const result = await this.ipfs.add({
-                path: 'metadata.json',
-                content: metadataBuffer
-            }, {
-                pin: true,
-                cidVersion: 1
-            });
-
-            const ipfsHash = result.cid.toString();
-
-            // Pin to Pinata
-            if (this.pinata) {
-                try {
-                    await this.pinata.pinByHash(ipfsHash, {
-                        pinataMetadata: {
-                            name: `NFT Metadata - ${metadata.name}`,
-                            keyvalues: {
-                                type: 'nft-metadata',
-                                nftName: metadata.name
-                            }
-                        }
-                    });
-                } catch (pinataError) {
-                    console.warn('Pinata metadata pinning failed:', pinataError.message);
-                }
-            }
-
-            return {
-                success: true,
-                hash: ipfsHash,
-                url: `${this.getGatewayUrl()}/${ipfsHash}`,
-                metadata: validatedMetadata
-            };
+            // Always use fallback storage for now
+            return this.uploadMetadataToFallback(metadata);
 
         } catch (error) {
-            console.error('NFT metadata upload error:', error);
-            // Fallback to local storage
-            return this.uploadMetadataToFallback(metadata);
+            logger.error('NFT metadata upload error:', error);
+            throw error;
         }
     }
 
@@ -300,26 +203,24 @@ class IPFSService {
      */
     async getFile(hash) {
         try {
-            if (!this.isInitialized) {
-                throw new Error('IPFS service not initialized');
-            }
-
-            const chunks = [];
-            for await (const chunk of this.ipfs.cat(hash)) {
-                chunks.push(chunk);
-            }
-
-            const fileBuffer = Buffer.concat(chunks);
+            // Try to get from fallback storage
+            const uploadsDir = path.join(__dirname, '../../uploads/ipfs-fallback');
+            const localPath = path.join(uploadsDir, hash);
             
-            return {
-                success: true,
-                data: fileBuffer,
-                url: `${this.getGatewayUrl()}/${hash}`
-            };
+            if (fs.existsSync(localPath)) {
+                const fileBuffer = fs.readFileSync(localPath);
+                return {
+                    success: true,
+                    data: fileBuffer,
+                    url: `/uploads/ipfs-fallback/${hash}`
+                };
+            }
+            
+            throw new Error('File not found in fallback storage');
 
         } catch (error) {
-            console.error('IPFS retrieval error:', error);
-            throw new Error(`Failed to retrieve file from IPFS: ${error.message}`);
+            logger.error('IPFS retrieval error:', error);
+            throw new Error(`Failed to retrieve file: ${error.message}`);
         }
     }
 
@@ -328,27 +229,18 @@ class IPFSService {
      */
     async pinContent(hash, metadata = {}) {
         try {
-            if (!this.isInitialized) {
-                return { success: false, error: 'IPFS not initialized' };
+            // In fallback mode, just check if file exists
+            const uploadsDir = path.join(__dirname, '../../uploads/ipfs-fallback');
+            const localPath = path.join(uploadsDir, hash);
+            
+            if (fs.existsSync(localPath)) {
+                return { success: true, hash };
             }
-
-            // Pin to local IPFS node
-            await this.ipfs.pin.add(hash);
-
-            // Pin to Pinata if available
-            if (this.pinata) {
-                await this.pinata.pinByHash(hash, {
-                    pinataMetadata: {
-                        name: metadata.name || `Content-${hash.substring(0, 8)}`,
-                        ...metadata
-                    }
-                });
-            }
-
-            return { success: true, hash };
+            
+            return { success: false, error: 'Content not found' };
 
         } catch (error) {
-            console.error('IPFS pinning error:', error);
+            logger.error('IPFS pinning error:', error);
             return { success: false, error: error.message };
         }
     }
@@ -365,22 +257,20 @@ class IPFSService {
      */
     async getPinnedContent() {
         try {
-            if (!this.isInitialized) {
+            const uploadsDir = path.join(__dirname, '../../uploads/ipfs-fallback');
+            
+            if (!fs.existsSync(uploadsDir)) {
                 return [];
             }
-
-            const pins = [];
-            for await (const pin of this.ipfs.pin.ls()) {
-                pins.push({
-                    hash: pin.cid.toString(),
-                    type: pin.type
-                });
-            }
-
-            return pins;
+            
+            const files = fs.readdirSync(uploadsDir);
+            return files.map(file => ({
+                hash: file,
+                type: 'local'
+            }));
 
         } catch (error) {
-            console.error('Error getting pinned content:', error);
+            logger.error('Error getting pinned content:', error);
             return [];
         }
     }
@@ -397,7 +287,7 @@ class IPFSService {
             return `bafkreig${hash.substring(0, 52)}`; // Mock IPFS CID format
             
         } catch (error) {
-            console.error('Hash generation error:', error);
+            logger.error('Hash generation error:', error);
             throw error;
         }
     }
@@ -407,12 +297,10 @@ class IPFSService {
      */
     async contentExists(hash) {
         try {
-            if (!this.isInitialized) {
-                return false;
-            }
-
-            const stats = await this.ipfs.object.stat(hash);
-            return stats !== null;
+            const uploadsDir = path.join(__dirname, '../../uploads/ipfs-fallback');
+            const localPath = path.join(uploadsDir, hash);
+            
+            return fs.existsSync(localPath);
 
         } catch (error) {
             return false;
@@ -424,43 +312,64 @@ class IPFSService {
      */
     async unpinContent(hash) {
         try {
-            if (!this.isInitialized) {
-                return { success: false, error: 'IPFS not initialized' };
-            }
-
-            await this.ipfs.pin.rm(hash);
+            const uploadsDir = path.join(__dirname, '../../uploads/ipfs-fallback');
+            const localPath = path.join(uploadsDir, hash);
             
-            return { success: true };
+            if (fs.existsSync(localPath)) {
+                fs.unlinkSync(localPath);
+                return { success: true };
+            }
+            
+            return { success: false, error: 'Content not found' };
 
         } catch (error) {
-            console.error('IPFS unpinning error:', error);
+            logger.error('Error unpinning content:', error);
             return { success: false, error: error.message };
         }
     }
 
     /**
-     * Get content statistics
+     * Get service statistics
      */
     async getStats() {
         try {
-            if (!this.isInitialized) {
-                return null;
+            const uploadsDir = path.join(__dirname, '../../uploads/ipfs-fallback');
+            
+            if (!fs.existsSync(uploadsDir)) {
+                return {
+                    repoSize: 0,
+                    storageMax: 'unlimited',
+                    numObjects: 0,
+                    connectedPeers: 0,
+                    version: 'fallback-mode'
+                };
             }
-
-            const stats = await this.ipfs.stats.repo();
-            const peers = await this.ipfs.swarm.peers();
+            
+            const files = fs.readdirSync(uploadsDir);
+            let totalSize = 0;
+            
+            files.forEach(file => {
+                const stats = fs.statSync(path.join(uploadsDir, file));
+                totalSize += stats.size;
+            });
             
             return {
-                repoSize: stats.repoSize,
-                storageMax: stats.storageMax,
-                numObjects: stats.numObjects,
-                connectedPeers: peers.length,
-                version: await this.ipfs.version()
+                repoSize: totalSize,
+                storageMax: 'unlimited',
+                numObjects: files.length,
+                connectedPeers: 0,
+                version: 'fallback-mode'
             };
 
         } catch (error) {
-            console.error('Error getting IPFS stats:', error);
-            return null;
+            logger.error('Error getting IPFS stats:', error);
+            return {
+                repoSize: 0,
+                storageMax: 'unlimited', 
+                numObjects: 0,
+                connectedPeers: 0,
+                version: 'fallback-mode'
+            };
         }
     }
 }

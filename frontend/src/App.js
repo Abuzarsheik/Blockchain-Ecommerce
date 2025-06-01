@@ -1,61 +1,59 @@
-import React, { useEffect, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Provider, useDispatch } from 'react-redux';
-import { ToastContainer } from 'react-toastify';
-import { store } from './store/store';
-import { loadUser } from './store/slices/authSlice';
-import Footer from './components/Footer';
-import ErrorBoundary from './components/ErrorBoundary';
-import LoadingSpinner from './components/LoadingSpinner';
-import { FeedbackContainer } from './components/SmartFeedback';
-import HomePage from './pages/HomePage';
-import NFTCatalog from './pages/NFTCatalog';
-import ProductCatalog from './pages/ProductCatalog';
-import NFTDetail from './pages/NFTDetail';
-import ProductDetail from './pages/ProductDetail';
-import ShoppingCart from './pages/ShoppingCart';
-import Checkout from './pages/Checkout';
-import OrderHistory from './pages/OrderHistory';
-import OrderDetail from './pages/OrderDetail';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import EmailVerification from './pages/EmailVerification';
-import TwoFactorSetup from './pages/TwoFactorSetup';
-import Dashboard from './pages/Dashboard';
-import Technology from './pages/Technology';
-import About from './pages/About';
-import CreateNFT from './pages/CreateNFT';
-import UserProfile from './pages/UserProfile';
-import Help from './pages/Help';
-import Contact from './pages/Contact';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
-import NotFound from './pages/NotFound';
-import SearchResults from './pages/SearchResults';
-import Wishlist from './pages/Wishlist';
-import Notifications from './pages/Notifications';
-import ProtectedRoute from './components/ProtectedRoute';
-import { registerServiceWorker } from './utils/performance';
-import { ariaUtils } from './utils/accessibility';
-import { applyUserPreferences } from './utils/personalization';
-import 'react-toastify/dist/ReactToastify.css';
 import './styles/App.css';
 import './styles/accessibility.css';
 import './styles/micro-interactions.css';
-import ProfileSettings from './pages/ProfileSettings';
-import SellerDashboard from './pages/SellerDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminUserManagement from './pages/AdminUserManagement';
-import AdminDisputeResolution from './pages/AdminDisputeResolution';
+import 'react-toastify/dist/ReactToastify.css';
+import About from './pages/About';
 import AdminAnalytics from './pages/AdminAnalytics';
-import SecurityAuditTrail from './pages/SecurityAuditTrail';
-import Security from './pages/Security';
-import ReviewsPage from './pages/ReviewsPage';
-import TrackingPage from './pages/TrackingPage';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminDisputeResolution from './pages/AdminDisputeResolution';
+import AdminUserManagement from './pages/AdminUserManagement';
+import Checkout from './pages/Checkout';
+import Contact from './pages/Contact';
+import CreateNFT from './pages/CreateNFT';
+import Dashboard from './pages/Dashboard';
+import EmailVerification from './pages/EmailVerification';
 import EnhancedUserNavigation from './components/EnhancedUserNavigation';
-import TestShowcase from './pages/TestShowcase';
+import ErrorBoundary from './components/ErrorBoundary';
+import Footer from './components/Footer';
+import ForgotPassword from './pages/ForgotPassword';
+import Help from './pages/Help';
+import HomePage from './pages/HomePage';
+import LoadingSpinner from './components/LoadingSpinner';
+import Login from './pages/Login';
+import NFTCatalog from './pages/NFTCatalog';
+import NFTDetail from './pages/NFTDetail';
+import NotFound from './pages/NotFound';
+import Notifications from './pages/Notifications';
+import OrderDetail from './pages/OrderDetail';
+import OrderHistory from './pages/OrderHistory';
+import Privacy from './pages/Privacy';
+import ProductCatalog from './pages/ProductCatalog';
+import ProductDetail from './pages/ProductDetail';
+import ProfileSettings from './pages/ProfileSettings';
+import ProtectedRoute from './components/ProtectedRoute';
+import React, { useEffect, Suspense } from 'react';
+import Register from './pages/Register';
+import ResetPassword from './pages/ResetPassword';
+import ReviewsPage from './pages/ReviewsPage';
+import SearchResults from './pages/SearchResults';
+import Security from './pages/Security';
+import SecurityAuditTrail from './pages/SecurityAuditTrail';
+import SellerDashboard from './pages/SellerDashboard';
+import ShoppingCart from './pages/ShoppingCart';
+import Technology from './pages/Technology';
+import Terms from './pages/Terms';
+import TrackingPage from './pages/TrackingPage';
+import TwoFactorSetup from './pages/TwoFactorSetup';
+import UserProfile from './pages/UserProfile';
+import Wishlist from './pages/Wishlist';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { FeedbackContainer } from './components/SmartFeedback';
+import { Provider, useDispatch } from 'react-redux';
+import { ToastContainer } from 'react-toastify';
+import { applyUserPreferences } from './utils/personalization';
+import { ariaUtils } from './utils/accessibility';
+import { loadUser } from './store/slices/authSlice';
+import { store } from './store/store';
 
 // Global loading fallback component
 const GlobalLoadingFallback = () => (
@@ -78,9 +76,6 @@ function AppContent() {
     
     // Apply user preferences
     applyUserPreferences();
-    
-    // Register service worker for PWA functionality
-    // registerServiceWorker(); // Commented out during development to prevent caching issues
     
     // Try to load user data if token exists
     const token = localStorage.getItem('token');
@@ -157,7 +152,6 @@ function AppContent() {
                 <Route path="/catalog" element={<NFTCatalog />} />
                 <Route path="/products" element={<ProductCatalog />} />
                 <Route path="/search" element={<SearchResults />} />
-                <Route path="/test-showcase" element={<TestShowcase />} />
                 <Route path="/nft/:id" element={<NFTDetail />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
                 <Route path="/technology" element={<Technology />} />
@@ -384,12 +378,10 @@ function AppContent() {
 function App() {
   useEffect(() => {
     // App-level initialization
-    console.log('🚀 Blocmerce NFT Marketplace initialized with Enhanced Navigation');
     
     // Check for updates if service worker is supported
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('New version available, please refresh');
         // Could show a notification to user about updates
       });
     }

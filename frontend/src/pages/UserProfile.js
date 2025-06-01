@@ -1,13 +1,12 @@
+import '../styles/UserProfile.css';
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { User, Mail, Phone, MapPin, Edit3, Camera, Wallet, Award, TrendingUp } from 'lucide-react';
 import { toast } from 'react-toastify';
-import '../styles/UserProfile.css';
-import { useAuth } from '../contexts/AuthContext';
+import { useSelector } from 'react-redux';
+import { logger } from '../utils/logger';
 
 const UserProfile = () => {
   const { user, isAuthenticated } = useSelector(state => state.auth);
-  const { user: authUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
@@ -19,11 +18,9 @@ const UserProfile = () => {
     bio: user?.bio || 'Blockchain enthusiast and NFT collector',
     walletAddress: user?.walletAddress || ''
   });
-  const [activeTab, setActiveTab] = useState('overview');
-  const [loading, setLoading] = useState(false);
 
   // TODO: Replace with real API calls to fetch user stats
-  const [userStats, setUserStats] = useState({
+  const [userStats] = useState({
     nftsOwned: 0,
     nftsSold: 0,
     totalEarnings: 0,
@@ -35,13 +32,10 @@ const UserProfile = () => {
     // TODO: Fetch actual user statistics from API
     const fetchUserStats = async () => {
       try {
-        setLoading(true);
         // const response = await userAPI.getStats(user.id);
         // setUserStats(response.data);
       } catch (error) {
-        console.error('Failed to fetch user stats:', error);
-      } finally {
-        setLoading(false);
+        logger.error('Failed to fetch user stats:', error);
       }
     };
 

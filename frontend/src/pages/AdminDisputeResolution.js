@@ -1,4 +1,8 @@
+import '../styles/AdminDisputeResolution.css';
 import React, { useState, useEffect, useCallback } from 'react';
+import { apiEndpoints } from '../services/api';
+import { logger } from '../utils/logger';
+
 import { 
   AlertTriangle, 
   Search, 
@@ -24,8 +28,6 @@ import {
   Flag,
   Users
 } from 'lucide-react';
-import { apiEndpoints } from '../services/api';
-import '../styles/AdminDisputeResolution.css';
 
 const AdminDisputeResolution = () => {
   const [disputes, setDisputes] = useState([]);
@@ -120,7 +122,7 @@ const AdminDisputeResolution = () => {
       setTotalPages(response.data.pagination.total_pages);
       setTotalDisputes(response.data.pagination.total_disputes);
     } catch (err) {
-      console.error('Failed to fetch disputes:', err);
+      logger.error('Failed to fetch disputes:', err);
       setError(err.response?.data?.error || 'Failed to load disputes');
     } finally {
       setLoading(false);
@@ -162,7 +164,7 @@ const AdminDisputeResolution = () => {
       }
 
     } catch (err) {
-      console.error(`Failed to ${action} dispute:`, err);
+      logger.error(`Failed to ${action} dispute:`, err);
       alert(err.response?.data?.error || `Failed to ${action} dispute`);
     } finally {
       setLoadingActions(prev => ({ ...prev, [disputeId]: false }));
@@ -193,7 +195,7 @@ const AdminDisputeResolution = () => {
       }
 
     } catch (err) {
-      console.error('Failed to send message:', err);
+      logger.error('Failed to send message:', err);
       alert(err.response?.data?.error || 'Failed to send message');
     }
   };

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const logger = require('./logger');
 
 // MongoDB connection
 const connectDB = async () => {
@@ -10,10 +11,9 @@ const connectDB = async () => {
             useUnifiedTopology: true,
         });
 
-        console.log('✅ MongoDB connected successfully');
         return true;
     } catch (error) {
-        console.error('❌ MongoDB connection failed:', error.message);
+        logger.error('❌ MongoDB connection failed:', error.message);
         return false;
     }
 };
@@ -22,14 +22,12 @@ const connectDB = async () => {
 const testConnection = async () => {
     try {
         if (mongoose.connection.readyState === 1) {
-            console.log('✅ Database connection is active');
             return true;
         } else {
-            console.log('⚠️  Database not connected');
             return false;
         }
     } catch (error) {
-        console.error('❌ Database connection test failed:', error.message);
+        logger.error('❌ Database connection test failed:', error.message);
         return false;
     }
 };
@@ -44,9 +42,8 @@ const initDatabase = async () => {
 const closeDB = async () => {
     try {
         await mongoose.connection.close();
-        console.log('📴 Database connection closed');
     } catch (error) {
-        console.error('❌ Error closing database:', error.message);
+        logger.error('❌ Error closing database:', error.message);
     }
 };
 
@@ -56,11 +53,11 @@ mongoose.connection.on('connected', () => {
 });
 
 mongoose.connection.on('error', (err) => {
-    console.error('❌ Mongoose connection error:', err);
+    logger.error('❌ Mongoose connection error:', err);
 });
 
 mongoose.connection.on('disconnected', () => {
-    console.log('📴 Mongoose disconnected from MongoDB');
+    console.log('🔌 Mongoose disconnected from MongoDB');
 });
 
 module.exports = {

@@ -1,6 +1,7 @@
 const express = require('express');
-const router = express.Router();
 const { auth } = require('../middleware/auth');
+
+const router = express.Router();
 
 // TODO: Implement comprehensive audit logging system
 // This should integrate with a proper AuditLog model and database
@@ -32,7 +33,7 @@ router.post('/log', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Create audit log error:', error);
+        logger.error('Create audit log error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to create audit log'
@@ -65,7 +66,7 @@ router.post('/system-event', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Log system event error:', error);
+        logger.error('Log system event error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to log system event'
@@ -100,7 +101,7 @@ router.post('/security-event', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Log security event error:', error);
+        logger.error('Log security event error:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to log security event'

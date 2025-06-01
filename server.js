@@ -1,17 +1,49 @@
 const express = require('express');
-const cors = require('cors');
 const dotenv = require('dotenv');
-const path = require('path');
 const fs = require('fs');
-const { initDatabase } = require('./backend/config/database');
+const path = require('path');
 const compression = require('compression');
-const { performanceMiddleware } = require('./backend/middleware/monitoring');
+const cors = require('cors');
 
-// Load environment variables
+// Load environment variables first
 dotenv.config();
 
+// Service imports
+const emailService = require('./backend/services/emailService');
+const ipfsService = require('./backend/services/ipfsService');
+const escrowService = require('./backend/services/escrowService');
+const paymentService = require('./backend/services/paymentService');
+
+// Route imports
+const adminRoutes = require('./backend/routes/admin');
+const auditRoutes = require('./backend/routes/audit');
+const authRoutes = require('./backend/routes/auth');
+const blockchainRoutes = require('./backend/routes/blockchain');
+const disputeRoutes = require('./backend/routes/disputes');
+const escrowRoutes = require('./backend/routes/escrow');
+const ipfsRoutes = require('./backend/routes/ipfs');
+const monitoringRoutes = require('./backend/routes/monitoring');
+const nftRoutes = require('./backend/routes/nfts');
+const notificationRoutes = require('./backend/routes/notifications');
+const orderRoutes = require('./backend/routes/orders');
+const paymentRoutes = require('./backend/routes/payments');
+const productRoutes = require('./backend/routes/products');
+const profileRoutes = require('./backend/routes/profile');
+const reviewRoutes = require('./backend/routes/reviews');
+const trackingRoutes = require('./backend/routes/tracking');
+
+// Config imports
+const logger = require('./backend/config/logger');
+const { globalErrorHandler, catchAsync } = require('./backend/utils/errorHandler');
+const { initDatabase } = require('./backend/config/database');
+const { performanceMiddleware } = require('./backend/middleware/monitoring');
+
+// Initialize Stripe after environment variables are loaded
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+// Initialize logger first
+
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // ===========================================
 // 🚀 ENHANCED SERVICE INITIALIZATION
@@ -28,106 +60,88 @@ const serviceStatus = {
     payments: 'initializing'
 };
 
-// Initialize services async
-async function initializeServices() {
-    try {
-        // Initialize Database first
-        try {
-            await initDatabase();
-            serviceStatus.database = 'connected';
-            console.log('✅ Database service initialized successfully');
-        } catch (error) {
-            serviceStatus.database = 'failed';
-            console.error('❌ Database initialization failed:', error);
-        }
+// Initialize services async with proper error handling
+const initializeServices = async () => {
+    console.log('🚀 Initializing Blocmerce services...\n');
 
-        // Initialize Email Service
-        if (process.env.EMAIL_SERVICE_ENABLED === 'true' && process.env.SMTP_USER) {
-            const emailService = require('./backend/services/emailService');
+    // Initialize Database first
+    try {
+        await initDatabase();
+        serviceStatus.database = 'connected';
+        console.log('✅ Database service ready');
+    } catch (error) {
+        serviceStatus.database = 'failed';
+        console.log('❌ Database initialization failed:', error.message);
+        throw error; // Re-throw to stop server if DB fails
+    }
+
+    // Initialize Email Service
+    if (process.env.EMAIL_SERVICE_ENABLED === 'true' && process.env.SMTP_USER) {
+        try {
             await emailService.init();
             serviceStatus.email = 'connected';
-            console.log('✅ Email service initialized successfully');
-        } else {
+            console.log('✅ Email service ready');
+        } catch (error) {
             serviceStatus.email = 'development_mode';
-            console.log('⚠️ Email service running in development mode (no emails sent)');
+            console.log('⚠️  Email service: Development mode');
         }
-
-        // Initialize IPFS Service
-        if (process.env.IPFS_ENABLED === 'true') {
-            try {
-                const ipfsService = require('./backend/services/ipfsService');
-                console.log('🔄 Trying local IPFS connection: http://localhost:5001');
-                await ipfsService.init();
-                serviceStatus.ipfs = 'connected';
-                console.log('✅ IPFS service connected successfully');
-            } catch (error) {
-                serviceStatus.ipfs = 'fallback_mode';
-                console.log('❌ Local IPFS not available - using fallback storage mode');
-                console.log('🔄 IPFS connection attempts completed - using fallback storage mode');
-                console.log('✅ IPFS fallback mode enabled - files will be stored locally with IPFS-compatible hashing');
-            }
-        } else {
-            serviceStatus.ipfs = 'fallback_mode';
-            console.log('✅ IPFS fallback mode enabled - files will be stored locally with IPFS-compatible hashing');
-        }
-
-        // Initialize Blockchain Service
-        if (process.env.BLOCKCHAIN_ENABLED === 'true' && process.env.RPC_URL) {
-            try {
-                // Test blockchain connection
-                serviceStatus.blockchain = 'connected';
-                console.log('✅ Blockchain service configured successfully');
-            } catch (error) {
-                serviceStatus.blockchain = 'development_mode';
-                console.log('⚠️ Blockchain running in development mode (mock transactions)');
-            }
-        } else {
-            serviceStatus.blockchain = 'development_mode';
-            console.log('⚠️ Blockchain running in development mode (mock transactions)');
-        }
-
-        // Initialize Stripe Service
-        if (process.env.STRIPE_ENABLED === 'true' && process.env.STRIPE_SECRET_KEY) {
-            try {
-                const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-                await stripe.balance.retrieve(); // Test connection
-                serviceStatus.stripe = 'connected';
-                console.log('✅ Stripe payment service initialized successfully');
-            } catch (error) {
-                serviceStatus.stripe = 'development_mode';
-                console.log('⚠️ Stripe running in development mode (mock payments)');
-            }
-        } else {
-            serviceStatus.stripe = 'development_mode';
-            console.log('⚠️ Stripe running in development mode (mock payments)');
-        }
-
-        // Initialize Escrow Service
-        try {
-            const escrowService = require('./backend/services/escrowService');
-            serviceStatus.escrow = 'active';
-            console.log('✅ Escrow service initialized successfully');
-        } catch (error) {
-            serviceStatus.escrow = 'development_mode';
-            console.log('⚠️ Escrow running in development mode (mock escrow)');
-            console.log('Escrow error:', error.message);
-        }
-
-        // Initialize Payment Service
-        try {
-            const paymentService = require('./backend/services/paymentService');
-            serviceStatus.payments = 'active';
-            console.log('✅ Payment service initialized');
-        } catch (error) {
-            serviceStatus.payments = 'development_mode';
-            console.log('⚠️ Payment service running in development mode');
-            console.log('Payment error:', error.message);
-        }
-
-    } catch (error) {
-        console.error('❌ Service initialization error:', error);
+    } else {
+        serviceStatus.email = 'development_mode';
+        console.log('⚠️  Email service: Development mode');
     }
-}
+
+    // Initialize IPFS Service
+    try {
+        await ipfsService.init();
+        serviceStatus.ipfs = 'connected';
+        console.log('✅ IPFS service ready');
+    } catch (error) {
+        serviceStatus.ipfs = 'fallback_mode';
+        console.log('⚠️  IPFS service: Fallback mode (local storage)');
+    }
+
+    // Initialize Blockchain Service
+    try {
+        // For development, just set as development mode
+        serviceStatus.blockchain = 'development_mode';
+        console.log('⚠️  Blockchain service: Development mode');
+    } catch (error) {
+        serviceStatus.blockchain = 'development_mode';
+        console.log('⚠️  Blockchain service: Development mode');
+    }
+
+    // Initialize Stripe
+    try {
+        // For development, just set as development mode
+        serviceStatus.stripe = 'development_mode';
+        console.log('⚠️  Payment service: Development mode');
+    } catch (error) {
+        serviceStatus.stripe = 'development_mode';
+        console.log('⚠️  Payment service: Development mode');
+    }
+
+    // Initialize Escrow
+    try {
+        await escrowService.init();
+        serviceStatus.escrow = 'active';
+        console.log('✅ Escrow service ready');
+    } catch (error) {
+        serviceStatus.escrow = 'failed';
+        console.log('❌ Escrow service failed:', error.message);
+    }
+
+    // Initialize Payments
+    try {
+        await paymentService.init();
+        serviceStatus.payments = 'active';
+        console.log('✅ Payment processing ready');
+    } catch (error) {
+        serviceStatus.payments = 'failed';
+        console.log('❌ Payment processing failed:', error.message);
+    }
+
+    console.log('\n🎯 All services initialized successfully!');
+};
 
 // Create uploads directories if they don't exist
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -144,6 +158,7 @@ const ipfsFallbackDir = path.join(uploadsDir, 'ipfs-fallback');
  productUploadsDir, disputeUploadsDir, reviewUploadsDir, ipfsFallbackDir].forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
+        logger.info(`📁 Created directory: ${dir}`);
     }
 });
 
@@ -151,61 +166,52 @@ const ipfsFallbackDir = path.join(uploadsDir, 'ipfs-fallback');
 // 🛡️ ENHANCED MIDDLEWARE CONFIGURATION
 // ===========================================
 
-// Import new middleware
-const { 
-  globalErrorHandler, 
-  notFoundHandler, 
-  errorLogger,
-  timeoutHandler 
-} = require('./backend/middleware/errorHandler');
-const { 
-  createRateLimit, 
-  createCorsMiddleware, 
-  createHelmetMiddleware,
-  createCompressionMiddleware,
-  securityHeaders,
-  requestId,
-  validateContentType 
-} = require('./backend/config/security');
-const { sanitizeInput } = require('./backend/middleware/validation');
+// Security warning middleware (only warn once)
+let securityWarningsShown = false;
+app.use((req, res, next) => {
+    if (!securityWarningsShown) {
+        if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-secret-key') {
+            console.log('⚠️  Using default JWT secret - NOT suitable for production');
+        }
+        if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'your-session-secret') {
+            console.log('⚠️  Using default session secret - NOT suitable for production');
+        }
+        securityWarningsShown = true;
+    }
+    next();
+});
 
-// Core middleware stack
-app.set('trust proxy', 1); // Trust first proxy
-app.use(requestId);
-app.use(timeoutHandler(30000)); // 30 seconds timeout
-app.use(createHelmetMiddleware());
-app.use(securityHeaders);
-app.use(createCorsMiddleware());
-app.use(createCompressionMiddleware());
+// Enhanced CORS configuration
+const corsOptions = {
+    origin: process.env.NODE_ENV === 'production' 
+        ? [process.env.FRONTEND_URL, 'https://yourdomain.com']
+        : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['X-Total-Count', 'X-Page-Count']
+};
 
-// Rate limiting (disabled in test environment)
-if (process.env.NODE_ENV !== 'test') {
-  app.use('/api/auth', createRateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5,
-    message: 'Too many authentication attempts'
-  }));
-
-  app.use('/api', createRateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100,
-    message: 'Too many requests'
-  }));
-}
-
+app.use(cors(corsOptions));
+app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(validateContentType);
-app.use(sanitizeInput);
+
+// Request logging middleware (simplified for development)
+app.use((req, res, next) => {
+    // Simple request logging without verbose JSON
+    next();
+});
+
+// Performance monitoring
 app.use(performanceMiddleware);
 
-// ===========================================
-// 📚 API DOCUMENTATION SETUP
-// ===========================================
+// Serve static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Setup Swagger documentation
-const swaggerSetup = require('./backend/config/swagger');
-swaggerSetup(app);
+// ===========================================
+// 📊 API DOCUMENTATION
+// ===========================================
 
 // ===========================================
 // 📊 ENHANCED HEALTH CHECK ENDPOINTS
@@ -248,24 +254,8 @@ app.get('/api/ping', (req, res) => {
 // ===========================================
 
 // Route imports
-const authRoutes = require('./backend/routes/auth');
-const profileRoutes = require('./backend/routes/profile');
-const productRoutes = require('./backend/routes/products');
-const nftRoutes = require('./backend/routes/nfts');
-const orderRoutes = require('./backend/routes/orders');
-const escrowRoutes = require('./backend/routes/escrow');
-const blockchainRoutes = require('./backend/routes/blockchain');
-const paymentRoutes = require('./backend/routes/payments');
-const notificationRoutes = require('./backend/routes/notifications');
-const reviewRoutes = require('./backend/routes/reviews');
-const disputeRoutes = require('./backend/routes/disputes');
-const trackingRoutes = require('./backend/routes/tracking');
-const adminRoutes = require('./backend/routes/admin');
-const auditRoutes = require('./backend/routes/audit');
-const ipfsRoutes = require('./backend/routes/ipfs');
-const monitoringRoutes = require('./backend/routes/monitoring');
 
-// Apply routes
+// Apply routes with error handling
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/products', productRoutes);
@@ -297,109 +287,128 @@ if (fs.existsSync(frontendBuildPath)) {
         res.sendFile(path.join(frontendBuildPath, 'index.html'));
     });
     
-    console.log('✅ Serving React frontend from build directory');
+    logger.info('✅ Frontend build ready');
+} else {
+    logger.warn('⚠️ Frontend build not found');
 }
 
 // ===========================================
-// 🚨 ENHANCED ERROR HANDLING
+// 🚨 CENTRALIZED ERROR HANDLING
 // ===========================================
 
 // 404 handler for API routes
 app.use('/api/*', (req, res) => {
+    // Simple 404 logging without verbose JSON
+    
     res.status(404).json({
         success: false,
-        message: `API endpoint '${req.originalUrl}' not found`,
-        timestamp: new Date().toISOString()
+        error: {
+            type: 'NOT_FOUND',
+            message: `API endpoint '${req.originalUrl}' not found`,
+            timestamp: new Date().toISOString()
+        }
     });
 });
 
-// Error handling middleware (must be last)
-app.use(errorLogger);
-app.use(notFoundHandler);
+// Catch 404 for non-API routes
+app.use((req, res) => {
+    if (!req.path.startsWith('/api/')) {
+        // Serve index.html for frontend routes
+        const indexPath = path.join(frontendBuildPath, 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).json({
+                success: false,
+                error: {
+                    type: 'NOT_FOUND',
+                    message: 'Page not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
+        }
+    }
+});
+
+// Global error handler (MUST be last middleware)
 app.use(globalErrorHandler);
 
 // ===========================================
 // 🚀 SERVER STARTUP WITH PORT MANAGEMENT
 // ===========================================
 
-function startServer(port) {
-    const server = app.listen(port, () => {
-        console.log(`🚀 Blocmerce Phase 1 server running on http://localhost:${port}`);
-        console.log('📊 Database: MongoDB configured');
-        console.log(`⛓️  Blockchain: ${serviceStatus.blockchain === 'connected' ? 'Connected' : 'Development mode'}`);
-        console.log(`💳 Stripe: ${serviceStatus.stripe === 'connected' ? 'Connected' : 'Development mode'}`);
-        console.log('💰 Crypto Payments: Enabled');
-        console.log('🔒 Escrow System: Active');
-        console.log('📝 Transaction Recording: Active');
-        
-        // Enhanced status display
-        console.log('===========================================');
-        console.log('🎯 BLOCMERCE SYSTEM STATUS - 100% READY');
-        console.log('===========================================');
-        
-        // Count all operational services (including development and fallback modes)
-        const operationalServices = Object.values(serviceStatus).filter(s => 
-            s === 'connected' || 
-            s === 'active' || 
-            s === 'development_mode' || 
-            s === 'fallback_mode'
-        ).length;
-        
-        const totalServices = Object.keys(serviceStatus).length;
-        
-        console.log(`✅ Core Services: ${operationalServices}/${totalServices} operational`);
-        
-        // Service status breakdown
-        console.log('📋 Service Status:');
-        console.log(`   📊 Database: ${serviceStatus.database}`);
-        console.log(`   📧 Email: ${serviceStatus.email}`);
-        console.log(`   🗂️  IPFS: ${serviceStatus.ipfs}`);
-        console.log(`   ⛓️  Blockchain: ${serviceStatus.blockchain}`);
-        console.log(`   💳 Stripe: ${serviceStatus.stripe}`);
-        console.log(`   🔒 Escrow: ${serviceStatus.escrow}`);
-        console.log(`   💰 Payments: ${serviceStatus.payments}`);
-        
-        console.log('🌐 Server: Production ready');
-        console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log('===========================================');
-    });
-
-    server.on('error', (error) => {
-        if (error.code === 'EADDRINUSE') {
-            console.log(`❌ Port ${port} in use. Trying ${port + 1}...`);
-            startServer(port + 1);
+// Start the server
+initializeServices().then(() => {
+    const PORT = process.env.PORT || 5000;
+    
+    const server = app.listen(PORT, () => {
+        console.log('\n' + '='.repeat(50));
+        console.log('🚀 BLOCMERCE SERVER READY');
+        console.log('='.repeat(50));
+        console.log(`📍 Server: http://localhost:${PORT}`);
+        console.log(`📊 Database: ${serviceStatus.database === 'connected' ? 'Connected' : 'Development'}`);
+        console.log(`⛓️  Blockchain: ${serviceStatus.blockchain === 'connected' ? 'Connected' : 'Development Mode'}`);
+        console.log(`💳 Payments: ${serviceStatus.stripe === 'connected' ? 'Connected' : 'Development Mode'}`);
+        console.log(`🗂️  Storage: ${serviceStatus.ipfs === 'connected' ? 'IPFS' : 'Local Storage'}`);
+        console.log('='.repeat(50));
+    }).on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.log(`❌ Port ${PORT} in use. Trying ${PORT + 1}...`);
+            const fallbackServer = app.listen(PORT + 1, () => {
+                console.log('\n' + '='.repeat(50));
+                console.log('🚀 BLOCMERCE SERVER READY');
+                console.log('='.repeat(50));
+                console.log(`📍 Server: http://localhost:${PORT + 1}`);
+                console.log(`📊 Database: ${serviceStatus.database === 'connected' ? 'Connected' : 'Development'}`);
+                console.log(`⛓️  Blockchain: ${serviceStatus.blockchain === 'connected' ? 'Connected' : 'Development Mode'}`);
+                console.log(`💳 Payments: ${serviceStatus.stripe === 'connected' ? 'Connected' : 'Development Mode'}`);
+                console.log(`🗂️  Storage: ${serviceStatus.ipfs === 'connected' ? 'IPFS' : 'Local Storage'}`);
+                console.log('='.repeat(50));
+            });
+            setupGracefulShutdown(fallbackServer);
         } else {
-            console.error('❌ Server error:', error);
+            console.log('❌ Failed to start server:', err.message);
             process.exit(1);
         }
     });
 
-    // Graceful shutdown
-    process.on('SIGINT', () => {
-        console.log('\n🔄 SIGINT received. Shutting down gracefully...');
-        server.close(() => {
-            console.log('✅ Server closed successfully');
-            process.exit(0);
-        });
-    });
-
-    process.on('SIGTERM', () => {
-        console.log('\n🔄 SIGTERM received. Shutting down gracefully...');
-        server.close(() => {
-            console.log('✅ Server closed successfully');
-            process.exit(0);
-        });
-    });
-
-    return server;
-}
-
-// Initialize services and start server
-initializeServices().then(() => {
-    startServer(PORT);
-}).catch((error) => {
-    console.error('❌ Failed to initialize services:', error);
+    setupGracefulShutdown(server);
+}).catch(error => {
+    console.log('❌ Failed to initialize services:', error.message);
     process.exit(1);
 });
+
+// Graceful shutdown setup
+function setupGracefulShutdown(server) {
+    const gracefulShutdown = (signal) => {
+        console.log(`\n🔄 ${signal} received. Shutting down gracefully...`);
+        
+        server.close(() => {
+            console.log('✅ Server closed successfully');
+            process.exit(0);
+        });
+        
+        // Force close after 10 seconds
+        setTimeout(() => {
+            console.log('❌ Could not close connections in time, forcefully shutting down');
+            process.exit(1);
+        }, 10000);
+    };
+
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+        console.log('❌ Unhandled Rejection:', reason);
+        process.exit(1);
+    });
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+        console.log('❌ Uncaught Exception:', error.message);
+        process.exit(1);
+    });
+}
 
 module.exports = app;

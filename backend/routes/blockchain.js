@@ -1,12 +1,14 @@
-const express = require('express');
-// const { query } = require('../config/database'); // Temporarily disabled
-const { auth, optionalAuth } = require('../middleware/auth');
-const Transaction = require('../models/Transaction');
+  const crypto = require('crypto');
+const BlockchainRecord = require('../models/BlockchainRecord');
 const Order = require('../models/Order');
+const Transaction = require('../models/Transaction');
+const express = require('express');
+const { auth, optionalAuth } = require('../middleware/auth');
 const { body, param, query, validationResult } = require('express-validator');
 
+// const { query } = require('../config/database'); // Temporarily disabled
+
 // Blockchain record model for immutable transaction logging
-const BlockchainRecord = require('../models/BlockchainRecord');
 
 const router = express.Router();
 
@@ -72,7 +74,7 @@ router.post('/record-transaction', auth, [
     });
 
   } catch (error) {
-    console.error('Record blockchain transaction error:', error);
+    logger.error('Record blockchain transaction error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to record blockchain transaction',
@@ -139,7 +141,7 @@ router.get('/verify/:txHash', optionalAuth, [
     });
 
   } catch (error) {
-    console.error('Transaction verification error:', error);
+    logger.error('Transaction verification error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to verify transaction',
@@ -205,7 +207,7 @@ router.get('/transaction/:txHash', auth, [
     });
 
   } catch (error) {
-    console.error('Get blockchain transaction error:', error);
+    logger.error('Get blockchain transaction error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get transaction details',
@@ -288,7 +290,7 @@ router.get('/records', auth, [
     });
 
   } catch (error) {
-    console.error('Get blockchain records error:', error);
+    logger.error('Get blockchain records error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get blockchain records',
@@ -358,7 +360,7 @@ router.get('/stats', optionalAuth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Blockchain stats error:', error);
+    logger.error('Blockchain stats error:', error);
     res.status(500).json({
       success: false,
       status: 'error',
@@ -428,7 +430,7 @@ router.get('/activity', optionalAuth, [
     });
 
   } catch (error) {
-    console.error('Blockchain activity error:', error);
+    logger.error('Blockchain activity error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get blockchain activity',
@@ -504,7 +506,7 @@ router.get('/integrity-check', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Integrity check error:', error);
+    logger.error('Integrity check error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to perform integrity check',
@@ -537,7 +539,7 @@ router.get('/status', async (req, res) => {
     res.json(status);
 
   } catch (error) {
-    console.error('Blockchain status error:', error);
+    logger.error('Blockchain status error:', error);
     res.status(500).json({
       success: false,
       status: 'error',
@@ -551,7 +553,6 @@ router.get('/status', async (req, res) => {
 function generateMerkleRoot(data) {
   // Simple hash function for demonstration
   // In production, use proper cryptographic hash
-  const crypto = require('crypto');
   const combined = data.join('|');
   return crypto.createHash('sha256').update(combined).digest('hex');
 }
@@ -559,7 +560,6 @@ function generateMerkleRoot(data) {
 function generateTransactionSignature(transactionData) {
   // Simple signature generation for demonstration
   // In production, use proper digital signatures
-  const crypto = require('crypto');
   const data = JSON.stringify(transactionData);
   return crypto.createHash('sha256').update(data + process.env.SIGNATURE_SECRET || 'default_secret').digest('hex');
 }

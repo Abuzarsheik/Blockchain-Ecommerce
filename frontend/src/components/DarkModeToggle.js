@@ -1,6 +1,6 @@
+import '../styles/theme.css';
 import React, { useState, useEffect } from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
-import '../styles/theme.css';
 
 const DarkModeToggle = ({ className = '' }) => {
   const [theme, setTheme] = useState('system');

@@ -1,9 +1,9 @@
+import '../styles/Auth.css';
 import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 import { Link, useLocation } from 'react-router-dom';
 import { Mail, ArrowLeft, CheckCircle, Loader, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
-import api from '../services/api';
-import '../styles/Auth.css';
 
 const ForgotPassword = () => {
   const location = useLocation();

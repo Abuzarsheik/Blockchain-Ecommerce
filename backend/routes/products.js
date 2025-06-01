@@ -1,11 +1,12 @@
-const express = require('express');
 const Product = require('../models/Product');
-const { auth, adminAuth, optionalAuth } = require('../middleware/auth');
 const User = require('../models/User');
-const { getCategoryOptions } = require('../config/constants');
+const express = require('express');
+const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const { auth, adminAuth, optionalAuth } = require('../middleware/auth');
+const { getCategoryOptions } = require('../config/constants');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -122,8 +123,14 @@ router.get('/my', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching user products:', error);
-        res.status(500).json({ error: 'Server error' });
+        logger.error('Error fetching user products:', error);
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Server error',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -133,8 +140,14 @@ router.get('/low-stock', auth, async (req, res) => {
         const products = await Product.findLowStock(req.user._id);
         res.json({ products });
     } catch (error) {
-        console.error('Error fetching low stock products:', error);
-        res.status(500).json({ error: 'Server error' });
+        logger.error('Error fetching low stock products:', error);
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Server error',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -192,7 +205,7 @@ router.get('/', optionalAuth, async (req, res) => {
                     filter.$or.push({ seller: { $in: sellerIds } });
                 }
             } catch (sellerSearchError) {
-                console.error('Error searching sellers:', sellerSearchError);
+                logger.error('Error searching sellers:', sellerSearchError);
             }
         }
 
@@ -267,7 +280,7 @@ router.get('/', optionalAuth, async (req, res) => {
                     (productObj.inventory.quantity - (productObj.inventory.reserved || 0)) : 0;
                 return productObj;
             } catch (productError) {
-                console.error('Error processing product:', productError);
+                logger.error('Error processing product:', productError);
                 return product.toObject();
             }
         });
@@ -295,8 +308,14 @@ router.get('/', optionalAuth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get products error:', error);
-        res.status(500).json({ error: 'Failed to get products' });
+        logger.error('Get products error:', error);
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to get products',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -331,8 +350,14 @@ router.get('/seller/:sellerId', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching seller products:', error);
-        res.status(500).json({ error: 'Server error' });
+        logger.error('Error fetching seller products:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -342,11 +367,23 @@ router.get('/:id/inventory-history', auth, async (req, res) => {
         const product = await Product.findById(req.params.id);
         
         if (!product) {
-            return res.status(404).json({ error: 'Product not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         if (product.seller.toString() !== req.user.id.toString()) {
-            return res.status(403).json({ error: 'Unauthorized' });
+            return res.status(403).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         const { page = 1, limit = 20 } = req.query;
@@ -366,8 +403,14 @@ router.get('/:id/inventory-history', auth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching inventory history:', error);
-        res.status(500).json({ error: 'Server error' });
+        logger.error('Error fetching inventory history:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -380,7 +423,13 @@ router.get('/:id/verify', async (req, res) => {
         const productResult = await Product.findById(productId);
 
         if (!productResult) {
-            return res.status(404).json({ error: 'Product not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         // TODO: Implement blockchain verification
@@ -395,8 +444,14 @@ router.get('/:id/verify', async (req, res) => {
         res.json({ verification });
 
     } catch (error) {
-        console.error('Product verification error:', error);
-        res.status(500).json({ error: 'Failed to verify product' });
+        logger.error('Product verification error:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -411,8 +466,14 @@ router.get('/:id/history', async (req, res) => {
         res.json({ history: result });
 
     } catch (error) {
-        console.error('Product history error:', error);
-        res.status(500).json({ error: 'Failed to get product history' });
+        logger.error('Product history error:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -421,14 +482,26 @@ router.get('/:id', async (req, res) => {
     try {
         // Check if the ID is actually "categories" which should not match this route
         if (req.params.id === 'categories') {
-            return res.status(404).json({ error: 'Route not found. Categories endpoint should be handled separately.' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         const product = await Product.findById(req.params.id)
             .populate('seller', 'firstName lastName username sellerProfile');
         
         if (!product) {
-            return res.status(404).json({ error: 'Product not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         // Increment view count
@@ -440,12 +513,24 @@ router.get('/:id', async (req, res) => {
     } catch (error) {
         // Environment-aware logging
         if (process.env.NODE_ENV !== 'production') {
-            console.error('Get product error:', error);
+            logger.error('Get product error:', error);
         }
         if (error.name === 'CastError' && error.path === '_id') {
-            return res.status(400).json({ error: 'Invalid product ID format' });
+            return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
         }
-        res.status(500).json({ error: 'Failed to get product' });
+      });
+        }
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -481,16 +566,24 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
 
         // Validation
         if (!name || !description || !price || !category) {
-            return res.status(400).json({ 
-                error: 'Name, description, price, and category are required' 
-            });
+            return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         // Additional price validation
         if (price < 0) {
-            return res.status(400).json({ 
-                error: 'Price must be a positive number' 
-            });
+            return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         // Handle image uploads
@@ -568,8 +661,14 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
             product 
         });
     } catch (error) {
-        console.error('Error creating product:', error);
-        res.status(500).json({ error: 'Server error' });
+        logger.error('Error creating product:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -578,17 +677,35 @@ router.put('/:id', auth, upload.array('newImages', 5), async (req, res) => {
     try {
         // Validate ObjectId format first
         if (!req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
-            return res.status(400).json({ error: 'Invalid product ID format' });
+            return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
         
         const product = await Product.findById(req.params.id);
         
         if (!product) {
-            return res.status(404).json({ error: 'Product not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         if (product.seller.toString() !== req.user.id.toString()) {
-            return res.status(403).json({ error: 'Unauthorized' });
+            return res.status(403).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         const {
@@ -684,8 +801,14 @@ router.put('/:id', auth, upload.array('newImages', 5), async (req, res) => {
             product 
         });
     } catch (error) {
-        console.error('Error updating product:', error);
-        res.status(500).json({ error: 'Server error' });
+        logger.error('Error updating product:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -695,11 +818,23 @@ router.put('/:id/inventory', auth, async (req, res) => {
         const product = await Product.findById(req.params.id);
         
         if (!product) {
-            return res.status(404).json({ error: 'Product not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         if (product.seller.toString() !== req.user.id.toString()) {
-            return res.status(403).json({ error: 'Unauthorized' });
+            return res.status(403).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         const {
@@ -739,8 +874,14 @@ router.put('/:id/inventory', auth, async (req, res) => {
             product 
         });
     } catch (error) {
-        console.error('Error updating inventory:', error);
-        res.status(500).json({ error: 'Server error' });
+        logger.error('Error updating inventory:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 
@@ -750,7 +891,13 @@ router.delete('/:id', auth, async (req, res) => {
         const product = await Product.findById(req.params.id);
         
         if (!product) {
-            return res.status(404).json({ error: 'Product not found' });
+            return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         // Check if user is the product owner or an admin
@@ -760,7 +907,13 @@ router.delete('/:id', auth, async (req, res) => {
         const isAdmin = user && user.role === 'admin';
         
         if (!isOwner && !isAdmin) {
-            return res.status(403).json({ error: 'Unauthorized' });
+            return res.status(403).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
         }
 
         // Instead of deleting, mark as discontinued
@@ -769,8 +922,14 @@ router.delete('/:id', auth, async (req, res) => {
 
         res.json({ message: 'Product discontinued successfully' });
     } catch (error) {
-        console.error('Error deleting product:', error);
-        res.status(500).json({ error: 'Server error' });
+        logger.error('Error deleting product:', error);
+        res.status(500).json({
+        success: false,
+        error: {
+          message: 'Error occurred',
+          timestamp: new Date().toISOString()
+        }
+      });
     }
 });
 

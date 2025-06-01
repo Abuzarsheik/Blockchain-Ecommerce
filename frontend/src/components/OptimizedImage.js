@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useInView } from 'react-intersection-observer';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Image, AlertCircle } from 'lucide-react';
 import { optimizeImageUrl, progressiveImageLoad } from '../utils/performance';
+import { useInView } from 'react-intersection-observer';
+import { logger } from '../utils/logger';
 
 const OptimizedImage = ({
   src,
@@ -33,16 +34,8 @@ const OptimizedImage = ({
   });
 
   // Generate placeholder if none provided
-  const generatePlaceholder = (w, h) => {
-    const bgColor = '#f3f4f6';
-    const textColor = '#9ca3af';
-    return `data:image/svg+xml;base64,${btoa(
-      `<svg width="${w || 400}" height="${h || 300}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100%" height="100%" fill="${bgColor}"/>
-        <text x="50%" y="50%" font-family="Arial" font-size="14" fill="${textColor}" 
-              text-anchor="middle" dy=".3em">Loading...</text>
-      </svg>`
-    )}`;
+  const generatePlaceholder = (width, height, text = 'Loading...') => {
+    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}' viewBox='0 0 ${width} ${height}'%3E%3Crect width='100%25' height='100%25' fill='%23f8f9fa'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236c757d' font-family='system-ui, sans-serif' font-size='14'%3E${text}%3C/text%3E%3C/svg%3E`;
   };
 
   // Optimize image URL with quality and size parameters
@@ -95,7 +88,7 @@ const OptimizedImage = ({
           img.src = optimizedSrc;
         }
       } catch (error) {
-        console.error('Image loading error:', error);
+        logger.error('Image loading error:', error);
         setImageState({
           loaded: false,
           error: true,

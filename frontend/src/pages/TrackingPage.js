@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import '../styles/TrackingPage.css';
+import LoadingSpinner from '../components/LoadingSpinner';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+
 import { 
   Package, 
   Search, 
@@ -13,8 +16,6 @@ import {
   RefreshCw,
   ArrowLeft
 } from 'lucide-react';
-import LoadingSpinner from '../components/LoadingSpinner';
-import '../styles/TrackingPage.css';
 
 const TrackingPage = () => {
   const { trackingNumber: urlTrackingNumber } = useParams();
@@ -26,7 +27,7 @@ const TrackingPage = () => {
   const [error, setError] = useState(null);
   const [searched, setSearched] = useState(false);
 
-  const handleSearch = async (e) => {
+  const handleSearch = useCallback(async (e) => {
     e.preventDefault();
     
     if (!trackingNumber.trim()) {
@@ -63,7 +64,7 @@ const TrackingPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [trackingNumber]);
 
   const getStatusIcon = (status) => {
     switch (status?.toLowerCase()) {
@@ -142,11 +143,11 @@ const TrackingPage = () => {
   };
 
   // Auto-search if tracking number is in URL
-  React.useEffect(() => {
+  useEffect(() => {
     if (urlTrackingNumber && !searched) {
       handleSearch({ preventDefault: () => {} });
     }
-  }, [urlTrackingNumber, searched]);
+  }, [urlTrackingNumber, searched, handleSearch]);
 
   const shipment = trackingData?.shipment;
   const events = trackingData?.tracking_events || [];

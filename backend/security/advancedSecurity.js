@@ -1,12 +1,13 @@
+const crypto = require('crypto');
+const fs = require('fs').promises;
+const path = require('path');
+
 /**
  * 🔒 ADVANCED SECURITY FRAMEWORK
  * Enhanced security features for Blocmerce NFT Marketplace
  * Zero risk implementation - works independently
  */
 
-const crypto = require('crypto');
-const fs = require('fs').promises;
-const path = require('path');
 
 class AdvancedSecurityFramework {
     constructor() {
@@ -30,7 +31,6 @@ class AdvancedSecurityFramework {
             await this.loadBlockedIPs();
             await this.loadSecurityLogs();
             this.startCleanupInterval();
-            console.log('🔒 Advanced Security Framework initialized');
         } catch (error) {
             console.warn('⚠️ Security framework initialization warning:', error.message);
         }

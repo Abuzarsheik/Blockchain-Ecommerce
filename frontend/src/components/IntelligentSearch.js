@@ -1,23 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Filter, TrendingUp, Clock } from 'lucide-react';
+import { Search, X, TrendingUp, Clock } from 'lucide-react';
 
-const IntelligentSearch = ({ 
-  onSearch, 
-  onFilterChange, 
-  placeholder = "Search NFTs...", 
-  aiEnabled = false,
-  showTrending = false,
-  showRecent = false,
-  className = ""
-}) => {
+const IntelligentSearch = ({ onSearch, onClose, autoFocus = true }) => {
   const [query, setQuery] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [filters, setFilters] = useState({});
-  const searchRef = useRef(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const searchInputRef = useRef(null);
 
   // Mock suggestions data
-  const suggestions = [
+  const suggestionsData = [
     'Digital Art',
     'Abstract Collections',
     'Photography',
@@ -26,14 +16,14 @@ const IntelligentSearch = ({
     'Sports Cards'
   ];
 
-  const trendingSearches = [
+  const trendingTerms = [
     'Cyberpunk Collection',
     'Abstract Landscapes',
     'Digital Portraits',
     'Gaming Assets'
   ];
 
-  const recentSearches = [
+  const recentSearchesData = [
     'Sunset Photography',
     'Modern Art',
     'Digital Sculptures'
@@ -41,9 +31,8 @@ const IntelligentSearch = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setShowSuggestions(false);
-        setIsExpanded(false);
+      if (searchInputRef.current && !searchInputRef.current.contains(event.target)) {
+        setShowAdvanced(false);
       }
     };
 
@@ -54,31 +43,29 @@ const IntelligentSearch = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (query.trim()) {
-      onSearch(query, { filters });
-      setShowSuggestions(false);
+      onSearch(query);
+      setShowAdvanced(false);
     }
   };
 
   const handleSuggestionClick = (suggestion) => {
     setQuery(suggestion);
-    onSearch(suggestion, { filters });
-    setShowSuggestions(false);
+    onSearch(suggestion);
+    setShowAdvanced(false);
   };
 
   const handleFocus = () => {
-    setIsExpanded(true);
-    setShowSuggestions(true);
+    setShowAdvanced(true);
   };
 
   const clearSearch = () => {
     setQuery('');
-    setIsExpanded(false);
-    setShowSuggestions(false);
+    setShowAdvanced(false);
   };
 
   return (
-    <div ref={searchRef} className={`intelligent-search ${className}`}>
-      <form onSubmit={handleSubmit} className={`search-form ${isExpanded ? 'expanded' : ''}`}>
+    <div ref={searchInputRef} className="intelligent-search">
+      <form onSubmit={handleSubmit} className={`search-form ${showAdvanced ? 'expanded' : ''}`}>
         <div className="search-input-container">
           <Search size={18} className="search-icon" />
           <input
@@ -86,7 +73,7 @@ const IntelligentSearch = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={handleFocus}
-            placeholder={placeholder}
+            placeholder="Search NFTs..."
             className="search-input"
           />
           {query && (
@@ -94,20 +81,15 @@ const IntelligentSearch = ({
               <X size={16} />
             </button>
           )}
-          {aiEnabled && (
-            <button type="button" className="ai-button" title="AI Search">
-              ✨
-            </button>
-          )}
         </div>
       </form>
 
-      {showSuggestions && (
+      {showAdvanced && (
         <div className="search-suggestions">
           {query && (
             <div className="suggestion-section">
               <div className="suggestion-header">Suggestions</div>
-              {suggestions
+              {suggestionsData
                 .filter(s => s.toLowerCase().includes(query.toLowerCase()))
                 .slice(0, 3)
                 .map((suggestion, index) => (
@@ -124,39 +106,39 @@ const IntelligentSearch = ({
             </div>
           )}
 
-          {showTrending && (
+          {trendingTerms.length > 0 && (
             <div className="suggestion-section">
               <div className="suggestion-header">
                 <TrendingUp size={14} />
                 Trending
               </div>
-              {trendingSearches.slice(0, 3).map((trend, index) => (
+              {trendingTerms.slice(0, 3).map((trending, index) => (
                 <button
                   key={index}
-                  onClick={() => handleSuggestionClick(trend)}
+                  onClick={() => handleSuggestionClick(trending)}
                   className="suggestion-item trending"
                 >
-                  <TrendingUp size={14} />
-                  <span>{trend}</span>
+                  <TrendingUp size={12} />
+                  {trending}
                 </button>
               ))}
             </div>
           )}
 
-          {showRecent && recentSearches.length > 0 && (
+          {recentSearchesData.length > 0 && (
             <div className="suggestion-section">
               <div className="suggestion-header">
                 <Clock size={14} />
                 Recent
               </div>
-              {recentSearches.slice(0, 3).map((recent, index) => (
+              {recentSearchesData.slice(0, 3).map((recent, index) => (
                 <button
                   key={index}
                   onClick={() => handleSuggestionClick(recent)}
                   className="suggestion-item recent"
                 >
-                  <Clock size={14} />
-                  <span>{recent}</span>
+                  <Clock size={12} />
+                  {recent}
                 </button>
               ))}
             </div>

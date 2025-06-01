@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { logger } from './logger';
 
 /**
  * User Personalization and Preferences System
@@ -17,7 +18,7 @@ class PersonalizationManager {
       const stored = localStorage.getItem('userPreferences');
       return stored ? JSON.parse(stored) : this.getDefaultPreferences();
     } catch (error) {
-      console.error('Failed to load preferences:', error);
+      logger.error('Failed to load preferences:', error);
       return this.getDefaultPreferences();
     }
   }
@@ -71,7 +72,7 @@ class PersonalizationManager {
         interactionPatterns: {}
       };
     } catch (error) {
-      console.error('Failed to load behavior data:', error);
+      logger.error('Failed to load behavior data:', error);
       return {};
     }
   }
@@ -82,7 +83,7 @@ class PersonalizationManager {
       localStorage.setItem('userPreferences', JSON.stringify(this.preferences));
       this.applyPreferences();
     } catch (error) {
-      console.error('Failed to save preferences:', error);
+      logger.error('Failed to save preferences:', error);
     }
   }
 
@@ -91,7 +92,7 @@ class PersonalizationManager {
     try {
       localStorage.setItem('userBehavior', JSON.stringify(this.behaviorData));
     } catch (error) {
-      console.error('Failed to save behavior data:', error);
+      logger.error('Failed to save behavior data:', error);
     }
   }
 
@@ -453,7 +454,7 @@ class PersonalizationManager {
       this.updateRecommendations();
       return true;
     } catch (error) {
-      console.error('Failed to import data:', error);
+      logger.error('Failed to import data:', error);
       return false;
     }
   }

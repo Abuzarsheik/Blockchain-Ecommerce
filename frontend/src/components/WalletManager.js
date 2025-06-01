@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { Button } from './ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { Input } from './ui/Input';
-import { walletService, WALLET_TYPES, SUPPORTED_CURRENCIES } from '../services/walletService';
 import { api } from '../services/api';
+import { useSelector } from 'react-redux';
+import { walletService, WALLET_TYPES, SUPPORTED_CURRENCIES } from '../services/walletService';
+import { Wallet, CreditCard, DollarSign, RefreshCw, Eye, EyeOff, Copy, ExternalLink } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 const WalletManager = () => {
   const { user } = useSelector((state) => state.auth);
@@ -47,7 +49,7 @@ const WalletManager = () => {
         setBalances(info.balances);
       }
     } catch (error) {
-      console.error('Failed to initialize wallet:', error);
+      logger.error('Failed to initialize wallet:', error);
     }
   };
 
@@ -65,7 +67,7 @@ const WalletManager = () => {
       });
       
     } catch (error) {
-      console.error('Failed to connect wallet:', error);
+      logger.error('Failed to connect wallet:', error);
       alert(`Failed to connect wallet: ${error.message}`);
     } finally {
       setIsConnecting(false);
@@ -86,7 +88,7 @@ const WalletManager = () => {
         setTransactions(response.data.transactions);
       }
     } catch (error) {
-      console.error('Failed to load transaction history:', error);
+      logger.error('Failed to load transaction history:', error);
     }
   };
 
@@ -123,7 +125,7 @@ const WalletManager = () => {
       }
 
     } catch (error) {
-      console.error('Payment processing failed:', error);
+      logger.error('Payment processing failed:', error);
       alert(`Payment failed: ${error.message}`);
     } finally {
       setLoading(false);
@@ -156,7 +158,7 @@ const WalletManager = () => {
       }
 
     } catch (error) {
-      console.error('Withdrawal processing failed:', error);
+      logger.error('Withdrawal processing failed:', error);
       alert(`Withdrawal failed: ${error.response?.data?.error || error.message}`);
     } finally {
       setLoading(false);
@@ -171,7 +173,7 @@ const WalletManager = () => {
       await walletService.loadBalances();
       setBalances(walletService.getWalletInfo().balances);
     } catch (error) {
-      console.error('Failed to refresh balances:', error);
+      logger.error('Failed to refresh balances:', error);
     } finally {
       setLoading(false);
     }

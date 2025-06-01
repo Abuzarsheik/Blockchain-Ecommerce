@@ -1,7 +1,7 @@
+import '../styles/Contact.css';
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
 import { toast } from 'react-toastify';
-import '../styles/Contact.css';
 
 const Contact = () => {
   const [formData, setFormData] = useState({

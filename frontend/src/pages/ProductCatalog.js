@@ -1,6 +1,7 @@
+import '../styles/ProductCatalog.css';
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, Grid, List, ChevronDown, Star, DollarSign, Package, Verified, X } from 'lucide-react';
-import '../styles/ProductCatalog.css';
+import { logger } from '../utils/logger';
 
 const ProductCatalog = () => {
     const [products, setProducts] = useState([]);
@@ -38,7 +39,7 @@ const ProductCatalog = () => {
                 setCategories(data.categories);
             }
         } catch (error) {
-            console.error('Error fetching categories:', error);
+            logger.error('Error fetching categories:', error);
         }
     };
 
@@ -86,7 +87,7 @@ const ProductCatalog = () => {
                 setError('Failed to fetch products');
             }
         } catch (error) {
-            console.error('Error fetching products:', error);
+            logger.error('Error fetching products:', error);
             setError('Error fetching products');
         }
     }, [currentPage, searchTerm, selectedCategory, sortBy, applyAdvancedFilters]);

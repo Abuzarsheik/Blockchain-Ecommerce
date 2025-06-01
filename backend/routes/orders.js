@@ -1,9 +1,9 @@
-const express = require('express');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
-const { auth, adminAuth } = require('../middleware/auth');
-const shippingService = require('../services/shippingService');
+const express = require('express');
 const notificationService = require('../services/notificationService');
+const shippingService = require('../services/shippingService');
+const { auth, adminAuth } = require('../middleware/auth');
 const { body, param, query, validationResult } = require('express-validator');
 
 const router = express.Router();
@@ -129,7 +129,7 @@ router.get('/', auth, [
         });
 
     } catch (error) {
-        console.error('Get orders error:', error);
+        logger.error('Get orders error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to get orders' 
@@ -180,7 +180,7 @@ router.get('/:id', auth, [
                     trackingInfo = trackingResult;
                 }
             } catch (trackingError) {
-                console.error('Error fetching tracking info:', trackingError);
+                logger.error('Error fetching tracking info:', trackingError);
             }
         }
 
@@ -197,7 +197,7 @@ router.get('/:id', auth, [
         });
 
     } catch (error) {
-        console.error('Get order error:', error);
+        logger.error('Get order error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to get order' 
@@ -244,7 +244,7 @@ router.get('/:id/tracking', auth, [
         res.json(trackingInfo);
 
     } catch (error) {
-        console.error('Get tracking error:', error);
+        logger.error('Get tracking error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to get tracking information' 
@@ -291,7 +291,7 @@ router.get('/tracking/:trackingNumber', [
                 liveTracking = trackingResult.tracking_data;
             }
         } catch (trackingError) {
-            console.error('Error fetching live tracking:', trackingError);
+            logger.error('Error fetching live tracking:', trackingError);
         }
 
         res.json({
@@ -313,7 +313,7 @@ router.get('/tracking/:trackingNumber', [
         });
 
     } catch (error) {
-        console.error('Track by number error:', error);
+        logger.error('Track by number error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to track order' 
@@ -487,7 +487,7 @@ router.post('/', auth, [
         });
 
     } catch (error) {
-        console.error('Create order error:', error);
+        logger.error('Create order error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to create order' 
@@ -564,7 +564,7 @@ router.post('/:id/delivery-confirmation', auth, [
         });
 
     } catch (error) {
-        console.error('Delivery confirmation error:', error);
+        logger.error('Delivery confirmation error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to confirm delivery' 
@@ -583,7 +583,13 @@ router.put('/:id/status', auth, async (req, res) => {
         const orderId = req.params.id;
 
         if (!['pending', 'paid', 'failed', 'refunded'].includes(status)) {
-            return res.status(400).json({ error: 'Invalid status' });
+            return res.status(400).json({
+                success: false,
+                error: {
+                    message: 'Invalid status',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         const order = await Order.findOneAndUpdate(
@@ -593,7 +599,13 @@ router.put('/:id/status', auth, async (req, res) => {
         ).populate('items.productId', 'name image_url price');
 
         if (!order) {
-            return res.status(404).json({ error: 'Order not found' });
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'Order not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         res.json({
@@ -602,8 +614,14 @@ router.put('/:id/status', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Update order status error:', error);
-        res.status(500).json({ error: 'Failed to update order status' });
+        logger.error('Update order status error:', error);
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to update order status',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 

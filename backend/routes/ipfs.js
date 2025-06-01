@@ -1,10 +1,11 @@
 const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const path = require('path');
 const fs = require('fs');
 const ipfsService = require('../services/ipfsService');
+const multer = require('multer');
+const path = require('path');
 const { auth } = require('../middleware/auth');
+
+const router = express.Router();
 
 // IPFS Health Check (no auth required)
 router.get('/health', async (req, res) => {
@@ -108,7 +109,7 @@ router.post('/upload', auth, upload.single('file'), async (req, res) => {
             fs.unlinkSync(req.file.path);
         }
         
-        console.error('IPFS upload error:', error);
+        logger.error('IPFS upload error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -137,7 +138,7 @@ router.post('/metadata', auth, async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('NFT metadata upload error:', error);
+        logger.error('NFT metadata upload error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -166,7 +167,7 @@ router.get('/file/:hash', async (req, res) => {
         res.send(result.data);
 
     } catch (error) {
-        console.error('IPFS file retrieval error:', error);
+        logger.error('IPFS file retrieval error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -194,7 +195,7 @@ router.post('/pin', auth, async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('IPFS pin error:', error);
+        logger.error('IPFS pin error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -220,7 +221,7 @@ router.delete('/pin/:hash', auth, async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('IPFS unpin error:', error);
+        logger.error('IPFS unpin error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -246,7 +247,7 @@ router.get('/pins', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get pins error:', error);
+        logger.error('Get pins error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -268,7 +269,7 @@ router.get('/exists/:hash', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Content exists check error:', error);
+        logger.error('Content exists check error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -294,7 +295,7 @@ router.get('/stats', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('IPFS stats error:', error);
+        logger.error('IPFS stats error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -322,7 +323,7 @@ router.post('/hash', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Hash generation error:', error);
+        logger.error('Hash generation error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -390,7 +391,7 @@ router.post('/upload/bulk', auth, upload.array('files', 10), async (req, res) =>
             });
         }
 
-        console.error('Bulk upload error:', error);
+        logger.error('Bulk upload error:', error);
         res.status(500).json({
             success: false,
             error: error.message

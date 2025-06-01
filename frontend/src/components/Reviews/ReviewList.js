@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { Card, CardContent } from '../ui/Card';
-import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
+import { Card, CardContent } from '../ui/Card';
 import { api } from '../../services/api';
+import { useSelector } from 'react-redux';
+import { logger } from '../../utils/logger';
 
 const ReviewList = ({ reviews: initialReviews, statistics, onReviewUpdate }) => {
   const { user } = useSelector((state) => state.auth);
@@ -37,7 +38,7 @@ const ReviewList = ({ reviews: initialReviews, statistics, onReviewUpdate }) => 
         ));
       }
     } catch (error) {
-      console.error('Vote helpful error:', error);
+      logger.error('Vote helpful error:', error);
       alert(error.response?.data?.error || 'Failed to record vote');
     }
   };
@@ -57,7 +58,7 @@ const ReviewList = ({ reviews: initialReviews, statistics, onReviewUpdate }) => 
         setReportData({ reason: '', details: '' });
       }
     } catch (error) {
-      console.error('Report review error:', error);
+      logger.error('Report review error:', error);
       alert(error.response?.data?.error || 'Failed to report review');
     }
   };
@@ -329,7 +330,7 @@ const ReviewList = ({ reviews: initialReviews, statistics, onReviewUpdate }) => 
                           <img
                             key={index}
                             src={image.url}
-                            alt={`Review image ${index + 1}`}
+                            alt={`Review ${index + 1}`}
                             className="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80"
                             onClick={() => window.open(image.url, '_blank')}
                           />

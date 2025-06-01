@@ -1,4 +1,6 @@
+import './InteractiveNFTCard.css';
 import React, { useState, useRef, useEffect } from 'react';
+import { useInView } from 'react-intersection-observer';
 import { 
   Heart, 
   Share2, 
@@ -14,8 +16,6 @@ import {
   ShoppingCart,
   ExternalLink
 } from 'lucide-react';
-import { useInView } from 'react-intersection-observer';
-import './InteractiveNFTCard.css';
 
 const InteractiveNFTCard = ({ 
   nft, 

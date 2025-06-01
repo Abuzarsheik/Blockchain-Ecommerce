@@ -85,7 +85,7 @@ const sendErrorProd = (err, res) => {
   // Programming or other unknown error: don't leak error details
   else {
     // Log error for debugging
-    console.error('💥 UNKNOWN ERROR:', err);
+    logger.error('💥 UNKNOWN ERROR:', err);
 
     // Send generic message
     res.status(500).json({
@@ -237,7 +237,7 @@ const errorLogger = (err, req, res, next) => {
     // logService.error(errorLog);
   }
 
-  console.error('📊 Error Log:', JSON.stringify(errorLog, null, 2));
+  logger.error('📊 Error Log:', JSON.stringify(errorLog, null, 2));
   next(err);
 };
 

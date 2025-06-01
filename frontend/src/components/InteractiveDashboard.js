@@ -1,5 +1,7 @@
+import './InteractiveDashboard.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
+
   TrendingUp, 
   TrendingDown, 
   Eye, 
@@ -13,7 +15,6 @@ import {
   Activity,
   Zap
 } from 'lucide-react';
-import './InteractiveDashboard.css';
 
 const InteractiveDashboard = ({ userType = 'buyer' }) => {
   const [selectedMetric, setSelectedMetric] = useState('sales');

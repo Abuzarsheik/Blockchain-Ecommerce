@@ -1,9 +1,10 @@
-const express = require('express');
-const router = express.Router();
-const { auth } = require('../middleware/auth');
-const notificationService = require('../services/notificationService');
 const Notification = require('../models/Notification');
+const express = require('express');
+const notificationService = require('../services/notificationService');
+const { auth } = require('../middleware/auth');
 const { body, param, query, validationResult } = require('express-validator');
+
+const router = express.Router();
 
 /**
  * @route   GET /api/notifications
@@ -74,7 +75,7 @@ router.get('/', auth, [
     });
 
   } catch (error) {
-    console.error('Get notifications error:', error);
+    logger.error('Get notifications error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get notifications',
@@ -98,7 +99,7 @@ router.get('/unread-count', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get unread count error:', error);
+    logger.error('Get unread count error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get unread count',
@@ -124,7 +125,7 @@ router.get('/stats', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get notification stats error:', error);
+    logger.error('Get notification stats error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get notification stats',
@@ -174,7 +175,7 @@ router.get('/:id', auth, [
     });
 
   } catch (error) {
-    console.error('Get notification details error:', error);
+    logger.error('Get notification details error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get notification details',
@@ -222,7 +223,7 @@ router.put('/:id/read', auth, [
     });
 
   } catch (error) {
-    console.error('Mark notification as read error:', error);
+    logger.error('Mark notification as read error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to mark notification as read',
@@ -247,7 +248,7 @@ router.put('/mark-all-read', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Mark all as read error:', error);
+    logger.error('Mark all as read error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to mark all notifications as read',
@@ -292,7 +293,7 @@ router.delete('/:id', auth, [
     });
 
   } catch (error) {
-    console.error('Delete notification error:', error);
+    logger.error('Delete notification error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete notification',
@@ -343,7 +344,7 @@ router.post('/test', auth, [
     });
 
   } catch (error) {
-    console.error('Create test notification error:', error);
+    logger.error('Create test notification error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create test notification',
@@ -432,7 +433,7 @@ router.post('/action', auth, [
     res.json(result);
 
   } catch (error) {
-    console.error('Handle notification action error:', error);
+    logger.error('Handle notification action error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to handle notification action',
@@ -506,7 +507,7 @@ router.get('/admin/all', auth, [
     });
 
   } catch (error) {
-    console.error('Get all notifications error:', error);
+    logger.error('Get all notifications error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get notifications',
@@ -560,7 +561,7 @@ router.post('/admin/broadcast', auth, [
         });
         notifications.push(notification);
       } catch (error) {
-        console.error(`Failed to create notification for user ${userId}:`, error);
+        logger.error('Failed to create notification for user ${userId}:', error);
       }
     }
 
@@ -572,7 +573,7 @@ router.post('/admin/broadcast', auth, [
     });
 
   } catch (error) {
-    console.error('Broadcast notification error:', error);
+    logger.error('Broadcast notification error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to broadcast notification',

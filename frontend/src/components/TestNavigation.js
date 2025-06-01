@@ -1,9 +1,9 @@
 import React from 'react';
+import { Home, User, Settings, Menu, X } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 const TestNavigation = () => {
   try {
-    console.log('🔥 TEST NAVIGATION IS WORKING!');
-    console.log('🔥 TestNavigation render at:', new Date().toISOString());
     
     return (
       <div style={{
@@ -26,7 +26,7 @@ const TestNavigation = () => {
       </div>
     );
   } catch (error) {
-    console.error('🚨 TestNavigation error:', error);
+    logger.error('🚨 TestNavigation error:', error);
     return (
       <div style={{
         background: 'orange',

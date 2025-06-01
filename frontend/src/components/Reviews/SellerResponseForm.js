@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { api } from '../../services/api';
+import { useSelector } from 'react-redux';
+import { Send, X } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 const SellerResponseForm = ({ review, onResponseSubmitted, onCancel }) => {
   const { user } = useSelector((state) => state.auth);
@@ -38,7 +40,7 @@ const SellerResponseForm = ({ review, onResponseSubmitted, onCancel }) => {
         onResponseSubmitted(response.data.review);
       }
     } catch (error) {
-      console.error('Submit response error:', error);
+      logger.error('Submit response error:', error);
       setError(error.response?.data?.error || 'Failed to submit response');
     } finally {
       setLoading(false);

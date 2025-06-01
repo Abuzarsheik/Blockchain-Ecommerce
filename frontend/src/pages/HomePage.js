@@ -1,8 +1,8 @@
+import '../styles/HomePage.css';
 import React from 'react';
+import { ArrowRight, Verified, TrendingUp, Users, ShoppingBag, User, HelpCircle, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { ArrowRight, Verified, TrendingUp, Users, ShoppingBag, User, HelpCircle, Settings } from 'lucide-react';
-import '../styles/HomePage.css';
 
 const HomePage = () => {
   const { user, isAuthenticated } = useSelector(state => state.auth);

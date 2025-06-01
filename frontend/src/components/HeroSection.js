@@ -1,8 +1,9 @@
+import '../styles/theme.css';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Play, 
-  Sparkles, 
+  Stars, 
   TrendingUp, 
   Users, 
   ShoppingBag, 
@@ -13,7 +14,6 @@ import {
   Wallet,
   Star
 } from 'lucide-react';
-import '../styles/theme.css';
 
 const HeroSection = () => {
   const [currentNFTIndex, setCurrentNFTIndex] = useState(0);

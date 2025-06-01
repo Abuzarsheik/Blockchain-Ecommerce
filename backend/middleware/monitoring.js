@@ -1,4 +1,5 @@
 const os = require('os');
+
 // const process = require('process'); // Remove - use global process instead
 
 // In-memory storage for metrics (in production, use Redis or database)
@@ -39,7 +40,6 @@ const performanceMiddleware = (req, res, next) => {
 
   // Performance monitoring
   const startMemory = process.memoryUsage();
-  let _memUsage = process.memoryUsage(); // Prefix with underscore to indicate intentionally unused
 
   res.on('finish', () => {
     const duration = Date.now() - startTime;
@@ -69,7 +69,6 @@ const performanceMiddleware = (req, res, next) => {
       metrics.requests.byEndpoint[routeKey].count;
 
     // Track memory usage
-    const memDelta = process.memoryUsage().heapUsed - startMemory.heapUsed;
     metrics.system.lastCheck = Date.now();
 
     // Track error

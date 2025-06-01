@@ -1,5 +1,7 @@
+import '../styles/theme.css';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { 
+
   Filter, 
   X, 
   ChevronDown, 
@@ -13,7 +15,6 @@ import {
   Calendar,
   DollarSign
 } from 'lucide-react';
-import '../styles/theme.css';
 
 const AdvancedFilters = ({ 
   onFiltersChange, 

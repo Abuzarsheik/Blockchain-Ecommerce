@@ -1,5 +1,5 @@
-const { ethers } = require('ethers');
 const axios = require('axios');
+const { ethers } = require('ethers');
 
 class GasOptimizationService {
     constructor() {
@@ -56,7 +56,7 @@ class GasOptimizationService {
             };
 
         } catch (error) {
-            console.error('Gas optimization error:', error);
+            logger.error('Gas optimization error:', error);
             
             // Fallback to network defaults
             return this.getFallbackGasPrice(network);
@@ -229,7 +229,6 @@ class GasOptimizationService {
      * Calculate optimized gas prices
      */
     calculateGasPrices(gasData, network) {
-        const basePrice = gasData.standard;
         
         return {
             immediate: gasData.fast * 115n / 100n,  // +15% for immediate
@@ -293,7 +292,7 @@ class GasOptimizationService {
             };
 
         } catch (error) {
-            console.error('Cost calculation error:', error);
+            logger.error('Cost calculation error:', error);
             return { success: false, error: error.message };
         }
     }
@@ -349,7 +348,7 @@ class GasOptimizationService {
             return { success: true, processed: transactions.length };
 
         } catch (error) {
-            console.error('Batch processing error:', error);
+            logger.error('Batch processing error:', error);
             return { success: false, error: error.message };
         }
     }
@@ -378,7 +377,7 @@ class GasOptimizationService {
             return { success: true, hash: tx.hash, gasPrice };
 
         } catch (error) {
-            console.error('Transaction execution error:', error);
+            logger.error('Transaction execution error:', error);
             return { success: false, error: error.message };
         }
     }
@@ -404,7 +403,7 @@ class GasOptimizationService {
                     this.analyzeGasTrends(prices);
                 }
             } catch (error) {
-                console.error('Gas monitoring error:', error);
+                logger.error('Gas monitoring error:', error);
             }
         }, 30000); // Check every 30 seconds
 

@@ -1,6 +1,7 @@
-import { ethers } from 'ethers';
-import { blockchainService } from './blockchain';
 import { api } from './api';
+import { blockchainService } from './blockchain';
+import { ethers } from 'ethers';
+import { logger } from '../utils/logger';
 
 class EscrowService {
     constructor() {
@@ -48,10 +49,9 @@ class EscrowService {
                     blockchainService.signer || blockchainService.provider
                 );
                 this.isInitialized = true;
-                console.log('✅ Escrow service initialized');
             }
         } catch (error) {
-            console.error('❌ Failed to initialize escrow service:', error);
+            logger.error('❌ Failed to initialize escrow service:', error);
         }
     }
 
@@ -121,7 +121,7 @@ class EscrowService {
                 wait: async () => await tx.wait()
             };
         } catch (error) {
-            console.error('Create escrow error:', error);
+            logger.error('Create escrow error:', error);
             return {
                 success: false,
                 error: error.message
@@ -171,7 +171,7 @@ class EscrowService {
                 wait: async () => await tx.wait()
             };
         } catch (error) {
-            console.error('Confirm delivery error:', error);
+            logger.error('Confirm delivery error:', error);
             return {
                 success: false,
                 error: error.message
@@ -217,7 +217,7 @@ class EscrowService {
                 wait: async () => await tx.wait()
             };
         } catch (error) {
-            console.error('Confirm receipt error:', error);
+            logger.error('Confirm receipt error:', error);
             return {
                 success: false,
                 error: error.message
@@ -267,7 +267,7 @@ class EscrowService {
                 wait: async () => await tx.wait()
             };
         } catch (error) {
-            console.error('Raise dispute error:', error);
+            logger.error('Raise dispute error:', error);
             return {
                 success: false,
                 error: error.message
@@ -319,7 +319,7 @@ class EscrowService {
                 wait: async () => await tx.wait()
             };
         } catch (error) {
-            console.error('Auto-release funds error:', error);
+            logger.error('Auto-release funds error:', error);
             return {
                 success: false,
                 error: error.message
@@ -337,7 +337,7 @@ class EscrowService {
             const response = await api.get(`/escrow/${escrowId}`);
             return response.data;
         } catch (error) {
-            console.error('Get escrow error:', error);
+            logger.error('Get escrow error:', error);
             return {
                 success: false,
                 error: error.response?.data?.error || error.message
@@ -355,7 +355,7 @@ class EscrowService {
             const response = await api.get(`/escrow/user/${role}`);
             return response.data;
         } catch (error) {
-            console.error('Get user escrows error:', error);
+            logger.error('Get user escrows error:', error);
             return {
                 success: false,
                 error: error.response?.data?.error || error.message,
@@ -374,7 +374,7 @@ class EscrowService {
             const response = await api.get(`/escrow/transaction/${txHash}`);
             return response.data;
         } catch (error) {
-            console.error('Get transaction status error:', error);
+            logger.error('Get transaction status error:', error);
             return {
                 success: false,
                 error: error.response?.data?.error || error.message
@@ -392,7 +392,7 @@ class EscrowService {
             const response = await api.get(`/escrow/${escrowId}/can-auto-release`);
             return response.data;
         } catch (error) {
-            console.error('Can auto-release error:', error);
+            logger.error('Can auto-release error:', error);
             return {
                 success: false,
                 error: error.response?.data?.error || error.message,
@@ -410,7 +410,7 @@ class EscrowService {
             const response = await api.get('/escrow/stats');
             return response.data;
         } catch (error) {
-            console.error('Get contract stats error:', error);
+            logger.error('Get contract stats error:', error);
             return {
                 success: false,
                 error: error.response?.data?.error || error.message
@@ -584,9 +584,8 @@ class EscrowService {
                 });
             });
 
-            console.log('✅ Escrow event listeners started');
         } catch (error) {
-            console.error('Start event listener error:', error);
+            logger.error('Start event listener error:', error);
         }
     }
 
@@ -596,7 +595,6 @@ class EscrowService {
     stopEventListener() {
         if (this.contract) {
             this.contract.removeAllListeners();
-            console.log('🔇 Escrow event listeners stopped');
         }
     }
 }

@@ -1,7 +1,7 @@
+import '../styles/Technology.css';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Zap, Globe, TrendingUp, ArrowRight } from 'lucide-react';
-import '../styles/Technology.css';
 
 const Technology = () => {
   return (

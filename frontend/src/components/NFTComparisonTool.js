@@ -1,5 +1,7 @@
+import '../styles/theme.css';
 import React, { useState } from 'react';
 import { 
+
   Plus, 
   X, 
   ArrowRight, 
@@ -11,7 +13,6 @@ import {
   TrendingUp,
   Star
 } from 'lucide-react';
-import '../styles/theme.css';
 
 const NFTComparisonTool = ({ 
   initialNFTs = [], 

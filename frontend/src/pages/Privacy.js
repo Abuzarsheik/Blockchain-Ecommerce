@@ -1,6 +1,6 @@
+import '../styles/Privacy.css';
 import React from 'react';
 import { Shield, Eye, Lock, Database } from 'lucide-react';
-import '../styles/Privacy.css';
 
 const Privacy = () => {
   return (

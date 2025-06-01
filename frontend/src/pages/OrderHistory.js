@@ -1,12 +1,12 @@
+import '../styles/OrderHistory.css';
+import LoadingSpinner from '../components/LoadingSpinner';
+import OrderTracking from '../components/OrderTracking';
 import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { Package, Calendar, DollarSign, Eye, Truck, ExternalLink } from 'lucide-react';
 import { fetchOrders } from '../store/slices/ordersSlice';
-import LoadingSpinner from '../components/LoadingSpinner';
-import OrderTracking from '../components/OrderTracking';
 import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
-import '../styles/OrderHistory.css';
+import { useDispatch, useSelector } from 'react-redux';
 
 const OrderHistory = () => {
   const dispatch = useDispatch();

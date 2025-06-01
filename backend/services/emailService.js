@@ -1,5 +1,5 @@
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 class EmailService {
     constructor() {
@@ -32,7 +32,6 @@ class EmailService {
                 // Verify transporter
                 await this.transporter.verify();
                 this.emailEnabled = true;
-                console.log('✅ Email service configured with real SMTP');
             } else {
                 // Create a dummy transporter for development
                 this.transporter = nodemailer.createTransport({
@@ -41,13 +40,12 @@ class EmailService {
                     buffer: true
                 });
                 this.emailEnabled = false;
-                console.log('⚠️ Email service running in development mode (no emails sent)');
             }
 
             this.isInitialized = true;
             return true;
         } catch (error) {
-            console.error('❌ Email service initialization failed:', error);
+            logger.error('❌ Email service initialization failed:', error);
             this.emailEnabled = false;
             this.isInitialized = false;
             return false;
@@ -210,7 +208,7 @@ class EmailService {
             console.log(`📧 Email sent to ${to}: ${subject}`);
             return { success: true, messageId: result.messageId };
         } catch (error) {
-            console.error('📧 Error sending email:', error);
+            logger.error('📧 Error sending email:', error);
             return { success: false, error: error.message };
         }
     }

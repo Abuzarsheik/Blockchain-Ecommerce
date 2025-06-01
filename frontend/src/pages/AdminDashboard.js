@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Users, 
-  TrendingUp, 
-  DollarSign,
-  Package,
-  Shield,
-  Activity,
-  User,
-  ShoppingCart,
-  AlertTriangle,
-  CheckCircle,
-  BarChart3,
-  Settings
-} from 'lucide-react';
-import { apiEndpoints } from '../services/api';
 import '../styles/AdminDashboard.css';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { 
+  BarChart3,
+  Users,
+  ShoppingCart,
+  DollarSign,
+  TrendingUp,
+  AlertTriangle,
+  Package,
+  Activity,
+  CheckCircle,
+  Settings,
+  Shield,
+  User
+} from 'lucide-react';
+import { logger } from '../utils/logger';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
@@ -23,6 +23,48 @@ const AdminDashboard = () => {
   const [error, setError] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
   const [refreshing, setRefreshing] = useState(false);
+
+  // Mock API endpoints for now - using useMemo to prevent re-creation
+  const apiEndpoints = useMemo(() => ({
+    getDashboardStats: async (period) => {
+      // Mock implementation
+      return {
+        data: {
+          users: { total: 1250, new: 45, active: 890, verified: 750, verificationRate: 60 },
+          orders: { total: 3420, pending: 12 },
+          revenue: { total: 125000, averageOrderValue: 36.5 },
+          disputes: { open: 3, resolved: 47 },
+          platformHealth: {
+            userGrowthRate: 8.5,
+            orderFulfillmentRate: 94,
+            disputeRate: 1.2,
+            averageOrderValue: 36.5
+          },
+          transactions: { total: 5680, period: 234, volume: 89000 },
+          products: { total: 890, active: 756, new: 23 }
+        }
+      };
+    },
+    getDashboardActivity: async (limit) => {
+      // Mock implementation
+      return {
+        data: {
+          activities: [
+            {
+              type: 'user_registration',
+              description: 'New user registered: john_doe',
+              timestamp: new Date().toISOString()
+            },
+            {
+              type: 'order_created',
+              description: 'Order #1234 created by user_123',
+              timestamp: new Date(Date.now() - 3600000).toISOString()
+            }
+          ]
+        }
+      };
+    }
+  }), []);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -37,12 +79,12 @@ const AdminDashboard = () => {
       setStats(statsResponse.data);
       setActivity(activityResponse.data.activities);
     } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
+      logger.error('Failed to fetch dashboard data:', err);
       setError(err.response?.data?.error || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod]);
+  }, [selectedPeriod, apiEndpoints]);
 
   useEffect(() => {
     fetchDashboardData();

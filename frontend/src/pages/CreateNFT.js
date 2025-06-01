@@ -1,10 +1,11 @@
+import '../styles/CreateNFT.css';
 import React, { useState } from 'react';
+import { Upload, Image, FileText, DollarSign, Loader } from 'lucide-react';
+import { api } from '../services/api';
+import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Upload, Image, FileText, DollarSign, Loader } from 'lucide-react';
-import { toast } from 'react-toastify';
-import { api } from '../services/api';
-import '../styles/CreateNFT.css';
+import { logger } from '../utils/logger';
 
 const CreateNFT = () => {
   const navigate = useNavigate();
@@ -95,7 +96,7 @@ const CreateNFT = () => {
       toast.success('NFT created successfully!');
       navigate('/catalog');
     } catch (error) {
-      console.error('NFT creation error:', error);
+      logger.error('NFT creation error:', error);
       const errorMessage = error.response?.data?.error || 'Failed to create NFT. Please try again.';
       toast.error(errorMessage);
     } finally {

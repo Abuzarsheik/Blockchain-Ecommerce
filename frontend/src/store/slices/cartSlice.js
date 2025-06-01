@@ -1,6 +1,7 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { api } from '../../services/api';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { migrateCartData, cleanCartItems } from '../../utils/cartUtils';
+import { logger } from '../../utils/logger';
 
 // Helper functions for localStorage
 const saveCartToStorage = (cartState) => {
@@ -18,7 +19,7 @@ const saveCartToStorage = (cartState) => {
     };
     localStorage.setItem('cart', JSON.stringify(cartData));
   } catch (error) {
-    console.error('Error saving cart to localStorage:', error);
+    logger.error('Error saving cart to localStorage:', error);
   }
 };
 
@@ -36,7 +37,7 @@ const loadCartFromStorage = () => {
       }
     }
   } catch (error) {
-    console.error('Error loading cart from localStorage:', error);
+    logger.error('Error loading cart from localStorage:', error);
     // Clear corrupted cart data
     localStorage.removeItem('cart');
   }
@@ -227,7 +228,7 @@ const cartSlice = createSlice({
       })
       .addCase(applyCoupon.rejected, (state, action) => {
         // Handle coupon application failure
-        console.error('Failed to apply coupon:', action.error.message);
+        logger.error('Failed to apply coupon:', action.error.message);
       });
   }
 });

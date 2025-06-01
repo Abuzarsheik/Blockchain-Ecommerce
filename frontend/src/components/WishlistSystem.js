@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, X, ShoppingCart, Eye, Trash2 } from 'lucide-react';
-import { useSelector } from 'react-redux';
 
 const WishlistSystem = ({ isDropdown = false, onClose }) => {
-  const { user } = useSelector(state => state.auth);
-  const [wishlist, setWishlist] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [wishlistItems, setWishlistItems] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // Mock wishlist data
   useEffect(() => {
@@ -37,18 +35,17 @@ const WishlistSystem = ({ isDropdown = false, onClose }) => {
     ];
 
     setTimeout(() => {
-      setWishlist(mockWishlist);
+      setWishlistItems(mockWishlist);
       setLoading(false);
     }, 1000);
   }, []);
 
   const removeFromWishlist = (itemId) => {
-    setWishlist(prev => prev.filter(item => item.id !== itemId));
+    setWishlistItems(prev => prev.filter(item => item.id !== itemId));
   };
 
   const addToCart = (item) => {
     // Mock add to cart functionality
-    console.log('Adding to cart:', item);
     // You would typically dispatch an action here
   };
 
@@ -128,7 +125,7 @@ const WishlistSystem = ({ isDropdown = false, onClose }) => {
         <div className="header-left">
           <Heart size={20} />
           <h3>My Wishlist</h3>
-          <span className="item-count">({wishlist.length} items)</span>
+          <span className="item-count">({wishlistItems.length} items)</span>
         </div>
         {isDropdown && onClose && (
           <button onClick={onClose} className="close-button">
@@ -139,7 +136,7 @@ const WishlistSystem = ({ isDropdown = false, onClose }) => {
 
       {/* Wishlist Items */}
       <div className="wishlist-content">
-        {wishlist.length === 0 ? (
+        {wishlistItems.length === 0 ? (
           <div className="empty-wishlist">
             <Heart size={48} />
             <h4>Your wishlist is empty</h4>
@@ -147,7 +144,7 @@ const WishlistSystem = ({ isDropdown = false, onClose }) => {
           </div>
         ) : (
           <div className="wishlist-items">
-            {wishlist.map((item) => (
+            {wishlistItems.map((item) => (
               <div key={item.id} className="wishlist-item">
                 <div className="item-image">
                   <img src={item.image} alt={item.title} />
@@ -190,7 +187,7 @@ const WishlistSystem = ({ isDropdown = false, onClose }) => {
         )}
 
         {/* Footer Actions */}
-        {wishlist.length > 0 && !isDropdown && (
+        {wishlistItems.length > 0 && !isDropdown && (
           <div className="wishlist-footer">
             <button className="clear-all-button">
               Clear All
@@ -201,7 +198,7 @@ const WishlistSystem = ({ isDropdown = false, onClose }) => {
           </div>
         )}
 
-        {wishlist.length > 0 && isDropdown && (
+        {wishlistItems.length > 0 && isDropdown && (
           <div className="dropdown-footer">
             <button className="view-all-link">
               View All Wishlist Items

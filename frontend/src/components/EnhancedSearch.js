@@ -1,7 +1,8 @@
+import './EnhancedSearch.css';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, X, Filter, TrendingUp, Clock, Hash } from 'lucide-react';
 import { debounce } from '../utils/performance';
-import './EnhancedSearch.css';
+import { logger } from '../utils/logger';
 
 const EnhancedSearch = ({
   onSearch,
@@ -43,7 +44,7 @@ const EnhancedSearch = ({
           onSearch(term, filters);
         }
       } catch (error) {
-        console.error('Search error:', error);
+        logger.error('Search error:', error);
       } finally {
         setIsLoading(false);
       }

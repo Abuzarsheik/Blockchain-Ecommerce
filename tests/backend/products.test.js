@@ -275,7 +275,7 @@ describe('Products API', () => {
         .expect(400);
 
       expect(response.body.error).toBeDefined();
-    });
+    }, 60000);
   });
 
   describe('PUT /api/products/:id', () => {

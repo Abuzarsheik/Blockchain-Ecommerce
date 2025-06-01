@@ -1,4 +1,6 @@
+import '../styles/theme.css';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { toast } from 'react-toastify';
 import { 
   Bell, 
   X, 
@@ -12,8 +14,7 @@ import {
   Settings,
   Filter
 } from 'lucide-react';
-import { toast } from 'react-toastify';
-import '../styles/theme.css';
+import { logger } from '../utils/logger';
 
 // Notification types configuration - moved outside component to prevent re-renders
 const notificationTypes = {
@@ -102,7 +103,7 @@ const SmartNotifications = ({ isOpen, onClose, userId }) => {
         setNotifications(data.notifications || mockNotifications);
       }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      logger.error('Failed to fetch notifications:', error);
       setNotifications(mockNotifications);
     } finally {
       setLoading(false);
@@ -117,7 +118,6 @@ const SmartNotifications = ({ isOpen, onClose, userId }) => {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log('Connected to notification service');
     };
 
     ws.onmessage = (event) => {
@@ -133,7 +133,7 @@ const SmartNotifications = ({ isOpen, onClose, userId }) => {
     };
 
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      logger.error('WebSocket error:', error);
     };
 
     return () => {
@@ -166,7 +166,7 @@ const SmartNotifications = ({ isOpen, onClose, userId }) => {
         )
       );
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      logger.error('Failed to mark notification as read:', error);
     }
   }, []);
 
@@ -184,7 +184,7 @@ const SmartNotifications = ({ isOpen, onClose, userId }) => {
         prev.map(notif => ({ ...notif, read: true }))
       );
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
+      logger.error('Failed to mark all notifications as read:', error);
     }
   }, []);
 
@@ -202,7 +202,7 @@ const SmartNotifications = ({ isOpen, onClose, userId }) => {
         prev.filter(notif => notif.id !== notificationId)
       );
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      logger.error('Failed to delete notification:', error);
     }
   }, []);
 

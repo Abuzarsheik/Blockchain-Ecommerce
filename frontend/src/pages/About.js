@@ -1,8 +1,8 @@
+import '../styles/About.css';
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
 import { Users, Target, Award, ArrowRight, User, ShoppingBag } from 'lucide-react';
-import '../styles/About.css';
+import { useSelector } from 'react-redux';
 
 const About = () => {
   const { isAuthenticated, user } = useSelector(state => state.auth);

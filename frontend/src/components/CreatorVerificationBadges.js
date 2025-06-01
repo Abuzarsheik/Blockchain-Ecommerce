@@ -1,5 +1,7 @@
+import '../styles/theme.css';
 import React from 'react';
 import { 
+
   Shield, 
   Star, 
   Award, 
@@ -8,7 +10,6 @@ import {
   Verified,
   Diamond
 } from 'lucide-react';
-import '../styles/theme.css';
 
 const CreatorVerificationBadges = ({ 
   creator, 

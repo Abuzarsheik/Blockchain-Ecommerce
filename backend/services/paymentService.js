@@ -1,9 +1,9 @@
-const { ethers } = require('ethers');
-const crypto = require('crypto');
-const Transaction = require('../models/Transaction');
 const Order = require('../models/Order');
+const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const crypto = require('crypto');
 const notificationService = require('./notificationService');
+const { ethers } = require('ethers');
 
 // Supported cryptocurrencies
 const SUPPORTED_CURRENCIES = {
@@ -78,9 +78,8 @@ class PaymentService {
       }
 
       this.isInitialized = true;
-      console.log('✅ Payment service initialized');
     } catch (error) {
-      console.error('❌ Failed to initialize payment service:', error);
+      logger.error('❌ Failed to initialize payment service:', error);
     }
   }
 
@@ -145,7 +144,7 @@ class PaymentService {
           orderNumber: orderId ? (await Order.findById(orderId))?.orderNumber : null
         });
       } catch (notifError) {
-        console.error('Failed to send payment notification:', notifError);
+        logger.error('Failed to send payment notification:', notifError);
       }
 
       // If transaction hash is provided, start monitoring
@@ -171,7 +170,7 @@ class PaymentService {
             currency
           });
         } catch (notifError) {
-          console.error('Failed to send order notification:', notifError);
+          logger.error('Failed to send order notification:', notifError);
         }
       }
 
@@ -182,7 +181,7 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Payment processing error:', error);
+      logger.error('Payment processing error:', error);
       return {
         success: false,
         error: error.message
@@ -236,7 +235,7 @@ class PaymentService {
               transactionId: transaction._id
             });
           } catch (notifError) {
-            console.error('Failed to send transaction confirmation notification:', notifError);
+            logger.error('Failed to send transaction confirmation notification:', notifError);
           }
 
           // Update order status
@@ -271,7 +270,7 @@ class PaymentService {
       }
 
     } catch (error) {
-      console.error(`❌ Transaction monitoring failed for ${txHash}:`, error);
+      logger.error('❌ Transaction monitoring failed for ${txHash}:', error);
       
       // Update transaction as failed
       await Transaction.findByIdAndUpdate(transactionId, {
@@ -292,7 +291,7 @@ class PaymentService {
           });
         }
       } catch (notifError) {
-        console.error('Failed to send payment failure notification:', notifError);
+        logger.error('Failed to send payment failure notification:', notifError);
       }
     }
   }
@@ -368,7 +367,7 @@ class PaymentService {
           txHash: withdrawalResult.txHash
         });
       } catch (notifError) {
-        console.error('Failed to send withdrawal notification:', notifError);
+        logger.error('Failed to send withdrawal notification:', notifError);
       }
 
       return {
@@ -379,7 +378,7 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Withdrawal processing error:', error);
+      logger.error('Withdrawal processing error:', error);
       return {
         success: false,
         error: error.message
@@ -435,7 +434,7 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Withdrawal execution error:', error);
+      logger.error('Withdrawal execution error:', error);
       throw error;
     }
   }
@@ -503,7 +502,7 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Get transaction history error:', error);
+      logger.error('Get transaction history error:', error);
       return {
         success: false,
         error: error.message,
@@ -556,7 +555,7 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Get transaction by hash error:', error);
+      logger.error('Get transaction by hash error:', error);
       return {
         success: false,
         error: error.message
@@ -587,7 +586,6 @@ class PaymentService {
 
       // Save to blockchain records collection (for transparency)
       // This would typically be stored in a separate immutable collection
-      console.log('📝 Recording blockchain transaction:', blockchainRecord);
 
       // In a real implementation, this could also:
       // 1. Store in IPFS for immutability
@@ -598,7 +596,7 @@ class PaymentService {
       return blockchainRecord;
 
     } catch (error) {
-      console.error('Failed to record blockchain transaction:', error);
+      logger.error('Failed to record blockchain transaction:', error);
     }
   }
 
@@ -632,7 +630,7 @@ class PaymentService {
         balanceFormatted: ethers.formatEther(balance)
       };
     } catch (error) {
-      console.error('Get platform balance error:', error);
+      logger.error('Get platform balance error:', error);
       return {
         success: false,
         error: error.message,
@@ -696,7 +694,7 @@ class PaymentService {
       };
 
     } catch (error) {
-      console.error('Get payment stats error:', error);
+      logger.error('Get payment stats error:', error);
       return {
         success: false,
         error: error.message

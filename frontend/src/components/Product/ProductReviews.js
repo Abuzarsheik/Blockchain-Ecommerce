@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
-import { api } from '../../services/api';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReviewList from '../Reviews/ReviewList';
 import SellerResponseForm from '../Reviews/SellerResponseForm';
+import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { api } from '../../services/api';
+import { useSelector } from 'react-redux';
+import { Star, ThumbsUp, ThumbsDown, Flag, MessageCircle, User } from 'lucide-react';
+import { logger } from '../../utils/logger';
 
 const ProductReviews = ({ productId, sellerId }) => {
   const { user } = useSelector((state) => state.auth);
@@ -31,7 +33,7 @@ const ProductReviews = ({ productId, sellerId }) => {
         setStatistics(response.data.statistics);
       }
     } catch (error) {
-      console.error('Failed to load reviews:', error);
+      logger.error('Failed to load reviews:', error);
     } finally {
       setLoading(false);
     }
@@ -49,7 +51,7 @@ const ProductReviews = ({ productId, sellerId }) => {
         setUserEligibleToReview(response.data.canReview);
       }
     } catch (error) {
-      console.error('Failed to check review eligibility:', error);
+      logger.error('Failed to check review eligibility:', error);
       setUserEligibleToReview(false);
     }
   };

@@ -22,7 +22,7 @@ class PaymentService {
                 paymentIntentId: paymentIntent.id
             };
         } catch (error) {
-            console.error('Payment intent creation error:', error);
+            logger.error('Payment intent creation error:', error);
             return {
                 success: false,
                 error: error.message
@@ -39,7 +39,7 @@ class PaymentService {
                 paymentIntent
             };
         } catch (error) {
-            console.error('Payment confirmation error:', error);
+            logger.error('Payment confirmation error:', error);
             return {
                 success: false,
                 error: error.message
@@ -60,7 +60,7 @@ class PaymentService {
                 customer
             };
         } catch (error) {
-            console.error('Customer creation error:', error);
+            logger.error('Customer creation error:', error);
             return {
                 success: false,
                 error: error.message
@@ -81,7 +81,7 @@ class PaymentService {
                 event
             };
         } catch (error) {
-            console.error('Webhook error:', error);
+            logger.error('Webhook error:', error);
             return {
                 success: false,
                 error: error.message

@@ -1,11 +1,13 @@
-const express = require('express');
-const router = express.Router();
-const { auth, adminAuth } = require('../middleware/auth');
-const shippingService = require('../services/shippingService');
+        const db = require('../config/database');
 const Order = require('../models/Order');
+const express = require('express');
 const notificationService = require('../services/notificationService');
-const { body, param, query, validationResult } = require('express-validator');
+const shippingService = require('../services/shippingService');
 const trackingService = require('../services/trackingService');
+const { auth, adminAuth } = require('../middleware/auth');
+const { body, param, query, validationResult } = require('express-validator');
+
+const router = express.Router();
 
 // Tracking Health Check (no auth required) - MOVED TO TOP
 router.get('/health', async (req, res) => {
@@ -85,7 +87,7 @@ router.get('/:trackingNumber', [
                 liveTracking = trackingResult.tracking_data;
             }
         } catch (trackingError) {
-            console.error('Error fetching live tracking:', trackingError);
+            logger.error('Error fetching live tracking:', trackingError);
         }
 
         res.json({
@@ -118,7 +120,7 @@ router.get('/:trackingNumber', [
         });
 
     } catch (error) {
-        console.error('Track shipment error:', error);
+        logger.error('Track shipment error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to track shipment' 
@@ -133,7 +135,6 @@ router.get('/:trackingNumber', [
  */
 router.post('/bulk-update', adminAuth, async (req, res) => {
     try {
-        console.log('Starting bulk tracking update...');
         
         const results = await shippingService.updateAllOrderTracking();
         
@@ -144,7 +145,7 @@ router.post('/bulk-update', adminAuth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Bulk tracking update error:', error);
+        logger.error('Bulk tracking update error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to update tracking information' 
@@ -207,7 +208,7 @@ router.post('/webhook/carrier', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Carrier webhook error:', error);
+        logger.error('Carrier webhook error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to process webhook' 
@@ -288,7 +289,7 @@ router.post('/events', auth, [
         });
 
     } catch (error) {
-        console.error('Add tracking event error:', error);
+        logger.error('Add tracking event error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to add tracking event' 
@@ -365,7 +366,7 @@ router.post('/shipping-labels', auth, [
                 estimatedDelivery: order.estimated_delivery
             });
         } catch (notifError) {
-            console.error('Failed to send shipping notification:', notifError);
+            logger.error('Failed to send shipping notification:', notifError);
         }
 
         res.json({
@@ -376,7 +377,7 @@ router.post('/shipping-labels', auth, [
         });
 
     } catch (error) {
-        console.error('Create shipping label error:', error);
+        logger.error('Create shipping label error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to create shipping label' 
@@ -420,7 +421,7 @@ router.post('/carriers/:carrier/rates', auth, [
         });
 
     } catch (error) {
-        console.error('Get carrier rates error:', error);
+        logger.error('Get carrier rates error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to get shipping rates' 
@@ -525,7 +526,7 @@ router.get('/analytics/delivery-performance', adminAuth, [
         });
 
     } catch (error) {
-        console.error('Get delivery analytics error:', error);
+        logger.error('Get delivery analytics error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to get delivery analytics' 
@@ -560,7 +561,7 @@ router.get('/notifications/settings', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get notification settings error:', error);
+        logger.error('Get notification settings error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to get notification settings' 
@@ -600,7 +601,7 @@ router.put('/notifications/settings', auth, [
         });
 
     } catch (error) {
-        console.error('Update notification settings error:', error);
+        logger.error('Update notification settings error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to update notification settings' 
@@ -649,7 +650,7 @@ router.post('/shipments', auth, async (req, res) => {
         res.status(201).json(result);
 
     } catch (error) {
-        console.error('Create shipment error:', error);
+        logger.error('Create shipment error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -667,7 +668,7 @@ router.get('/track/:trackingNumber', async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('Track shipment error:', error);
+        logger.error('Track shipment error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -697,7 +698,7 @@ router.put('/shipments/:trackingNumber', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Update shipment error:', error);
+        logger.error('Update shipment error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -724,7 +725,7 @@ router.get('/shipments/user/:userId', auth, async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('Get user shipments error:', error);
+        logger.error('Get user shipments error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -742,7 +743,7 @@ router.get('/proof/:trackingNumber', auth, async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('Get delivery proof error:', error);
+        logger.error('Get delivery proof error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -788,7 +789,7 @@ router.post('/track/bulk', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Bulk tracking error:', error);
+        logger.error('Bulk tracking error:', error);
         res.status(500).json({
             success: false,
             error: error.message
@@ -807,7 +808,6 @@ router.get('/stats', auth, async (req, res) => {
             });
         }
 
-        const db = require('../config/database');
         
         const stats = await db.collection('shipments').aggregate([
             {
@@ -835,7 +835,7 @@ router.get('/stats', auth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Get tracking stats error:', error);
+        logger.error('Get tracking stats error:', error);
         res.status(500).json({
             success: false,
             error: error.message

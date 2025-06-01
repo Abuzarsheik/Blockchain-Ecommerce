@@ -1,13 +1,16 @@
-import { ethers, BrowserProvider, formatEther, keccak256, toUtf8Bytes, isAddress } from 'ethers';
 import Web3 from 'web3';
+import { ethers, BrowserProvider, formatEther, isAddress } from 'ethers';
+import { logger } from '../utils/logger';
 
+// Blockchain service for interacting with smart contracts
 class BlockchainService {
   constructor() {
     this.web3 = null;
     this.provider = null;
     this.signer = null;
     this.account = null;
-    this.contracts = {};
+    this.networkId = null;
+    this.contracts = new Map();
     this.isInitialized = false;
   }
 
@@ -32,7 +35,7 @@ class BlockchainService {
 
         return true;
       } catch (error) {
-        console.error('Failed to initialize Web3:', error);
+        logger.error('Failed to initialize Web3:', error);
         return false;
       }
     } else {
@@ -57,7 +60,7 @@ class BlockchainService {
       
       return this.account;
     } catch (error) {
-      console.error('Failed to connect wallet:', error);
+      logger.error('Failed to connect wallet:', error);
       throw new Error('Failed to connect wallet');
     }
   }
@@ -76,7 +79,7 @@ class BlockchainService {
       this.account = accounts[0] || null;
       return this.account;
     } catch (error) {
-      console.error('Failed to get current account:', error);
+      logger.error('Failed to get current account:', error);
       return null;
     }
   }
@@ -92,7 +95,7 @@ class BlockchainService {
         name: network.name,
       };
     } catch (error) {
-      console.error('Failed to get network:', error);
+      logger.error('Failed to get network:', error);
       return null;
     }
   }
@@ -108,7 +111,7 @@ class BlockchainService {
       const balance = await this.provider.getBalance(account);
       return formatEther(balance);
     } catch (error) {
-      console.error('Failed to get balance:', error);
+      logger.error('Failed to get balance:', error);
       return '0';
     }
   }
@@ -121,10 +124,10 @@ class BlockchainService {
 
     try {
       const contract = new ethers.Contract(contractAddress, abi, this.signer || this.provider);
-      this.contracts[contractName] = contract;
+      this.contracts.set(contractName, contract);
       return contract;
     } catch (error) {
-      console.error(`Failed to initialize ${contractName} contract:`, error);
+      logger.error(`Failed to initialize ${contractName} contract:`, error);
       throw error;
     }
   }
@@ -134,11 +137,10 @@ class BlockchainService {
     try {
       // TODO: Implement actual blockchain verification
       // This should interact with your ProductRegistry contract
-      // Example: const result = await this.contracts.ProductRegistry.verifyProduct(productId);
       
       throw new Error('Product verification not yet implemented');
     } catch (error) {
-      console.error('Failed to verify product:', error);
+      logger.error('Failed to verify product:', error);
       throw error;
     }
   }
@@ -156,7 +158,7 @@ class BlockchainService {
       
       throw new Error('Product history retrieval not yet implemented');
     } catch (error) {
-      console.error('Failed to get product history:', error);
+      logger.error('Failed to get product history:', error);
       throw error;
     }
   }
@@ -169,7 +171,7 @@ class BlockchainService {
 
     try {
       // Hash the review content
-      const contentHash = keccak256(toUtf8Bytes(content));
+      // const contentHash = keccak256(toUtf8Bytes(content));
       
       // TODO: Implement actual blockchain review submission
       // This should interact with your ReviewSystem contract
@@ -179,7 +181,7 @@ class BlockchainService {
       
       throw new Error('Review submission to blockchain not yet implemented');
     } catch (error) {
-      console.error('Failed to submit review:', error);
+      logger.error('Failed to submit review:', error);
       throw error;
     }
   }
@@ -206,7 +208,7 @@ class BlockchainService {
         };
       }
     } catch (error) {
-      console.error('Failed to get transaction status:', error);
+      logger.error('Failed to get transaction status:', error);
       throw error;
     }
   }
@@ -220,7 +222,7 @@ class BlockchainService {
       });
       return true;
     } catch (error) {
-      console.error('Failed to switch network:', error);
+      logger.error('Failed to switch network:', error);
       throw error;
     }
   }
@@ -234,7 +236,7 @@ class BlockchainService {
       });
       return true;
     } catch (error) {
-      console.error('Failed to add network:', error);
+      logger.error('Failed to add network:', error);
       throw error;
     }
   }

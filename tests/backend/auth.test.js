@@ -120,9 +120,9 @@ describe('Authentication API', () => {
       const response = await request(app)
         .post('/api/auth/register')
         .send({...userData, username: 'testuser456'}) // Different username
-        .expect(400);
+        .expect(409);
 
-      expect(response.body.error).toContain('already exists');
+      expect(response.body.error.message).toContain('already exists');
     });
   });
 

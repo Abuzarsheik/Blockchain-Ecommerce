@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { Bell, Check, X, Settings, Filter, Archive, Trash2, Mail, MessageSquare, ShoppingBag, Star, AlertCircle } from 'lucide-react';
-import './Notifications.css';
+import { Bell, Check, Trash2, Settings, ShoppingBag, Star, MessageSquare, AlertCircle, Mail } from 'lucide-react';
+import '../styles/Notifications.css';
 
 const Notifications = () => {
-  const { user } = useSelector(state => state.auth);
   const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all');
-  const [loading, setLoading] = useState(true);
 
   // Mock notifications data - replace with API call
   useEffect(() => {

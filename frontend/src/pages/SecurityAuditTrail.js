@@ -1,3 +1,4 @@
+import '../styles/SecurityAuditTrail.css';
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Shield, 
@@ -25,7 +26,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { apiEndpoints } from '../services/api';
-import '../styles/SecurityAuditTrail.css';
+import { logger } from '../utils/logger';
 
 const SecurityAuditTrail = () => {
   const [activeTab, setActiveTab] = useState('audit-logs');
@@ -125,7 +126,7 @@ const SecurityAuditTrail = () => {
           break;
       }
     } catch (err) {
-      console.error('Failed to fetch audit data:', err);
+      logger.error('Failed to fetch audit data:', err);
       setError(err.response?.data?.error || 'Failed to load audit data');
     } finally {
       setLoading(false);
@@ -156,7 +157,7 @@ const SecurityAuditTrail = () => {
       link.click();
       link.remove();
     } catch (err) {
-      console.error('Failed to export audit log:', err);
+      logger.error('Failed to export audit log:', err);
       alert('Failed to export audit log');
     }
   };
@@ -167,7 +168,7 @@ const SecurityAuditTrail = () => {
       alert('Audit request submitted successfully');
       fetchData();
     } catch (err) {
-      console.error('Failed to request audit:', err);
+      logger.error('Failed to request audit:', err);
       alert('Failed to request audit');
     }
   };

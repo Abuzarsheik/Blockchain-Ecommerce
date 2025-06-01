@@ -247,7 +247,6 @@ const swaggerSetup = (app) => {
     res.send(specs);
   });
 
-  console.log('📚 API Documentation available at: http://localhost:5000/api/docs');
 };
 
 module.exports = swaggerSetup; 

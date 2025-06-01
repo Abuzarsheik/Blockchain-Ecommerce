@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
-import { Button } from './ui/Button';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Badge } from './ui/Badge';
-import { useSelector } from 'react-redux';
+import { Button } from './ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import { api } from '../services/api';
+import { useSelector } from 'react-redux';
+import { Bell, Check, X, Clock, Search, Filter } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 const NotificationCenter = ({ isDropdown = false, onClose }) => {
   const { user } = useSelector((state) => state.auth);
@@ -77,7 +79,7 @@ const NotificationCenter = ({ isDropdown = false, onClose }) => {
         setUnreadCount(response.data.unreadCount);
       }
     } catch (error) {
-      console.error('Failed to load notifications:', error);
+      logger.error('Failed to load notifications:', error);
     } finally {
       if (!silent) setLoading(false);
     }
@@ -90,7 +92,7 @@ const NotificationCenter = ({ isDropdown = false, onClose }) => {
         setUnreadCount(response.data.unreadCount);
       }
     } catch (error) {
-      console.error('Failed to load unread count:', error);
+      logger.error('Failed to load unread count:', error);
     }
   };
 
@@ -101,7 +103,7 @@ const NotificationCenter = ({ isDropdown = false, onClose }) => {
         setStats(response.data.stats);
       }
     } catch (error) {
-      console.error('Failed to load notification stats:', error);
+      logger.error('Failed to load notification stats:', error);
     }
   };
 
@@ -119,7 +121,7 @@ const NotificationCenter = ({ isDropdown = false, onClose }) => {
       
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      logger.error('Failed to mark notification as read:', error);
     }
   };
 
@@ -134,7 +136,7 @@ const NotificationCenter = ({ isDropdown = false, onClose }) => {
         setUnreadCount(0);
       }
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
+      logger.error('Failed to mark all as read:', error);
     }
   };
 
@@ -152,7 +154,7 @@ const NotificationCenter = ({ isDropdown = false, onClose }) => {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      logger.error('Failed to delete notification:', error);
     }
   };
 
@@ -169,7 +171,7 @@ const NotificationCenter = ({ isDropdown = false, onClose }) => {
         alert(response.data.message);
       }
     } catch (error) {
-      console.error('Failed to handle notification action:', error);
+      logger.error('Failed to handle notification action:', error);
       alert('Failed to process action');
     }
   };

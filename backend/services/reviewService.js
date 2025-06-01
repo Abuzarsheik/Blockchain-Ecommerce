@@ -1,6 +1,6 @@
-const Review = require('../models/Review');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const Review = require('../models/Review');
 const User = require('../models/User');
 const notificationService = require('./notificationService');
 
@@ -68,7 +68,7 @@ class ReviewService {
         statistics
       };
     } catch (error) {
-      console.error('Get product reviews error:', error);
+      logger.error('Get product reviews error:', error);
       throw error;
     }
   }
@@ -158,7 +158,7 @@ class ReviewService {
         aspectRatings
       };
     } catch (error) {
-      console.error('Calculate product statistics error:', error);
+      logger.error('Calculate product statistics error:', error);
       throw error;
     }
   }
@@ -176,7 +176,7 @@ class ReviewService {
 
       return orders;
     } catch (error) {
-      console.error('Get eligible orders error:', error);
+      logger.error('Get eligible orders error:', error);
       throw error;
     }
   }
@@ -207,7 +207,7 @@ class ReviewService {
 
       return { canReview: true, orderId: order._id };
     } catch (error) {
-      console.error('Check user review eligibility error:', error);
+      logger.error('Check user review eligibility error:', error);
       throw error;
     }
   }
@@ -277,7 +277,7 @@ class ReviewService {
 
       return review;
     } catch (error) {
-      console.error('Create review error:', error);
+      logger.error('Create review error:', error);
       throw error;
     }
   }
@@ -292,7 +292,7 @@ class ReviewService {
         'ratings.count': stats.totalReviews || 0
       });
     } catch (error) {
-      console.error('Update product rating error:', error);
+      logger.error('Update product rating error:', error);
     }
   }
 
@@ -327,7 +327,7 @@ class ReviewService {
         );
       }
     } catch (error) {
-      console.error('Send review notifications error:', error);
+      logger.error('Send review notifications error:', error);
     }
   }
 
@@ -371,7 +371,7 @@ class ReviewService {
 
       return review;
     } catch (error) {
-      console.error('Add seller response error:', error);
+      logger.error('Add seller response error:', error);
       throw error;
     }
   }
@@ -451,7 +451,7 @@ class ReviewService {
         )?.vote || null
       };
     } catch (error) {
-      console.error('Vote helpful error:', error);
+      logger.error('Vote helpful error:', error);
       throw error;
     }
   }
@@ -496,12 +496,11 @@ class ReviewService {
       // Notify admin if flagged
       if (review.status === 'flagged') {
         // Add admin notification logic here
-        console.log('Review flagged for admin review:', reviewId);
       }
 
       return { message: 'Review reported successfully' };
     } catch (error) {
-      console.error('Report review error:', error);
+      logger.error('Report review error:', error);
       throw error;
     }
   }
@@ -528,7 +527,7 @@ class ReviewService {
         currentPage: page
       };
     } catch (error) {
-      console.error('Get user reviews error:', error);
+      logger.error('Get user reviews error:', error);
       throw error;
     }
   }
@@ -560,7 +559,7 @@ class ReviewService {
         currentPage: page
       };
     } catch (error) {
-      console.error('Get seller reviews error:', error);
+      logger.error('Get seller reviews error:', error);
       throw error;
     }
   }

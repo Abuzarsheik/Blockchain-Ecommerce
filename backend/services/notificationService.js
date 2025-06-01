@@ -1,7 +1,7 @@
 const Notification = require('../models/Notification');
-const User = require('../models/User');
 const Order = require('../models/Order');
 const Transaction = require('../models/Transaction');
+const User = require('../models/User');
 
 // Mock email service (replace with actual email service like SendGrid, Nodemailer, etc.)
 const emailService = {
@@ -544,7 +544,7 @@ class NotificationService {
       return notification;
 
     } catch (error) {
-      console.error('❌ Failed to create notification:', error);
+      logger.error('❌ Failed to create notification:', error);
       throw error;
     }
   }
@@ -590,7 +590,7 @@ class NotificationService {
       return notification;
 
     } catch (error) {
-      console.error('❌ Failed to deliver notification:', error);
+      logger.error('❌ Failed to deliver notification:', error);
       throw error;
     }
   }
@@ -611,7 +611,7 @@ class NotificationService {
       return { success: true, channel: 'inApp' };
 
     } catch (error) {
-      console.error('❌ In-app notification delivery failed:', error);
+      logger.error('❌ In-app notification delivery failed:', error);
       return { success: false, channel: 'inApp', error: error.message };
     }
   }
@@ -654,7 +654,7 @@ class NotificationService {
 
     } catch (error) {
       if (process.env.NODE_ENV !== 'production') {
-        console.error('❌ Email notification delivery failed:', error);
+        logger.error('❌ Email notification delivery failed:', error);
       }
       return { success: false, channel: 'email', error: error.message };
     }
@@ -680,7 +680,7 @@ class NotificationService {
       return { success: result.success, channel: 'sms', messageId: result.messageId };
 
     } catch (error) {
-      console.error('❌ SMS notification delivery failed:', error);
+      logger.error('❌ SMS notification delivery failed:', error);
       return { success: false, channel: 'sms', error: error.message };
     }
   }
@@ -702,7 +702,7 @@ class NotificationService {
       return { success: true, channel: 'push' };
 
     } catch (error) {
-      console.error('❌ Push notification delivery failed:', error);
+      logger.error('❌ Push notification delivery failed:', error);
       return { success: false, channel: 'push', error: error.message };
     }
   }
@@ -792,12 +792,12 @@ class NotificationService {
         try {
           callback(notification);
         } catch (error) {
-          console.error('❌ Real-time notification callback error:', error);
+          logger.error('❌ Real-time notification callback error:', error);
         }
       });
 
     } catch (error) {
-      console.error('❌ Real-time notification emission failed:', error);
+      logger.error('❌ Real-time notification emission failed:', error);
     }
   }
 
@@ -887,7 +887,7 @@ class NotificationService {
       return scheduledNotifications.length;
 
     } catch (error) {
-      console.error('❌ Failed to process scheduled notifications:', error);
+      logger.error('❌ Failed to process scheduled notifications:', error);
       return 0;
     }
   }
@@ -902,7 +902,7 @@ class NotificationService {
       return result.deletedCount;
 
     } catch (error) {
-      console.error('❌ Failed to cleanup old notifications:', error);
+      logger.error('❌ Failed to cleanup old notifications:', error);
       return 0;
     }
   }

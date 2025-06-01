@@ -1,6 +1,6 @@
+import '../styles/Pagination.css';
 import React from 'react';
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
-import '../styles/Pagination.css';
 
 const Pagination = ({ 
   currentPage, 

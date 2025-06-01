@@ -1,19 +1,17 @@
+import '../styles/search-results.css';
+import AdvancedFilters from '../components/AdvancedFilters';
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import IntelligentSearch from '../components/IntelligentSearch';
-import AdvancedFilters from '../components/AdvancedFilters';
-import '../styles/search-results.css';
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q');
   const intent = searchParams.get('intent');
-  const [results, setResults] = useState([]);
+  const [results] = useState([]);
   const [filters, setFilters] = useState({});
 
   useEffect(() => {
     // Fetch search results based on query and intent
-    console.log('Searching for:', query, 'with intent:', intent);
   }, [query, intent]);
 
   return (

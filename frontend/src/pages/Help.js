@@ -1,6 +1,6 @@
+import '../styles/Help.css';
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Search, MessageCircle, Mail, Phone } from 'lucide-react';
-import '../styles/Help.css';
 
 const Help = () => {
   const [openFaq, setOpenFaq] = useState(null);

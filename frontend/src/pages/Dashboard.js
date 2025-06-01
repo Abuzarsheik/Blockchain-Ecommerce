@@ -1,34 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { 
-  ShoppingBag, 
-  Package, 
-  User, 
-  Heart, 
-  Settings, 
-  TrendingUp,
-  Wallet,
-  Plus,
-  ArrowRight
-} from 'lucide-react';
-import DataVisualizationDashboard from '../components/DataVisualization';
-import { usePersonalization } from '../utils/personalization';
 import '../styles/Dashboard.css';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
 import PersonalizedRecommendations from '../components/PersonalizedRecommendations';
 import RecentActivity from '../components/RecentActivity';
 import NFTShowcase from '../components/NFTShowcase';
+import { logger } from '../utils/logger';
 
 const Dashboard = () => {
   const { user, isAuthenticated } = useSelector(state => state.auth);
   const { items } = useSelector(state => state.cart);
-  const { insights } = usePersonalization();
-  const { user: authUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [dateRange, setDateRange] = useState('7d');
+  
+  // Mock implementations for missing hooks
+  const insights = { avgMatchScore: 87, totalViews: 1250, favoriteCategory: 'Digital Art' };
+  const authUser = user;
+  
   const [loading, setLoading] = useState(false);
-  const [dashboardData, setDashboardData] = useState({
+  const [dashboardData] = useState({
     nftData: [],
     salesData: [],
     totalRevenue: 0,
@@ -44,7 +32,7 @@ const Dashboard = () => {
         // const response = await dashboardAPI.getData(user.id, dateRange);
         // setDashboardData(response.data);
       } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
+        logger.error('Failed to fetch dashboard data:', error);
       } finally {
         setLoading(false);
       }
@@ -53,7 +41,7 @@ const Dashboard = () => {
     if (authUser) {
       fetchDashboardData();
     }
-  }, [authUser, dateRange]);
+  }, [authUser]);
 
   if (!isAuthenticated) {
     return (

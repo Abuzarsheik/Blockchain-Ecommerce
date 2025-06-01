@@ -1,9 +1,9 @@
+import '../styles/Auth.css';
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import api from '../services/api';
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Loader, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-toastify';
-import api from '../services/api';
-import '../styles/Auth.css';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 
 const ResetPassword = () => {
   const navigate = useNavigate();

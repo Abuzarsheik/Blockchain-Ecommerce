@@ -1,5 +1,6 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const jwt = require('jsonwebtoken');
+const logger = require('../config/logger');
 
 // JWT authentication middleware
 const auth = async (req, res, next) => {
@@ -7,53 +8,67 @@ const auth = async (req, res, next) => {
         const token = req.header('Authorization')?.replace('Bearer ', '');
         
         if (!token) {
-            return res.status(401).json({ error: 'Access denied. No token provided.' });
+            return res.status(401).json({
+                success: false,
+                error: {
+                    message: 'Access denied. No token provided.',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
         
         // Get user from database
         const user = await User.findById(decoded.userId).select('-password_hash');
 
         if (!user) {
-            return res.status(401).json({ error: 'Invalid token. User not found.' });
-        }
-
-        // Check if user is active
-        if (!user.isActive) {
-            return res.status(401).json({ error: 'Account is deactivated.' });
-        }
-
-        // Check if account is locked
-        if (user.isLocked) {
-            return res.status(423).json({ error: 'Account is temporarily locked.' });
+            return res.status(401).json({
+                success: false,
+                error: {
+                    message: 'Invalid token. User not found.',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         req.user = { 
             userId: user._id, 
-            id: user._id, // For backward compatibility
+            id: user._id,
             email: user.email, 
             wallet_address: user.wallet_address,
-            userType: user.userType,
-            isVerified: user.isVerified,
-            emailVerified: user.emailVerification?.isVerified || false
+            userType: user.userType || 'user',
+            isVerified: user.isVerified || false
         };
         next();
     } catch (error) {
-        // Use proper logging instead of console.error in production
-        if (process.env.NODE_ENV !== 'production') {
-            console.error('Auth middleware error:', error);
-        }
-        
         if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ error: 'Invalid token.' });
+            return res.status(401).json({
+                success: false,
+                error: {
+                    message: 'Invalid token.',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
         
         if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({ error: 'Token expired.' });
+            return res.status(401).json({
+                success: false,
+                error: {
+                    message: 'Token expired.',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
         
-        res.status(500).json({ error: 'Authentication failed.' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Authentication failed.',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 };
 
@@ -67,18 +82,16 @@ const optionalAuth = async (req, res, next) => {
             return next();
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
         const user = await User.findById(decoded.userId).select('-password_hash');
 
-        req.user = user && user.isActive && !user.isLocked ? { 
+        req.user = user ? { 
             userId: user._id, 
-            id: user._id, // For backward compatibility
+            id: user._id,
             email: user.email, 
             wallet_address: user.wallet_address,
-            userType: user.userType,
-            isVerified: user.isVerified,
-            emailVerified: user.emailVerification?.isVerified || false
+            userType: user.userType || 'user',
+            isVerified: user.isVerified || false
         } : null;
         next();
     } catch (error) {
@@ -93,124 +106,60 @@ const adminAuth = async (req, res, next) => {
         const token = req.header('Authorization')?.replace('Bearer ', '');
         
         if (!token) {
-            return res.status(401).json({ error: 'Access denied. No token provided.' });
+            return res.status(401).json({
+                success: false,
+                error: {
+                    message: 'Access denied. No token provided.',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        
-        // Get user from database
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
         const user = await User.findById(decoded.userId).select('-password_hash');
 
-        if (!user) {
-            return res.status(401).json({ error: 'Invalid token. User not found.' });
-        }
-
-        // Check if user is active
-        if (!user.isActive) {
-            return res.status(401).json({ error: 'Account is deactivated.' });
-        }
-
-        // Check if user is locked
-        if (user.isLocked) {
-            return res.status(423).json({ error: 'Account is temporarily locked.' });
-        }
-
-        // Check if user is admin
-        if (user.role !== 'admin') {
-            return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
+        if (!user || user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                error: {
+                    message: 'Access denied. Admin privileges required.',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         req.user = { 
             userId: user._id, 
-            id: user._id, // For backward compatibility
+            id: user._id,
             email: user.email, 
-            wallet_address: user.wallet_address,
-            userType: user.userType,
             role: user.role,
-            isVerified: user.isVerified,
-            emailVerified: user.emailVerification?.isVerified || false
+            userType: user.userType || 'admin'
         };
         
         next();
     } catch (error) {
-        // Use proper logging instead of console.error in production
-        if (process.env.NODE_ENV !== 'production') {
-            console.error('Admin auth middleware error:', error);
-        }
-        
-        if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ error: 'Invalid token.' });
-        }
-        
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({ error: 'Token expired.' });
-        }
-        
-        res.status(500).json({ error: 'Admin authentication failed.' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Admin authentication failed.',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 };
 
-// Verified user middleware (requires email verification)
-const verifiedAuth = async (req, res, next) => {
-    try {
-        await auth(req, res, () => {});
-        
-        if (!req.user.emailVerified) {
-            return res.status(403).json({ 
-                error: 'Email verification required. Please verify your email to access this feature.' 
-            });
-        }
-
-        next();
-    } catch (error) {
-        res.status(500).json({ error: 'Verification check failed.' });
-    }
-};
-
-// Generate JWT token with enhanced options
+// Generate JWT token
 const generateToken = (userId, expiresIn = '7d') => {
-    const payload = {
-        userId,
-        iat: Math.floor(Date.now() / 1000),
-        jti: require('crypto').randomBytes(16).toString('hex') // JWT ID for potential blacklisting
-    };
-
     return jwt.sign(
-        payload,
-        process.env.JWT_SECRET,
-        { 
-            expiresIn,
-            issuer: 'YourApp',
-            audience: 'YourApp-Users'
-        }
+        { userId },
+        process.env.JWT_SECRET || 'fallback-secret',
+        { expiresIn }
     );
-};
-
-// Generate refresh token
-const generateRefreshToken = (userId) => {
-    return jwt.sign(
-        { userId, type: 'refresh' },
-        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-        { expiresIn: '30d' }
-    );
-};
-
-// Verify refresh token
-const verifyRefreshToken = (token) => {
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
-        return decoded.type === 'refresh' ? decoded : null;
-    } catch (error) {
-        return null;
-    }
 };
 
 module.exports = {
     auth,
     optionalAuth,
     adminAuth,
-    verifiedAuth,
-    generateToken,
-    generateRefreshToken,
-    verifyRefreshToken
+    generateToken
 }; 

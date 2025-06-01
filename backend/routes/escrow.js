@@ -1,12 +1,13 @@
-const express = require('express');
-const router = express.Router();
-const escrowService = require('../services/escrowService');
-const { auth } = require('../middleware/auth');
 const Order = require('../models/Order');
-const User = require('../models/User');
 const Product = require('../models/Product');
+const User = require('../models/User');
+const escrowService = require('../services/escrowService');
+const express = require('express');
 const notificationService = require('../services/notificationService');
+const { auth } = require('../middleware/auth');
 const { body, param, validationResult } = require('express-validator');
+
+const router = express.Router();
 
 /**
  * @route   POST /api/escrow/create
@@ -87,7 +88,7 @@ router.post('/create', auth, [
         }
 
     } catch (error) {
-        console.error('Create escrow error:', error);
+        logger.error('Create escrow error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -142,7 +143,7 @@ router.get('/:escrowId', auth, [
         }
 
     } catch (error) {
-        console.error('Get escrow error:', error);
+        logger.error('Get escrow error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -189,7 +190,7 @@ router.get('/user/:role', auth, [
         });
 
     } catch (error) {
-        console.error('Get user escrows error:', error);
+        logger.error('Get user escrows error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -245,7 +246,7 @@ router.post('/:escrowId/confirm-delivery', auth, [
         }
 
     } catch (error) {
-        console.error('Confirm delivery error:', error);
+        logger.error('Confirm delivery error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -299,7 +300,7 @@ router.post('/:escrowId/confirm-receipt', auth, [
         }
 
     } catch (error) {
-        console.error('Confirm receipt error:', error);
+        logger.error('Confirm receipt error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -355,7 +356,7 @@ router.post('/:escrowId/dispute', auth, [
         }
 
     } catch (error) {
-        console.error('Raise dispute error:', error);
+        logger.error('Raise dispute error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -411,7 +412,7 @@ router.post('/:escrowId/resolve-dispute', auth, [
         }
 
     } catch (error) {
-        console.error('Resolve dispute error:', error);
+        logger.error('Resolve dispute error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -475,7 +476,7 @@ router.post('/:escrowId/auto-release', auth, [
         }
 
     } catch (error) {
-        console.error('Auto-release error:', error);
+        logger.error('Auto-release error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -514,7 +515,7 @@ router.get('/:escrowId/can-auto-release', auth, [
         });
 
     } catch (error) {
-        console.error('Check auto-release error:', error);
+        logger.error('Check auto-release error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -556,7 +557,7 @@ router.get('/transaction/:txHash', auth, [
         });
 
     } catch (error) {
-        console.error('Get transaction status error:', error);
+        logger.error('Get transaction status error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -596,7 +597,7 @@ router.get('/stats', auth, async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Get contract stats error:', error);
+        logger.error('Get contract stats error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -674,7 +675,6 @@ router.post('/webhook/events', async (req, res) => {
                 break;
 
             default:
-                console.log('Unknown event type:', eventType);
         }
 
         res.json({
@@ -683,7 +683,7 @@ router.post('/webhook/events', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Webhook event error:', error);
+        logger.error('Webhook event error:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -765,7 +765,7 @@ router.post('/activate', auth, [
         buyerName: order.buyer_id.username
       });
     } catch (notifError) {
-      console.error('Failed to send escrow activation notifications:', notifError);
+      logger.error('Failed to send escrow activation notifications:', notifError);
     }
 
     res.json({
@@ -781,7 +781,7 @@ router.post('/activate', auth, [
     });
 
   } catch (error) {
-    console.error('Escrow activation error:', error);
+    logger.error('Escrow activation error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to activate escrow',
@@ -862,7 +862,7 @@ router.post('/release', auth, [
         buyerName: order.buyer_id.username
       });
     } catch (notifError) {
-      console.error('Failed to send escrow release notifications:', notifError);
+      logger.error('Failed to send escrow release notifications:', notifError);
     }
 
     res.json({
@@ -879,7 +879,7 @@ router.post('/release', auth, [
     });
 
   } catch (error) {
-    console.error('Escrow release error:', error);
+    logger.error('Escrow release error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to release escrow',
@@ -948,7 +948,7 @@ router.post('/confirm-delivery', auth, [
         deliveryTime: new Date().toISOString()
       });
     } catch (notifError) {
-      console.error('Failed to send delivery confirmation notifications:', notifError);
+      logger.error('Failed to send delivery confirmation notifications:', notifError);
     }
 
     res.json({
@@ -963,7 +963,7 @@ router.post('/confirm-delivery', auth, [
     });
 
   } catch (error) {
-    console.error('Delivery confirmation error:', error);
+    logger.error('Delivery confirmation error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to confirm delivery',

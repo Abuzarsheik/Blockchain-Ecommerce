@@ -1,7 +1,7 @@
 const Dispute = require('../models/Dispute');
 const Order = require('../models/Order');
-const Transaction = require('../models/Transaction');
 const Review = require('../models/Review');
+const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const notificationService = require('./notificationService');
 
@@ -197,7 +197,7 @@ class DisputeService {
             return dispute;
 
         } catch (error) {
-            console.error('Create dispute error:', error);
+            logger.error('Create dispute error:', error);
             throw error;
         }
     }
@@ -241,7 +241,7 @@ class DisputeService {
                     }
 
                 } catch (error) {
-                    console.error(`Assessment criterion ${criterionName} failed:`, error);
+                    logger.error('Assessment criterion ${criterionName} failed:', error);
                     assessmentResults.push({
                         criterion: criterionName,
                         result: false,
@@ -296,7 +296,7 @@ class DisputeService {
             return dispute;
 
         } catch (error) {
-            console.error('Automated assessment error:', error);
+            logger.error('Automated assessment error:', error);
             
             // Fallback to manual review
             const dispute = await Dispute.findById(disputeId);
@@ -333,7 +333,7 @@ class DisputeService {
             }
 
         } catch (error) {
-            console.error('Execute recommended action error:', error);
+            logger.error('Execute recommended action error:', error);
             await this.escalateToAdmin(dispute, 'Failed to execute automated resolution');
         }
     }
@@ -410,7 +410,7 @@ class DisputeService {
             return dispute;
 
         } catch (error) {
-            console.error('Assign dispute to admin error:', error);
+            logger.error('Assign dispute to admin error:', error);
             throw error;
         }
     }
@@ -444,7 +444,7 @@ class DisputeService {
             return dispute;
 
         } catch (error) {
-            console.error('Add evidence error:', error);
+            logger.error('Add evidence error:', error);
             throw error;
         }
     }
@@ -465,7 +465,7 @@ class DisputeService {
             return dispute;
 
         } catch (error) {
-            console.error('Add message error:', error);
+            logger.error('Add message error:', error);
             throw error;
         }
     }
@@ -493,7 +493,7 @@ class DisputeService {
             return dispute;
 
         } catch (error) {
-            console.error('Admin resolve dispute error:', error);
+            logger.error('Admin resolve dispute error:', error);
             throw error;
         }
     }
@@ -532,7 +532,7 @@ class DisputeService {
             await this.updateOrderStatus(dispute.order_id, resolution.decision);
 
         } catch (error) {
-            console.error('Execute resolution error:', error);
+            logger.error('Execute resolution error:', error);
             throw error;
         }
     }
@@ -549,7 +549,7 @@ class DisputeService {
             // await transactionService.createRefund(buyerId, amount, currency);
             
         } catch (error) {
-            console.error('Process refund error:', error);
+            logger.error('Process refund error:', error);
             throw error;
         }
     }
@@ -565,7 +565,7 @@ class DisputeService {
             // await transactionService.releaseFunds(sellerId, amount, currency);
             
         } catch (error) {
-            console.error('Release funds error:', error);
+            logger.error('Release funds error:', error);
             throw error;
         }
     }
@@ -588,7 +588,7 @@ class DisputeService {
             // await dispute.save();
             
         } catch (error) {
-            console.error('Execute blockchain resolution error:', error);
+            logger.error('Execute blockchain resolution error:', error);
             throw error;
         }
     }
@@ -615,7 +615,7 @@ class DisputeService {
                 }
             }
         } catch (error) {
-            console.error('Execute additional actions error:', error);
+            logger.error('Execute additional actions error:', error);
         }
     }
 
@@ -639,7 +639,7 @@ class DisputeService {
             await Order.findByIdAndUpdate(orderId, { status: newStatus });
 
         } catch (error) {
-            console.error('Update order status error:', error);
+            logger.error('Update order status error:', error);
         }
     }
 
@@ -713,7 +713,7 @@ class DisputeService {
             }
 
         } catch (error) {
-            console.error('Send dispute notifications error:', error);
+            logger.error('Send dispute notifications error:', error);
         }
     }
 
@@ -755,7 +755,7 @@ class DisputeService {
         try {
             return await Dispute.findAdminDisputes(options);
         } catch (error) {
-            console.error('Get admin disputes error:', error);
+            logger.error('Get admin disputes error:', error);
             throw error;
         }
     }
@@ -767,7 +767,7 @@ class DisputeService {
         try {
             return await Dispute.findUserDisputes(userId, options);
         } catch (error) {
-            console.error('Get user disputes error:', error);
+            logger.error('Get user disputes error:', error);
             throw error;
         }
     }
@@ -779,7 +779,7 @@ class DisputeService {
         try {
             return await Dispute.getDisputeStats(timeframe);
         } catch (error) {
-            console.error('Get dispute statistics error:', error);
+            logger.error('Get dispute statistics error:', error);
             throw error;
         }
     }

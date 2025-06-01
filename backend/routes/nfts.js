@@ -1,10 +1,10 @@
-const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const NFT = require('../models/NFT');
-const { auth } = require('../middleware/auth');
+const express = require('express');
+const fs = require('fs');
+const multer = require('multer');
 const optionalAuth = require('../middleware/auth').optionalAuth;
+const path = require('path');
+const { auth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -151,7 +151,7 @@ router.get('/', optionalAuth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get NFTs error:', error);
+        logger.error('Get NFTs error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch NFTs',
@@ -189,7 +189,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get NFT error:', error);
+        logger.error('Get NFT error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch NFT',
@@ -244,7 +244,7 @@ router.post('/:id/like', auth, async (req, res) => {
             like_count: nft.like_count
         });
     } catch (error) {
-        console.error('Like NFT error:', error);
+        logger.error('Like NFT error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to like/unlike NFT',
@@ -312,7 +312,7 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
             nft
         });
     } catch (error) {
-        console.error('Create NFT error:', error);
+        logger.error('Create NFT error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to create NFT',
@@ -360,7 +360,7 @@ router.put('/:id', auth, async (req, res) => {
             nft
         });
     } catch (error) {
-        console.error('Update NFT error:', error);
+        logger.error('Update NFT error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to update NFT',
@@ -401,7 +401,7 @@ router.delete('/:id', auth, async (req, res) => {
                 try {
                     fs.unlinkSync(imagePath);
                 } catch (imageError) {
-                    console.error('Error deleting image file:', imageError);
+                    logger.error('Error deleting image file:', imageError);
                     // Continue with NFT deletion even if image deletion fails
                 }
             }
@@ -415,7 +415,7 @@ router.delete('/:id', auth, async (req, res) => {
             message: 'NFT deleted successfully'
         });
     } catch (error) {
-        console.error('Delete NFT error:', error);
+        logger.error('Delete NFT error:', error);
         
         // Handle specific MongoDB errors
         if (error.name === 'CastError') {

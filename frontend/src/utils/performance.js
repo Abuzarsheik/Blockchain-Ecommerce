@@ -1,3 +1,7 @@
+import { logger } from './logger';
+
+const React = require('react');
+
 // Performance optimization utilities
 export const debounce = (func, wait, immediate = false) => {
   let timeout;
@@ -55,7 +59,6 @@ export const formatAddress = memoize((address) => {
 
 export const lazyLoad = (importFunc) => {
   // Dynamic import React only when needed
-  const React = require('react');
   return React.lazy(importFunc);
 };
 
@@ -191,10 +194,9 @@ export const progressiveImageLoad = (src, placeholder) => {
  */
 export const lazyComponent = (importFn, componentName = 'Component') => {
   // Dynamic import React only when needed
-  const React = require('react');
   return React.lazy(() => 
     importFn().catch(error => {
-      console.error(`Failed to load ${componentName}:`, error);
+      logger.error(`Failed to load ${componentName}:`, error);
       // Return a fallback component
       return {
         default: () => React.createElement('div', {
@@ -291,7 +293,7 @@ export const performanceMonitor = {
     // Basic performance tracking
     const observer = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
-        console.log('Performance Entry:', {
+        console.log({
           name: entry.name,
           duration: entry.duration,
           startTime: entry.startTime
@@ -322,7 +324,7 @@ export const memoryUtils = {
           fn();
         }
       } catch (error) {
-        console.error('Cleanup error:', error);
+        logger.error('Cleanup error:', error);
       }
     });
   },
@@ -403,7 +405,6 @@ export const registerServiceWorker = () => {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('SW registered: ', registration);
         })
         .catch((registrationError) => {
           console.log('SW registration failed: ', registrationError);

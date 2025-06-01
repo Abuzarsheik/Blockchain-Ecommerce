@@ -1,3 +1,15 @@
+const QRCode = require('qrcode');
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const emailService = require('../services/emailService');
+const express = require('express');
+const notificationService = require('../services/notificationService');
+const rateLimit = require('express-rate-limit');
+const speakeasy = require('speakeasy');
+const { KYC_STATUS } = require('../config/constants');
+const { auth, generateToken } = require('../middleware/auth');
+const { body, validationResult } = require('express-validator');
+
 /**
  * @swagger
  * tags:
@@ -172,50 +184,19 @@
  *                       type: string
  */
 
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const speakeasy = require('speakeasy');
-const QRCode = require('qrcode');
-const rateLimit = require('express-rate-limit');
-const { body, validationResult } = require('express-validator');
-const User = require('../models/User');
-const { auth, generateToken } = require('../middleware/auth');
-const emailService = require('../services/emailService');
-const notificationService = require('../services/notificationService');
-const { KYC_STATUS } = require('../config/constants');
 
 const router = express.Router();
 
 // Auth Health Check (no auth required)
 router.get('/health', async (req, res) => {
     try {
-        const health = {
+        const userCount = await User.countDocuments();
+        res.json({
             status: 'ok',
             service: 'Authentication',
             timestamp: new Date().toISOString(),
-            endpoints: [
-                'POST /api/auth/register',
-                'POST /api/auth/login',
-                'POST /api/auth/logout',
-                'POST /api/auth/forgot-password',
-                'POST /api/auth/reset-password',
-                'GET /api/auth/verify'
-            ]
-        };
-
-        // Test database connection
-        try {
-            const userCount = await User.countDocuments();
-            health.stats = {
-                totalUsers: userCount,
-                message: 'Authentication service operational'
-            };
-        } catch (dbError) {
-            health.warning = 'Database connection issue';
-            health.stats = { message: 'Auth service running but database unreachable' };
-        }
-
-        res.json(health);
+            stats: { totalUsers: userCount }
+        });
     } catch (error) {
         res.status(500).json({
             status: 'error',
@@ -273,7 +254,6 @@ const loginValidation = [
 // Register new user
 router.post('/register', authLimiter, registerValidation, async (req, res) => {
     try {
-        // Check validation errors
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ 
@@ -284,30 +264,26 @@ router.post('/register', authLimiter, registerValidation, async (req, res) => {
 
         const { firstName, lastName, username, email, password, userType, wallet_address } = req.body;
 
-        // Check if user already exists
+        // Check if user exists
         const existingUser = await User.findOne({ 
-            $or: [
-                { email: email.toLowerCase() },
-                { username: username.toLowerCase() }
-            ]
+            $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }]
         });
 
         if (existingUser) {
-            if (existingUser.email === email.toLowerCase()) {
-                return res.status(400).json({ error: 'User with this email already exists' });
-            } else {
-                return res.status(400).json({ error: 'Username is already taken' });
-            }
+            return res.status(409).json({
+                success: false,
+                error: {
+                    message: existingUser.email === email.toLowerCase() ? 
+                        'User with this email already exists' : 'Username is already taken',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         // Hash password
-        const saltRounds = 12;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Generate email verification token
-        const emailVerificationToken = emailService.generateSecureToken();
-
-        // Create new user
+        // Create user
         const newUser = new User({
             firstName: firstName.trim(),
             lastName: lastName.trim(),
@@ -316,96 +292,30 @@ router.post('/register', authLimiter, registerValidation, async (req, res) => {
             password_hash: hashedPassword,
             userType: userType,
             wallet_address: wallet_address || null,
-            emailVerification: {
-                token: emailVerificationToken,
-                expires: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-            },
-            // Initialize KYC with proper defaults to prevent validation errors
-            kyc: {
-                status: KYC_STATUS.NOT_STARTED,
-                level: 'basic',
-                personalInfo: {
-                    sourceOfFunds: 'employment'
-                },
-                documents: {
-                    identity: {
-                        type: 'national_id'
-                    },
-                    proofOfAddress: {
-                        type: 'utility_bill'
-                    }
-                },
-                riskAssessment: {
-                    level: 'low'
-                },
-                compliance: {
-                    sanctionsList: {
-                        result: 'clear'
-                    },
-                    pepCheck: {
-                        result: 'clear'
-                    },
-                    adverseMedia: {
-                        result: 'clear'
-                    }
-                }
-            },
             profile: {
                 avatar: null,
                 bio: '',
                 location: '',
                 website: '',
-                social: {
-                    twitter: '',
-                    instagram: '',
-                    discord: ''
-                }
-            },
-            sellerProfile: userType === 'seller' ? {
-                storeName: '',
-                storeDescription: '',
-                isVerified: false,
-                rating: {
-                    average: 0,
-                    count: 0,
-                    lastUpdated: new Date()
-                },
-                totalSales: 0,
-                commission: 5
-            } : undefined
+                social: { twitter: '', instagram: '', discord: '' }
+            }
         });
 
         await newUser.save();
 
-        // Send email verification
-        await emailService.sendEmailVerification(newUser, emailVerificationToken);
-
-        // Generate JWT token
         const token = generateToken(newUser._id);
 
-        // Log registration
-        const ipAddress = getClientIP(req);
-        await newUser.addLoginHistory(ipAddress, req.headers['user-agent'], null, true);
-
-        // Return user data (exclude sensitive fields)
-        const userData = {
-            id: newUser._id,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
-            username: newUser.username,
-            email: newUser.email,
-            userType: newUser.userType,
-            wallet_address: newUser.wallet_address,
-            profile: newUser.profile,
-            sellerProfile: newUser.sellerProfile,
-            isVerified: newUser.isVerified,
-            emailVerified: newUser.emailVerification.isVerified,
-            created_at: newUser.created_at
-        };
-
         res.status(201).json({
-            message: 'User registered successfully. Please check your email to verify your account.',
-            user: userData,
+            message: 'User registered successfully',
+            user: {
+                id: newUser._id,
+                firstName: newUser.firstName,
+                lastName: newUser.lastName,
+                username: newUser.username,
+                email: newUser.email,
+                userType: newUser.userType,
+                wallet_address: newUser.wallet_address
+            },
             token: token
         });
 
@@ -429,131 +339,28 @@ router.post('/login', authLimiter, loginValidation, async (req, res) => {
             });
         }
 
-        const { email, password, twoFactorCode } = req.body;
-        const ipAddress = getClientIP(req);
-        const userAgent = req.headers['user-agent'];
+        const { email, password } = req.body;
 
-        // Find user
         const user = await User.findOne({ email: email.toLowerCase() });
         if (!user) {
-            return res.status(401).json({ error: 'Invalid email or password' });
-        }
-
-        // Check if account is locked
-        if (user.isLocked) {
-            await user.addLoginHistory(ipAddress, userAgent, null, false);
-            return res.status(423).json({ 
-                error: 'Account temporarily locked due to too many failed attempts. Please try again later.' 
+            return res.status(401).json({
+                success: false,
+                error: {
+                    message: 'Invalid email or password',
+                    timestamp: new Date().toISOString()
+                }
             });
         }
 
-        // Check password
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
         if (!isValidPassword) {
-            await user.incLoginAttempts();
-            await user.addLoginHistory(ipAddress, userAgent, null, false);
-            return res.status(401).json({ error: 'Invalid email or password' });
-        }
-
-        // Check 2FA if enabled
-        if (user.twoFactorAuth.isEnabled) {
-            if (!twoFactorCode) {
-                return res.status(200).json({ 
-                    message: 'Two-factor authentication required',
-                    requires2FA: true,
-                    tempToken: generateToken(user._id, '5m') // Short-lived token for 2FA verification
-                });
-            }
-
-            // Verify 2FA code
-            const verified = speakeasy.totp.verify({
-                secret: user.twoFactorAuth.secret,
-                encoding: 'base32',
-                token: twoFactorCode,
-                window: 2 // Allow 60 seconds clock drift
-            });
-
-            if (!verified) {
-                // Check backup codes
-                const backupCode = user.twoFactorAuth.backupCodes.find(
-                    code => code.code === twoFactorCode.toUpperCase() && !code.used
-                );
-
-                if (!backupCode) {
-                    await user.incLoginAttempts();
-                    await user.addLoginHistory(ipAddress, userAgent, null, false);
-                    return res.status(401).json({ error: 'Invalid two-factor authentication code' });
+            return res.status(401).json({
+                success: false,
+                error: {
+                    message: 'Invalid email or password',
+                    timestamp: new Date().toISOString()
                 }
-
-                // Mark backup code as used
-                backupCode.used = true;
-                await user.save();
-            }
-
-            // Update 2FA last used timestamp
-            user.twoFactorAuth.lastUsed = new Date();
-            await user.save();
-        }
-
-        // Reset login attempts on successful login
-        await user.resetLoginAttempts();
-
-        // Update last login and log the login
-        user.lastLogin = new Date();
-        user.updated_at = new Date();
-        await user.save();
-        await user.addLoginHistory(ipAddress, userAgent, null, true);
-
-        // Send login notification if enabled
-        if (user.security.loginNotifications) {
-            // TODO: Implement sendLoginNotification in emailService
-            // await emailService.sendLoginNotification(user, ipAddress, userAgent, null);
-            console.log('📧 [DEV MODE] Login notification would be sent to:', user.email);
-        }
-
-        // Get device info for security alert
-        const deviceInfo = {
-            userAgent: userAgent || 'Unknown',
-            ipAddress: ipAddress || 'Unknown',
-            deviceType: getDeviceType(userAgent),
-            location: 'Unknown' // You could integrate with IP geolocation service
-        };
-
-        // Check if this is a new device (simple implementation)
-        const isNewDevice = !user.trusted_devices?.some(device => 
-            device.userAgent === deviceInfo.userAgent && device.ipAddress === deviceInfo.ipAddress
-        );
-
-        // Add device to trusted devices if not already there
-        if (isNewDevice) {
-            if (!user.trusted_devices) {
-                user.trusted_devices = [];
-            }
-            user.trusted_devices.push({
-                ...deviceInfo,
-                firstSeen: new Date(),
-                lastUsed: new Date()
             });
-            
-            // Send security alert for new device login
-            try {
-                await notificationService.sendSecurityAlert(user._id, 'login_new_device', {
-                    deviceType: deviceInfo.deviceType,
-                    location: deviceInfo.location,
-                    ipAddress: deviceInfo.ipAddress,
-                    loginTime: new Date().toISOString()
-                }, deviceInfo);
-            } catch (notifError) {
-                console.error('Failed to send new device login notification:', notifError);
-            }
-        } else {
-            // Update last used time for existing device
-            const deviceIndex = user.trusted_devices.findIndex(device => 
-                device.userAgent === deviceInfo.userAgent && device.ipAddress === deviceInfo.ipAddress
-            );
-            if (deviceIndex !== -1) {
-                user.trusted_devices[deviceIndex].lastUsed = new Date();
-            }
         }
 
         const token = generateToken(user._id);
@@ -568,22 +375,19 @@ router.post('/login', authLimiter, loginValidation, async (req, res) => {
                 username: user.username,
                 email: user.email,
                 userType: user.userType,
-                wallet_address: user.wallet_address,
-                profile: user.profile,
-                sellerProfile: user.sellerProfile,
-                isVerified: user.isVerified,
-                emailVerified: user.emailVerification.isVerified,
-                twoFactorEnabled: user.twoFactorAuth.isEnabled,
-                created_at: user.created_at,
-                updated_at: user.updated_at,
-                lastLogin: user.lastLogin,
-                isNewDevice
+                wallet_address: user.wallet_address
             }
         });
 
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Login failed' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Login failed',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -593,7 +397,13 @@ router.post('/verify-email', async (req, res) => {
         const { token } = req.body;
 
         if (!token) {
-            return res.status(400).json({ error: 'Verification token is required' });
+            return res.status(400).json({
+                success: false,
+                error: {
+                    message: 'Verification token is required',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         const user = await User.findOne({
@@ -602,7 +412,13 @@ router.post('/verify-email', async (req, res) => {
         });
 
         if (!user) {
-            return res.status(400).json({ error: 'Invalid or expired verification token' });
+            return res.status(400).json({
+                success: false,
+                error: {
+                    message: 'Invalid or expired verification token',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         // Mark email as verified
@@ -616,7 +432,13 @@ router.post('/verify-email', async (req, res) => {
 
     } catch (error) {
         console.error('Email verification error:', error);
-        res.status(500).json({ error: 'Email verification failed' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Email verification failed',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -625,11 +447,23 @@ router.post('/resend-verification', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         if (user.emailVerification.isVerified) {
-            return res.status(400).json({ error: 'Email is already verified' });
+            return res.status(400).json({
+                success: false,
+                error: {
+                    message: 'Email is already verified',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         // Generate new verification token
@@ -647,7 +481,13 @@ router.post('/resend-verification', auth, async (req, res) => {
 
     } catch (error) {
         console.error('Resend verification error:', error);
-        res.status(500).json({ error: 'Failed to resend verification email' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to resend verification email',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -658,7 +498,10 @@ router.post('/forgot-password', passwordResetLimiter, [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ error: 'Valid email is required' });
+            return res.status(400).json({
+                error: 'Validation failed',
+                details: errors.array()
+            });
         }
 
         const { email } = req.body;
@@ -671,7 +514,13 @@ router.post('/forgot-password', passwordResetLimiter, [
 
         // Check if too many reset attempts
         if (user.passwordReset.attempts >= 3) {
-            return res.status(429).json({ error: 'Too many password reset attempts. Please try again later.' });
+            return res.status(429).json({
+                success: false,
+                error: {
+                    message: 'Too many password reset attempts. Please try again later.',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         // Generate reset token
@@ -690,7 +539,13 @@ router.post('/forgot-password', passwordResetLimiter, [
 
     } catch (error) {
         console.error('Password reset request error:', error);
-        res.status(500).json({ error: 'Password reset request failed' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Password reset request failed',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -718,7 +573,10 @@ router.post('/reset-password', [
         });
 
         if (!user) {
-            return res.status(400).json({ error: 'Invalid or expired reset token' });
+            return res.status(400).json({
+                error: 'Invalid or expired reset token',
+                timestamp: new Date().toISOString()
+            });
         }
 
         // Hash new password
@@ -740,7 +598,13 @@ router.post('/reset-password', [
 
     } catch (error) {
         console.error('Password reset error:', error);
-        res.status(500).json({ error: 'Password reset failed' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Password reset failed',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -749,11 +613,23 @@ router.post('/setup-2fa', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         if (user.twoFactorAuth.isEnabled) {
-            return res.status(400).json({ error: 'Two-factor authentication is already enabled' });
+            return res.status(400).json({
+                success: false,
+                error: {
+                    message: 'Two-factor authentication is already enabled',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         // Generate secret
@@ -786,7 +662,13 @@ router.post('/setup-2fa', auth, async (req, res) => {
 
     } catch (error) {
         console.error('2FA setup error:', error);
-        res.status(500).json({ error: '2FA setup failed' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: '2FA setup failed',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -797,18 +679,27 @@ router.post('/verify-2fa', auth, [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ error: '6-digit code is required' });
+            return res.status(400).json({
+                error: '6-digit code is required',
+                timestamp: new Date().toISOString()
+            });
         }
 
         const { code } = req.body;
         const user = await User.findById(req.user.id);
 
         if (!user || !user.twoFactorAuth.secret) {
-            return res.status(400).json({ error: 'Please setup 2FA first' });
+            return res.status(400).json({
+                error: 'Please setup 2FA first',
+                timestamp: new Date().toISOString()
+            });
         }
 
         if (user.twoFactorAuth.isEnabled) {
-            return res.status(400).json({ error: '2FA is already enabled' });
+            return res.status(400).json({
+                error: '2FA is already enabled',
+                timestamp: new Date().toISOString()
+            });
         }
 
         // Verify the code
@@ -820,7 +711,10 @@ router.post('/verify-2fa', auth, [
         });
 
         if (!verified) {
-            return res.status(400).json({ error: 'Invalid 2FA code' });
+            return res.status(400).json({
+                error: 'Invalid 2FA code',
+                timestamp: new Date().toISOString()
+            });
         }
 
         // Enable 2FA
@@ -835,7 +729,13 @@ router.post('/verify-2fa', auth, [
 
     } catch (error) {
         console.error('2FA verification error:', error);
-        res.status(500).json({ error: '2FA verification failed' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: '2FA verification failed',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -857,17 +757,29 @@ router.post('/disable-2fa', auth, [
         const user = await User.findById(req.user.id);
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         if (!user.twoFactorAuth.isEnabled) {
-            return res.status(400).json({ error: '2FA is not enabled' });
+            return res.status(400).json({
+                error: '2FA is not enabled',
+                timestamp: new Date().toISOString()
+            });
         }
 
         // Verify current password
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
         if (!isValidPassword) {
-            return res.status(401).json({ error: 'Invalid password' });
+            return res.status(400).json({
+                error: 'Invalid password',
+                timestamp: new Date().toISOString()
+            });
         }
 
         // Verify 2FA code if provided
@@ -886,7 +798,10 @@ router.post('/disable-2fa', auth, [
                 );
 
                 if (!backupCode) {
-                    return res.status(400).json({ error: 'Invalid 2FA code' });
+                    return res.status(400).json({
+                        error: 'Invalid 2FA code',
+                        timestamp: new Date().toISOString()
+                    });
                 }
             }
         }
@@ -902,23 +817,41 @@ router.post('/disable-2fa', auth, [
 
     } catch (error) {
         console.error('2FA disable error:', error);
-        res.status(500).json({ error: 'Failed to disable 2FA' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to disable 2FA',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
 // Get current user profile
 router.get('/me', auth, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password_hash -twoFactorAuth.secret -passwordReset -emailVerification.token');
+        const user = await User.findById(req.user.id).select('-password_hash');
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         res.json({ user });
 
     } catch (error) {
         console.error('Get profile error:', error);
-        res.status(500).json({ error: 'Failed to get user profile' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to get user profile',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -927,7 +860,13 @@ router.get('/login-history', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('loginHistory');
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         // Return last 20 login attempts
@@ -939,7 +878,13 @@ router.get('/login-history', auth, async (req, res) => {
 
     } catch (error) {
         console.error('Get login history error:', error);
-        res.status(500).json({ error: 'Failed to get login history' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to get login history',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -979,7 +924,13 @@ router.put('/profile', auth, async (req, res) => {
         ).select('-password_hash -twoFactorAuth.secret');
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         res.json({
@@ -990,9 +941,21 @@ router.put('/profile', auth, async (req, res) => {
     } catch (error) {
         console.error('Update profile error:', error);
         if (error.code === 11000) {
-            return res.status(400).json({ error: 'Username or email already exists' });
+            return res.status(409).json({
+                success: false,
+                error: {
+                    message: 'Username or email already exists',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
-        res.status(500).json({ error: 'Failed to update profile' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to update profile',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -1001,7 +964,13 @@ router.get('/security-settings', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('security twoFactorAuth.isEnabled');
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         const securitySettings = {
@@ -1016,7 +985,13 @@ router.get('/security-settings', auth, async (req, res) => {
 
     } catch (error) {
         console.error('Get security settings error:', error);
-        res.status(500).json({ error: 'Failed to get security settings' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to get security settings',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -1040,7 +1015,13 @@ router.put('/security-settings', auth, [
 
         const user = await User.findById(req.user.id);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         // Initialize security object if it doesn't exist
@@ -1069,7 +1050,13 @@ router.put('/security-settings', auth, [
 
     } catch (error) {
         console.error('Update security settings error:', error);
-        res.status(500).json({ error: 'Failed to update security settings' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to update security settings',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -1093,13 +1080,22 @@ router.put('/change-password', auth, [
 
         const user = await User.findById(req.user.id);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
 
         // Verify current password
         const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
         if (!isValidPassword) {
-            return res.status(401).json({ error: 'Current password is incorrect' });
+            return res.status(400).json({
+                error: 'Current password is incorrect',
+                timestamp: new Date().toISOString()
+            });
         }
 
         // Hash new password
@@ -1121,7 +1117,13 @@ router.put('/change-password', auth, [
 
     } catch (error) {
         console.error('Change password error:', error);
-        res.status(500).json({ error: 'Failed to change password' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to change password',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -1133,7 +1135,13 @@ router.post('/logout', auth, async (req, res) => {
         res.json({ message: 'Logged out successfully' });
     } catch (error) {
         console.error('Logout error:', error);
-        res.status(500).json({ error: 'Logout failed' });
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Logout failed',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 

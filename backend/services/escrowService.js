@@ -1,8 +1,8 @@
-const { ethers } = require('ethers');
-const crypto = require('crypto');
 const Order = require('../models/Order');
 const User = require('../models/User');
+const crypto = require('crypto');
 const escrowContractABI = require('../contracts/EscrowContract.json');
+const { ethers } = require('ethers');
 
 class EscrowService {
     constructor() {
@@ -36,9 +36,8 @@ class EscrowService {
             }
 
             this.isInitialized = true;
-            console.log('✅ Escrow service initialized successfully');
         } catch (error) {
-            console.error('❌ Failed to initialize escrow service:', error);
+            logger.error('❌ Failed to initialize escrow service:', error);
         }
     }
 
@@ -91,7 +90,7 @@ class EscrowService {
                 sellerAddress
             };
         } catch (error) {
-            console.error('Escrow creation error:', error);
+            logger.error('Escrow creation error:', error);
             return {
                 success: false,
                 error: error.message,
@@ -138,7 +137,7 @@ class EscrowService {
                 }
             };
         } catch (error) {
-            console.error('Get escrow error:', error);
+            logger.error('Get escrow error:', error);
             return {
                 success: false,
                 error: error.message
@@ -183,7 +182,7 @@ class EscrowService {
                 totalCount: escrows.length
             };
         } catch (error) {
-            console.error('Get user escrows error:', error);
+            logger.error('Get user escrows error:', error);
             return {
                 success: false,
                 error: error.message,
@@ -222,7 +221,7 @@ class EscrowService {
                 }
             };
         } catch (error) {
-            console.error('Confirm delivery error:', error);
+            logger.error('Confirm delivery error:', error);
             return {
                 success: false,
                 error: error.message
@@ -257,7 +256,7 @@ class EscrowService {
                 }
             };
         } catch (error) {
-            console.error('Confirm receipt error:', error);
+            logger.error('Confirm receipt error:', error);
             return {
                 success: false,
                 error: error.message
@@ -295,7 +294,7 @@ class EscrowService {
                 }
             };
         } catch (error) {
-            console.error('Raise dispute error:', error);
+            logger.error('Raise dispute error:', error);
             return {
                 success: false,
                 error: error.message
@@ -332,7 +331,7 @@ class EscrowService {
                 }
             };
         } catch (error) {
-            console.error('Resolve dispute error:', error);
+            logger.error('Resolve dispute error:', error);
             return {
                 success: false,
                 error: error.message
@@ -359,7 +358,7 @@ class EscrowService {
                 escrowId
             };
         } catch (error) {
-            console.error('Check auto-release error:', error);
+            logger.error('Check auto-release error:', error);
             return {
                 success: false,
                 error: error.message,
@@ -395,7 +394,7 @@ class EscrowService {
                 }
             };
         } catch (error) {
-            console.error('Auto-release funds error:', error);
+            logger.error('Auto-release funds error:', error);
             return {
                 success: false,
                 error: error.message
@@ -436,7 +435,7 @@ class EscrowService {
                 };
             }
         } catch (error) {
-            console.error('Get transaction status error:', error);
+            logger.error('Get transaction status error:', error);
             return {
                 success: false,
                 error: error.message,
@@ -513,7 +512,6 @@ class EscrowService {
             });
         });
 
-        console.log('✅ Escrow event listeners started');
     }
 
     /**
@@ -522,7 +520,6 @@ class EscrowService {
     stopEventListener() {
         if (this.contract) {
             this.contract.removeAllListeners();
-            console.log('🔇 Escrow event listeners stopped');
         }
     }
 
@@ -585,7 +582,7 @@ class EscrowService {
                 }
             });
         } catch (error) {
-            console.error('Error parsing events:', error);
+            logger.error('Error parsing events:', error);
         }
 
         return events;
@@ -620,7 +617,7 @@ class EscrowService {
                 }
             };
         } catch (error) {
-            console.error('Get contract stats error:', error);
+            logger.error('Get contract stats error:', error);
             return {
                 success: false,
                 error: error.message

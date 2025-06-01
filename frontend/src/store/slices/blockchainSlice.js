@@ -1,5 +1,5 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { blockchainService } from '../../services/blockchain';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 // Async thunks
 export const verifyProductOnChain = createAsyncThunk(

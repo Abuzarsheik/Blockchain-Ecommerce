@@ -1,4 +1,5 @@
 import { apiEndpoints } from '../services/api';
+import { logger } from './logger';
 
 class AuditLogger {
   static instance = null;
@@ -177,7 +178,7 @@ class AuditLogger {
         promises.push(
           Promise.all(userActions.map(action => 
             apiEndpoints.logUserAction(action).catch(err => 
-              console.error('Failed to log user action:', err)
+              logger.error('Failed to log user action:', err)
             )
           ))
         );
@@ -187,7 +188,7 @@ class AuditLogger {
         promises.push(
           Promise.all(systemEvents.map(event => 
             apiEndpoints.logSystemEvent(event).catch(err => 
-              console.error('Failed to log system event:', err)
+              logger.error('Failed to log system event:', err)
             )
           ))
         );
@@ -197,7 +198,7 @@ class AuditLogger {
         promises.push(
           Promise.all(securityEvents.map(event => 
             apiEndpoints.logSecurityEvent(event).catch(err => 
-              console.error('Failed to log security event:', err)
+              logger.error('Failed to log security event:', err)
             )
           ))
         );
@@ -205,7 +206,7 @@ class AuditLogger {
 
       await Promise.all(promises);
     } catch (error) {
-      console.error('Failed to flush audit logs:', error);
+      logger.error('Failed to flush audit logs:', error);
       // Re-add failed logs to queue for retry
       this.queue.unshift(...logsToSend);
     }

@@ -1,6 +1,6 @@
+import '../styles/Terms.css';
 import React from 'react';
 import { FileText, AlertTriangle, Scale, Users } from 'lucide-react';
-import '../styles/Terms.css';
 
 const Terms = () => {
   return (

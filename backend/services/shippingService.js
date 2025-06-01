@@ -1,5 +1,5 @@
-const axios = require('axios');
 const Order = require('../models/Order');
+const axios = require('axios');
 const notificationService = require('./notificationService');
 
 class ShippingService {
@@ -83,7 +83,7 @@ class ShippingService {
             };
 
         } catch (error) {
-            console.error('Get tracking info error:', error);
+            logger.error('Get tracking info error:', error);
             return {
                 success: false,
                 error: error.message
@@ -115,7 +115,7 @@ class ShippingService {
                     };
             }
         } catch (error) {
-            console.error(`Error fetching tracking from ${carrier}:`, error);
+            logger.error('Error fetching tracking from ${carrier}:', error);
             return {
                 carrier: carrier,
                 tracking_number: trackingNumber,
@@ -481,7 +481,7 @@ class ShippingService {
                 });
             }
         } catch (error) {
-            console.error('Error sending tracking notification:', error);
+            logger.error('Error sending tracking notification:', error);
         }
     }
 
@@ -533,7 +533,7 @@ class ShippingService {
                         results.errors++;
                     }
                 } catch (error) {
-                    console.error(`Error updating tracking for order ${order.orderNumber}:`, error);
+                    logger.error('Error updating tracking for order ${order.orderNumber}:', error);
                     results.errors++;
                 }
 
@@ -544,7 +544,7 @@ class ShippingService {
             return results;
 
         } catch (error) {
-            console.error('Error in bulk tracking update:', error);
+            logger.error('Error in bulk tracking update:', error);
             throw error;
         }
     }
@@ -588,7 +588,7 @@ class ShippingService {
             };
 
         } catch (error) {
-            console.error('Create shipping label error:', error);
+            logger.error('Create shipping label error:', error);
             return {
                 success: false,
                 error: error.message

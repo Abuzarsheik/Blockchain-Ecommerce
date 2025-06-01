@@ -1,4 +1,6 @@
+import '../styles/AdminUserManagement.css';
 import React, { useState, useEffect, useCallback } from 'react';
+import { apiEndpoints } from '../services/api';
 import { 
   User, 
   Search, 
@@ -16,8 +18,7 @@ import {
   Unlock,
   Edit
 } from 'lucide-react';
-import { apiEndpoints } from '../services/api';
-import '../styles/AdminUserManagement.css';
+import { logger } from '../utils/logger';
 
 const AdminUserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -59,7 +60,7 @@ const AdminUserManagement = () => {
         setError('Failed to fetch users');
       }
     } catch (error) {
-      console.error('Failed to fetch users:', error);
+      logger.error('Failed to fetch users:', error);
       setError('Failed to fetch users');
     } finally {
       setLoading(false);
@@ -87,7 +88,7 @@ const AdminUserManagement = () => {
 
       await fetchUsers();
     } catch (err) {
-      console.error(`Failed to ${action} user:`, err);
+      logger.error(`Failed to ${action} user:`, err);
       alert(err.response?.data?.error || `Failed to ${action} user`);
     } finally {
       setLoadingActions(prev => ({ ...prev, [userId]: null }));
@@ -100,7 +101,7 @@ const AdminUserManagement = () => {
       setSelectedUser(response.data);
       setShowUserModal(true);
     } catch (err) {
-      console.error('Failed to fetch user details:', err);
+      logger.error('Failed to fetch user details:', err);
       alert('Failed to load user details');
     }
   };
@@ -466,7 +467,7 @@ const UserDetailsModal = ({ user, onClose, onUpdate }) => {
       await apiEndpoints.updateUser(user._id, formData);
       onUpdate();
     } catch (err) {
-      console.error('Failed to update user:', err);
+      logger.error('Failed to update user:', err);
       alert('Failed to update user');
     } finally {
       setLoading(false);

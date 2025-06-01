@@ -1,6 +1,7 @@
-const mongoose = require('mongoose');
 const NFT = require('../models/NFT');
 const User = require('../models/User');
+const mongoose = require('mongoose');
+
 require('dotenv').config();
 
 const sampleNFTs = [
@@ -179,7 +180,6 @@ async function seedNFTs() {
   try {
     // Connect to MongoDB
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/blocmerce');
-    console.log('Connected to MongoDB');
 
     // Find a user to assign as creator/owner (preferably admin or seller)
     let creator = await User.findOne({ role: 'admin' });
@@ -198,12 +198,10 @@ async function seedNFTs() {
         isVerified: true
       });
       await creator.save();
-      console.log('Created default artist user');
     }
 
     // Clear existing NFTs
     await NFT.deleteMany({});
-    console.log('Cleared existing NFTs');
 
     // Create sample NFTs
     const nftsToCreate = sampleNFTs.map(nft => ({
@@ -215,17 +213,14 @@ async function seedNFTs() {
     const createdNFTs = await NFT.insertMany(nftsToCreate);
     console.log(`Created ${createdNFTs.length} sample NFTs`);
 
-    console.log('Sample NFTs:');
     createdNFTs.forEach((nft, index) => {
       console.log(`${index + 1}. ${nft.name} - ${nft.price} ETH`);
     });
 
-    console.log('NFT seeding completed successfully!');
   } catch (error) {
-    console.error('Error seeding NFTs:', error);
+    logger.error('Error seeding NFTs:', error);
   } finally {
     await mongoose.connection.close();
-    console.log('Database connection closed');
   }
 }
 

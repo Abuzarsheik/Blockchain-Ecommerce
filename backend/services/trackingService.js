@@ -1,3 +1,5 @@
+            const db = require('../config/database');
+            const emailService = require('./emailService');
 const axios = require('axios');
 const crypto = require('crypto');
 
@@ -79,7 +81,6 @@ class TrackingService {
             };
 
             // Store in database (assuming MongoDB)
-            const db = require('../config/database');
             await db.collection('shipments').insertOne(shipment);
 
             // Integrate with external provider if not local
@@ -95,7 +96,7 @@ class TrackingService {
             };
 
         } catch (error) {
-            console.error('Shipment creation error:', error);
+            logger.error('Shipment creation error:', error);
             throw new Error(`Failed to create shipment: ${error.message}`);
         }
     }
@@ -105,7 +106,6 @@ class TrackingService {
      */
     async trackShipment(trackingNumber) {
         try {
-            const db = require('../config/database');
             let shipment = await db.collection('shipments').findOne({ trackingNumber });
 
             if (!shipment) {
@@ -142,7 +142,7 @@ class TrackingService {
             };
 
         } catch (error) {
-            console.error('Tracking error:', error);
+            logger.error('Tracking error:', error);
             return {
                 success: false,
                 error: error.message
@@ -155,7 +155,6 @@ class TrackingService {
      */
     async updateShipmentStatus(trackingNumber, updateData) {
         try {
-            const db = require('../config/database');
             const shipment = await db.collection('shipments').findOne({ trackingNumber });
 
             if (!shipment) {
@@ -195,7 +194,7 @@ class TrackingService {
             return await db.collection('shipments').findOne({ trackingNumber });
 
         } catch (error) {
-            console.error('Status update error:', error);
+            logger.error('Status update error:', error);
             throw new Error(`Failed to update shipment status: ${error.message}`);
         }
     }
@@ -224,7 +223,7 @@ class TrackingService {
             };
 
         } catch (error) {
-            console.error(`${provider} tracking error:`, error.message);
+            logger.error('${provider} tracking error:', error.message);
             return { success: false, error: error.message };
         }
     }
@@ -365,7 +364,7 @@ class TrackingService {
             console.log(`✅ External shipment created with ${provider}:`, response.data);
 
         } catch (error) {
-            console.error(`Failed to create external shipment with ${provider}:`, error.message);
+            logger.error('Failed to create external shipment with ${provider}:', error.message);
         }
     }
 
@@ -374,7 +373,6 @@ class TrackingService {
      */
     async sendTrackingNotification(trackingNumber, updateData) {
         try {
-            const db = require('../config/database');
             const shipment = await db.collection('shipments').findOne({ trackingNumber });
             
             if (!shipment) {return;}
@@ -383,7 +381,6 @@ class TrackingService {
             const user = await db.collection('users').findOne({ _id: shipment.buyer });
             if (!user?.email) {return;}
 
-            const emailService = require('./emailService');
             
             await emailService.sendTrackingUpdate({
                 to: user.email,
@@ -395,7 +392,7 @@ class TrackingService {
             });
 
         } catch (error) {
-            console.error('Notification error:', error);
+            logger.error('Notification error:', error);
         }
     }
 
@@ -404,7 +401,6 @@ class TrackingService {
      */
     async getUserShipments(userId, role = 'buyer') {
         try {
-            const db = require('../config/database');
             const query = role === 'seller' ? { seller: userId } : { buyer: userId };
             
             const shipments = await db.collection('shipments')
@@ -425,7 +421,7 @@ class TrackingService {
             };
 
         } catch (error) {
-            console.error('Get user shipments error:', error);
+            logger.error('Get user shipments error:', error);
             return { success: false, error: error.message };
         }
     }
@@ -435,7 +431,6 @@ class TrackingService {
      */
     async getDeliveryProof(trackingNumber) {
         try {
-            const db = require('../config/database');
             const shipment = await db.collection('shipments').findOne({ trackingNumber });
 
             if (!shipment) {
@@ -461,7 +456,7 @@ class TrackingService {
             };
 
         } catch (error) {
-            console.error('Delivery proof error:', error);
+            logger.error('Delivery proof error:', error);
             return { success: false, error: error.message };
         }
     }

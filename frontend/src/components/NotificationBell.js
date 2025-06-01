@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import NotificationCenter from './NotificationCenter';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Badge } from './ui/Badge';
 import { useSelector } from 'react-redux';
-import NotificationCenter from './NotificationCenter';
+import { Bell, Check, X } from 'lucide-react';
+import { logger } from '../utils/logger';
+import { apiEndpoints as api } from '../services/api';
 
 const NotificationBell = () => {
   const { user } = useSelector((state) => state.auth);
@@ -56,7 +59,7 @@ const NotificationBell = () => {
         setUnreadCount(response.data.unreadCount);
       }
     } catch (error) {
-      console.error('Failed to load unread count:', error);
+      logger.error('Failed to load unread count:', error);
     }
   };
 

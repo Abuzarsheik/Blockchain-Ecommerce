@@ -1,10 +1,11 @@
+const Order = require('../models/Order');
+const Transaction = require('../models/Transaction');
 const express = require('express');
-const router = express.Router();
 const paymentService = require('../services/paymentService');
 const { auth } = require('../middleware/auth');
-const Transaction = require('../models/Transaction');
-const Order = require('../models/Order');
 const { body, param, query, validationResult } = require('express-validator');
+
+const router = express.Router();
 
 /**
  * @route   POST /api/payments/process
@@ -51,7 +52,7 @@ router.post('/process', auth, [
     }
 
   } catch (error) {
-    console.error('Process payment error:', error);
+    logger.error('Process payment error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -103,7 +104,7 @@ router.post('/withdraw', auth, [
     }
 
   } catch (error) {
-    console.error('Process withdrawal error:', error);
+    logger.error('Process withdrawal error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -152,7 +153,7 @@ router.get('/transactions', auth, [
     });
 
   } catch (error) {
-    console.error('Get transactions error:', error);
+    logger.error('Get transactions error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -203,7 +204,7 @@ router.get('/transactions/:address', auth, [
     });
 
   } catch (error) {
-    console.error('Get address transactions error:', error);
+    logger.error('Get address transactions error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -247,7 +248,7 @@ router.get('/transaction/:txHash', auth, [
     }
 
   } catch (error) {
-    console.error('Get transaction by hash error:', error);
+    logger.error('Get transaction by hash error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -307,7 +308,7 @@ router.put('/transactions/:txHash', auth, [
     });
 
   } catch (error) {
-    console.error('Update transaction error:', error);
+    logger.error('Update transaction error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -333,7 +334,7 @@ router.get('/currencies', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get currencies error:', error);
+    logger.error('Get currencies error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -378,7 +379,7 @@ router.get('/balance/:currency', auth, [
     });
 
   } catch (error) {
-    console.error('Get platform balance error:', error);
+    logger.error('Get platform balance error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -436,7 +437,7 @@ router.get('/stats', auth, [
     }
 
   } catch (error) {
-    console.error('Get payment stats error:', error);
+    logger.error('Get payment stats error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -475,7 +476,7 @@ router.post('/validate-address', auth, [
     });
 
   } catch (error) {
-    console.error('Validate address error:', error);
+    logger.error('Validate address error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -539,7 +540,7 @@ router.get('/user-stats', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get user stats error:', error);
+    logger.error('Get user stats error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',

@@ -1,6 +1,16 @@
+import '../styles/NFTCatalog.css';
+import IntelligentSearch from '../components/IntelligentSearch';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import VirtualizedNFTGrid from '../components/VirtualizedNFTGrid';
+import { addToCart } from '../store/slices/cartSlice';
+import { api } from '../services/api';
+import { debounce } from '../utils/performance';
+import { toast } from 'react-toastify';
+import { trackPageView } from '../utils/personalization';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
+import { logger } from '../utils/logger';
+
 import { 
   Grid, 
   List, 
@@ -8,14 +18,6 @@ import {
   TrendingUp,
   Users
 } from 'lucide-react';
-import { toast } from 'react-toastify';
-import { api } from '../services/api';
-import { addToCart } from '../store/slices/cartSlice';
-import IntelligentSearch from '../components/IntelligentSearch';
-import VirtualizedNFTGrid from '../components/VirtualizedNFTGrid';
-import { trackPageView } from '../utils/personalization';
-import { debounce } from '../utils/performance';
-import '../styles/NFTCatalog.css';
 
 const NFTCatalog = () => {
   const navigate = useNavigate();
@@ -89,7 +91,7 @@ const NFTCatalog = () => {
       
       setError(null);
     } catch (error) {
-      console.error('Failed to fetch NFTs:', error);
+      logger.error('Failed to fetch NFTs:', error);
       setError('Failed to load NFTs');
       toast.error('Failed to load NFTs');
     } finally {
@@ -109,7 +111,7 @@ const NFTCatalog = () => {
         const response = await api.get(`/nfts/search/suggestions?q=${searchTerm}`);
         setSuggestions(response.data.suggestions || []);
       } catch (error) {
-        console.error('Failed to fetch suggestions:', error);
+        logger.error('Failed to fetch suggestions:', error);
         setSuggestions([]);
       }
     }, 200);
@@ -207,7 +209,7 @@ const NFTCatalog = () => {
 
       toast.success(favorites.has(nftId) ? 'NFT unliked!' : 'NFT liked!');
     } catch (error) {
-      console.error('Like error:', error);
+      logger.error('Like error:', error);
       toast.error('Failed to like NFT');
     }
   }, [user, navigate, favorites]);

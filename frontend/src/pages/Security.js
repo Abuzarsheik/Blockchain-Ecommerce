@@ -1,6 +1,11 @@
+import '../styles/Security.css';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import { api } from '../services/api';
+import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { logger } from '../utils/logger';
+
 import { 
   Shield, 
   Lock, 
@@ -19,9 +24,6 @@ import {
   LogOut,
   Download
 } from 'lucide-react';
-import { toast } from 'react-toastify';
-import { api } from '../services/api';
-import '../styles/Security.css';
 
 const Security = () => {
   const { user, isAuthenticated } = useSelector(state => state.auth);
@@ -88,7 +90,7 @@ const Security = () => {
       ]);
       
     } catch (error) {
-      console.error('Error fetching security data:', error);
+      logger.error('Error fetching security data:', error);
       toast.error('Failed to load security information');
       // Set defaults if fetch fails
       setSecuritySettings({
@@ -142,7 +144,7 @@ const Security = () => {
       }
       
     } catch (error) {
-      console.error('Password change error:', error);
+      logger.error('Password change error:', error);
       toast.error(error.response?.data?.message || 'Failed to change password');
     } finally {
       setLoading(false);
@@ -166,7 +168,7 @@ const Security = () => {
       }
       
     } catch (error) {
-      console.error('2FA toggle error:', error);
+      logger.error('2FA toggle error:', error);
       toast.error('Failed to update two-factor authentication');
     } finally {
       setLoading(false);
@@ -182,7 +184,7 @@ const Security = () => {
       toast.success('Session revoked successfully');
       
     } catch (error) {
-      console.error('Session revoke error:', error);
+      logger.error('Session revoke error:', error);
       toast.error('Failed to revoke session');
     } finally {
       setLoading(false);
@@ -200,7 +202,7 @@ const Security = () => {
       }
       
     } catch (error) {
-      console.error('Settings update error:', error);
+      logger.error('Settings update error:', error);
       toast.error(error.response?.data?.error || 'Failed to update security settings');
     } finally {
       setLoading(false);
@@ -231,7 +233,7 @@ const Security = () => {
       toast.success('Security report downloaded');
       
     } catch (error) {
-      console.error('Report download error:', error);
+      logger.error('Report download error:', error);
       toast.error('Failed to download security report');
     }
   };

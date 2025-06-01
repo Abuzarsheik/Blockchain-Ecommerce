@@ -1,6 +1,5 @@
+import '../styles/ShoppingCart.css';
 import React, { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import { 
   Trash2, 
   Plus, 
@@ -22,9 +21,10 @@ import {
   applyCoupon,
   removeCoupon
 } from '../store/slices/cartSlice';
-import { toast } from 'react-toastify';
 import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
-import '../styles/ShoppingCart.css';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 
 const ShoppingCart = () => {
   const dispatch = useDispatch();

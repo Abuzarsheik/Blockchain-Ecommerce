@@ -1,9 +1,9 @@
+import './VirtualizedNFTGrid.css';
+import ProductCard from './ProductCard';
 import React, { useCallback } from 'react';
 import { FixedSizeGrid as Grid } from 'react-window';
-import { useInView } from 'react-intersection-observer';
-import ProductCard from './ProductCard';
 import { SkeletonGrid } from './ui/SkeletonCard';
-import './VirtualizedNFTGrid.css';
+import { useInView } from 'react-intersection-observer';
 
 const VirtualizedNFTGrid = ({ 
   nfts = [], 

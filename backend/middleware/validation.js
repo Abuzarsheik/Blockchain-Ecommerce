@@ -1,5 +1,6 @@
-const { body, param, query, validationResult } = require('express-validator');
+  const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
+const { body, param, query, validationResult } = require('express-validator');
 
 /**
  * Handle validation errors
@@ -318,7 +319,6 @@ const sanitizeInput = (req, res, next) => {
  * Rate limiting by IP
  */
 const createRateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
-  const rateLimit = require('express-rate-limit');
   
   return rateLimit({
     windowMs,

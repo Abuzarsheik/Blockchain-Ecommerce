@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { Eye, EyeOff, Loader, ShoppingBag, Store } from 'lucide-react';
-import { toast } from 'react-toastify';
-import { registerUser } from '../store/slices/authSlice';
 import '../styles/Register.css';
+import React, { useState } from 'react';
+import { Eye, EyeOff, Loader, ShoppingBag, Store } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { registerUser } from '../store/slices/authSlice';
+import { toast } from 'react-toastify';
+import { useDispatch } from 'react-redux';
+import { logger } from '../utils/logger';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -230,7 +231,7 @@ const Register = () => {
         }
       }
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error('Registration error:', error);
       toast.error('Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
