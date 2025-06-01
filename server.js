@@ -345,7 +345,9 @@ function startServer(port) {
             s === 'fallback_mode'
         ).length;
         
-        console.log(`✅ Core Services: ${operationalServices}/6 operational`);
+        const totalServices = Object.keys(serviceStatus).length;
+        
+        console.log(`✅ Core Services: ${operationalServices}/${totalServices} operational`);
         
         // Service status breakdown
         console.log('📋 Service Status:');
