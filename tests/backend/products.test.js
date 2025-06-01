@@ -239,7 +239,11 @@ describe('Products API', () => {
         price: 0.1,
         category: 'art-collectibles', // Use valid category
         seller: sellerId,
-        status: 'active'
+        status: 'active',
+        inventory: {
+          quantity: 1,
+          sku: `TEST-${Date.now()}`
+        }
       });
 
       const savedProduct = await product.save();
@@ -252,7 +256,7 @@ describe('Products API', () => {
         .expect(200);
 
       expect(response.body.product).toBeDefined();
-      expect(response.body.product._id).toBe(productId.toString());
+      expect(response.body.product.id).toBe(productId.toString());
       expect(response.body.product.name).toBe('Test NFT Product');
     });
 
@@ -282,7 +286,11 @@ describe('Products API', () => {
         price: 0.1,
         category: 'art-collectibles', // Use valid category
         seller: sellerId,
-        status: 'active'
+        status: 'active',
+        inventory: {
+          quantity: 1,
+          sku: `TEST-PUT-${Date.now()}`
+        }
       });
 
       const savedProduct = await product.save();
@@ -355,7 +363,11 @@ describe('Products API', () => {
         price: 0.1,
         category: 'art-collectibles', // Use valid category
         seller: sellerId,
-        status: 'active'
+        status: 'active',
+        inventory: {
+          quantity: 1,
+          sku: `TEST-DELETE-${Date.now()}`
+        }
       });
 
       const savedProduct = await product.save();
@@ -384,4 +396,4 @@ describe('Products API', () => {
       expect(response.body.error).toBeDefined();
     });
   });
-}); 
+});

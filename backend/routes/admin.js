@@ -734,66 +734,46 @@ router.post('/kyc/:userId/review', adminAuth, [
 
 /**
  * @route   GET /api/admin/audit-logs
- * @desc    Get audit logs with filtering
+ * @desc    Get audit logs with advanced filtering
  * @access  Admin
  */
 router.get('/audit-logs', adminAuth, async (req, res) => {
     try {
-        const {
-            page = 1,
-            limit = 50,
-            action,
-            userId,
-            severity,
-            startDate,
-            endDate,
-            search
+        const { 
+            page = 1, 
+            limit = 50, 
+            action, 
+            userId, 
+            severity, 
+            startDate, 
+            endDate 
         } = req.query;
 
-        const query = {};
-        
-        if (action) {query.action = action;}
-        if (userId) {query.userId = userId;}
-        if (severity) {query.severity = severity;}
+        const filter = {};
+        if (action) {filter.action = action;}
+        if (userId) {filter.userId = userId;}
+        if (severity) {filter.severity = severity;}
         if (startDate || endDate) {
-            query.timestamp = {};
-            if (startDate) {query.timestamp.$gte = new Date(startDate);}
-            if (endDate) {query.timestamp.$lte = new Date(endDate);}
-        }
-        if (search) {
-            query.$or = [
-                { action: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } },
-                { 'metadata.ip': { $regex: search, $options: 'i' } }
-            ];
+            filter.timestamp = {};
+            if (startDate) {filter.timestamp.$gte = new Date(startDate);}
+            if (endDate) {filter.timestamp.$lte = new Date(endDate);}
         }
 
-        // Mock audit logs data (replace with actual AuditLog model)
-        const mockAuditLogs = [
-            {
-                id: '1',
-                action: 'user_login',
-                userId: 'user123',
-                userEmail: 'user@example.com',
-                severity: 'low',
-                timestamp: new Date(),
-                description: 'User logged in successfully',
-                metadata: {
-                    ip: '192.168.1.1',
-                    userAgent: 'Mozilla/5.0...',
-                    location: 'New York, US'
-                }
-            }
-        ];
+        const skip = (page - 1) * limit;
+
+        // Query actual audit logs from database
+        // TODO: Implement AuditLog model and replace with real data
+        const auditLogs = [];
+        const total = 0;
 
         res.json({
             success: true,
-            auditLogs: mockAuditLogs,
+            auditLogs,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
-                total: mockAuditLogs.length,
-                pages: Math.ceil(mockAuditLogs.length / limit)
+                total,
+                pages: Math.ceil(total / limit)
             }
         });
 
@@ -815,8 +795,11 @@ router.get('/audit-logs/export', adminAuth, async (req, res) => {
     try {
         const { format = 'csv', ...filters } = req.query;
         
-        // Mock export functionality
-        const csvData = 'Timestamp,Action,User,Severity,Description\n2024-01-01,user_login,user@example.com,low,User logged in';
+        // TODO: Implement actual audit log export functionality
+        // Query audit logs based on filters and format as CSV/JSON
+        
+        const csvHeaders = 'Timestamp,Action,User,Severity,Description\n';
+        const csvData = csvHeaders; // Add actual data here
         
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', 'attachment; filename=audit-logs.csv');
@@ -840,52 +823,19 @@ router.get('/smart-contracts', adminAuth, async (req, res) => {
     try {
         const { page = 1, limit = 20, status, riskLevel } = req.query;
 
-        // Mock smart contracts data
-        const mockContracts = [
-            {
-                id: '1',
-                name: 'Product Registry',
-                address: '0x1234567890123456789012345678901234567890',
-                network: 'ethereum',
-                version: '1.0.0',
-                status: 'active',
-                riskLevel: 'low',
-                lastAudit: new Date('2024-01-01'),
-                nextAudit: new Date('2024-04-01'),
-                vulnerabilities: 0,
-                deployedAt: new Date('2023-12-01'),
-                gasUsage: '2,500,000',
-                transactions: 15420
-            },
-            {
-                id: '2',
-                name: 'Escrow System',
-                address: '0x2345678901234567890123456789012345678901',
-                network: 'ethereum',
-                version: '1.2.0',
-                status: 'active',
-                riskLevel: 'medium',
-                lastAudit: new Date('2024-01-15'),
-                nextAudit: new Date('2024-04-15'),
-                vulnerabilities: 1,
-                deployedAt: new Date('2023-11-15'),
-                gasUsage: '3,200,000',
-                transactions: 8750
-            }
-        ];
-
-        let filteredContracts = mockContracts;
-        if (status) {filteredContracts = filteredContracts.filter(c => c.status === status);}
-        if (riskLevel) {filteredContracts = filteredContracts.filter(c => c.riskLevel === riskLevel);}
+        // TODO: Implement actual smart contracts registry
+        // This should connect to blockchain and fetch deployed contracts
+        const contracts = [];
+        const total = 0;
 
         res.json({
             success: true,
-            contracts: filteredContracts,
+            contracts,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
-                total: filteredContracts.length,
-                pages: Math.ceil(filteredContracts.length / limit)
+                total,
+                pages: Math.ceil(total / limit)
             }
         });
 
@@ -908,7 +858,9 @@ router.post('/smart-contracts/:id/audit', adminAuth, async (req, res) => {
         const { id } = req.params;
         const { auditType = 'security', priority = 'medium' } = req.body;
 
-        // Mock audit request
+        // TODO: Implement actual contract audit request
+        // This should create audit record and integrate with audit service
+        
         res.json({
             success: true,
             message: 'Audit request submitted successfully',
@@ -942,54 +894,19 @@ router.get('/security-events', adminAuth, async (req, res) => {
             endDate
         } = req.query;
 
-        // Mock security events data
-        const mockEvents = [
-            {
-                id: '1',
-                type: 'suspicious_login',
-                severity: 'high',
-                category: 'authentication',
-                status: 'investigating',
-                timestamp: new Date(),
-                description: 'Multiple failed login attempts from unusual location',
-                affectedUser: 'user@example.com',
-                sourceIp: '192.168.1.100',
-                location: 'Unknown Location',
-                actions: ['account_locked', 'notification_sent'],
-                metadata: {
-                    attempts: 5,
-                    timeWindow: '5 minutes',
-                    userAgent: 'Mozilla/5.0...'
-                }
-            },
-            {
-                id: '2',
-                type: 'unusual_transaction',
-                severity: 'medium',
-                category: 'financial',
-                status: 'resolved',
-                timestamp: new Date(Date.now() - 3600000),
-                description: 'Large transaction amount detected',
-                affectedUser: 'trader@example.com',
-                sourceIp: '10.0.0.50',
-                location: 'New York, US',
-                actions: ['manual_review', 'approved'],
-                metadata: {
-                    amount: '50000',
-                    currency: 'USDT',
-                    previousMax: '10000'
-                }
-            }
-        ];
+        // TODO: Implement actual security events from database
+        // Query SecurityEvent model with proper filtering
+        const events = [];
+        const total = 0;
 
         res.json({
             success: true,
-            events: mockEvents,
+            events,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
-                total: mockEvents.length,
-                pages: Math.ceil(mockEvents.length / limit)
+                total,
+                pages: Math.ceil(total / limit)
             }
         });
 
@@ -998,38 +915,6 @@ router.get('/security-events', adminAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to fetch security events'
-        });
-    }
-});
-
-/**
- * @route   POST /api/admin/security-events
- * @desc    Create security event
- * @access  Admin
- */
-router.post('/security-events', adminAuth, async (req, res) => {
-    try {
-        const eventData = req.body;
-        
-        // Mock event creation
-        const newEvent = {
-            id: `event_${Date.now()}`,
-            ...eventData,
-            timestamp: new Date(),
-            createdBy: req.user.id
-        };
-
-        res.status(201).json({
-            success: true,
-            message: 'Security event created successfully',
-            event: newEvent
-        });
-
-    } catch (error) {
-        console.error('Create security event error:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to create security event'
         });
     }
 });

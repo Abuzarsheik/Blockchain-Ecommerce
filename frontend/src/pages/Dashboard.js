@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { 
@@ -15,237 +15,99 @@ import {
 import DataVisualizationDashboard from '../components/DataVisualization';
 import { usePersonalization } from '../utils/personalization';
 import '../styles/Dashboard.css';
+import { useAuth } from '../contexts/AuthContext';
+import PersonalizedRecommendations from '../components/PersonalizedRecommendations';
+import RecentActivity from '../components/RecentActivity';
+import NFTShowcase from '../components/NFTShowcase';
 
 const Dashboard = () => {
   const { user, isAuthenticated } = useSelector(state => state.auth);
   const { items } = useSelector(state => state.cart);
   const { insights } = usePersonalization();
+  const { user: authUser } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [dateRange, setDateRange] = useState('7d');
+  const [loading, setLoading] = useState(false);
+  const [dashboardData, setDashboardData] = useState({
+    nftData: [],
+    salesData: [],
+    totalRevenue: 0,
+    totalSales: 0,
+    averagePrice: 0
+  });
 
-  // Mock data for demonstration
-  const dashboardStats = {
-    totalOrders: 24,
-    totalSpent: 1247.50,
-    nftsOwned: 18,
-    watchlistItems: 5
-  };
+  useEffect(() => {
+    // TODO: Replace with actual API calls to fetch dashboard data
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        // const response = await dashboardAPI.getData(user.id, dateRange);
+        // setDashboardData(response.data);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Mock data for visualization
-  const mockNFTData = [
-    { name: 'Art', value: 45, color: '#8b5cf6' },
-    { name: 'Music', value: 25, color: '#06b6d4' },
-    { name: 'Gaming', value: 20, color: '#10b981' },
-    { name: 'Photography', value: 10, color: '#f59e0b' }
-  ];
-
-  const mockSalesData = [
-    { month: 'Jan', sales: 1200, purchases: 800 },
-    { month: 'Feb', sales: 1900, purchases: 1200 },
-    { month: 'Mar', sales: 1500, purchases: 900 },
-    { month: 'Apr', sales: 2200, purchases: 1500 },
-    { month: 'May', sales: 1800, purchases: 1100 },
-    { month: 'Jun', sales: 2500, purchases: 1800 }
-  ];
-
-  const recentOrders = [
-    {
-      id: "ORD-2024-001",
-      date: "2024-01-15",
-      status: "Delivered",
-      total: 89.99,
-      items: 2
-    },
-    {
-      id: "ORD-2024-002", 
-      date: "2024-01-10",
-      status: "Processing",
-      total: 159.50,
-      items: 1
-    },
-    {
-      id: "ORD-2024-003",
-      date: "2024-01-05",
-      status: "Shipped",
-      total: 299.99,
-      items: 3
+    if (authUser) {
+      fetchDashboardData();
     }
-  ];
-
-  // Check if user is a seller (sellers shouldn't see cart/buying options)
-  const isSeller = user?.userType === 'seller' && user?.role !== 'admin';
+  }, [authUser, dateRange]);
 
   if (!isAuthenticated) {
     return (
-      <div className="dashboard-unauthorized">
-        <h2>Please Login</h2>
-        <p>You need to be logged in to access your dashboard.</p>
-        <Link to="/login" className="btn-primary">Login</Link>
+      <div className="auth-prompt">
+        <h2>Please log in to access your dashboard</h2>
+        <Link to="/login" className="login-link">Go to Login</Link>
       </div>
     );
   }
 
   return (
     <div className="dashboard">
-      <div className="dashboard-container">
-        <div className="dashboard-header">
-          <h1>Welcome back, {user?.firstName ? `${user.firstName} ${user.lastName}` : 'User'}!</h1>
-          <p>Manage your account, track orders, and explore the marketplace</p>
+      <div className="dashboard-header">
+        <h1>Welcome back, {user?.firstName || 'User'}!</h1>
+        <p>Your blockchain marketplace journey continues</p>
+      </div>
+
+      <div className="dashboard-stats">
+        <div className="stat-card">
+          <h3>Total Revenue</h3>
+          <p className="stat-value">
+            {loading ? 'Loading...' : `${dashboardData.totalRevenue} ETH`}
+          </p>
+        </div>
+        <div className="stat-card">
+          <h3>Items Sold</h3>
+          <p className="stat-value">
+            {loading ? 'Loading...' : dashboardData.totalSales}
+          </p>
+        </div>
+        <div className="stat-card">
+          <h3>Average Price</h3>
+          <p className="stat-value">
+            {loading ? 'Loading...' : `${dashboardData.averagePrice} ETH`}
+          </p>
+        </div>
+        <div className="stat-card">
+          <h3>Cart Items</h3>
+          <p className="stat-value">{items.length}</p>
+        </div>
+      </div>
+
+      <div className="dashboard-content">
+        <div className="left-panel">
+          <PersonalizedRecommendations insights={insights} />
+          <RecentActivity />
         </div>
 
-        {/* Stats Cards */}
-        <div className="dashboard-stats">
-          <div className="stat-card">
-            <Package size={24} />
-            <div className="stat-info">
-              <span className="stat-number">{dashboardStats.totalOrders}</span>
-              <span className="stat-label">Total Orders</span>
-            </div>
-          </div>
-          
-          <div className="stat-card">
-            <Wallet size={24} />
-            <div className="stat-info">
-              <span className="stat-number">${dashboardStats.totalSpent}</span>
-              <span className="stat-label">Total Spent</span>
-            </div>
-          </div>
-          
-          <div className="stat-card">
-            <TrendingUp size={24} />
-            <div className="stat-info">
-              <span className="stat-number">{dashboardStats.nftsOwned}</span>
-              <span className="stat-label">NFTs Owned</span>
-            </div>
-          </div>
-          
-          <div className="stat-card">
-            <Heart size={24} />
-            <div className="stat-info">
-              <span className="stat-number">{dashboardStats.watchlistItems}</span>
-              <span className="stat-label">Watchlist</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Data Visualization Dashboard */}
-        <div className="dashboard-section">
-          <h2>Your Analytics</h2>
-          <DataVisualizationDashboard 
-            userInsights={insights}
-            nftData={mockNFTData}
-            salesData={mockSalesData}
+        <div className="right-panel">
+          <NFTShowcase 
+            nftData={dashboardData.nftData}
+            salesData={dashboardData.salesData}
+            loading={loading}
           />
-        </div>
-
-        <div className="dashboard-content">
-          {/* Quick Actions */}
-          <div className="dashboard-section">
-            <h2>Quick Actions</h2>
-            <div className="quick-actions">
-              <Link to="/catalog" className="action-card">
-                <ShoppingBag size={32} />
-                <h3>Browse Marketplace</h3>
-                <p>Discover new NFTs and digital assets</p>
-                <ArrowRight size={16} />
-              </Link>
-              
-              {(user?.userType === 'seller' || user?.role === 'admin') && (
-                <Link to="/create-nft" className="action-card">
-                  <Plus size={32} />
-                  <h3>Create NFT</h3>
-                  <p>Mint your own digital assets</p>
-                  <ArrowRight size={16} />
-                </Link>
-              )}
-              
-              <Link to="/profile" className="action-card">
-                <User size={32} />
-                <h3>Edit Profile</h3>
-                <p>Update your account information</p>
-                <ArrowRight size={16} />
-              </Link>
-              
-              {/* Only show cart for buyers and admins, not for pure sellers */}
-              {!isSeller && (
-                <Link to="/cart" className="action-card">
-                  <ShoppingBag size={32} />
-                  <h3>View Cart ({items.length})</h3>
-                  <p>Review items in your cart</p>
-                  <ArrowRight size={16} />
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {/* Recent Orders */}
-          <div className="dashboard-section">
-            <div className="section-header">
-              <h2>Recent Orders</h2>
-              <Link to="/orders" className="view-all-link">
-                View All Orders <ArrowRight size={16} />
-              </Link>
-            </div>
-            
-            {recentOrders.length > 0 ? (
-              <div className="orders-list">
-                {recentOrders.map(order => (
-                  <div key={order.id} className="order-item">
-                    <div className="order-info">
-                      <span className="order-id">{order.id}</span>
-                      <span className="order-date">{new Date(order.date).toLocaleDateString()}</span>
-                    </div>
-                    <div className="order-details">
-                      <span className="order-items">{order.items} item{order.items > 1 ? 's' : ''}</span>
-                      <span className="order-total">${order.total}</span>
-                    </div>
-                    <div className={`order-status ${order.status.toLowerCase()}`}>
-                      {order.status}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-orders">
-                <Package size={48} />
-                <p>No orders yet</p>
-                <Link to="/catalog" className="btn-secondary">Start Shopping</Link>
-              </div>
-            )}
-          </div>
-
-          {/* Account Management */}
-          <div className="dashboard-section">
-            <div className="section-header">
-              <h2>Account Management</h2>
-            </div>
-            
-            <div className="management-grid">
-              <Link to="/profile" className="management-card">
-                <Settings size={24} />
-                <div>
-                  <h4>Profile Settings</h4>
-                  <p>Update personal information and preferences</p>
-                </div>
-              </Link>
-              
-              <Link to="/security" className="management-card">
-                <User size={24} />
-                <div>
-                  <h4>Security</h4>
-                  <p>Manage password and security settings</p>
-                </div>
-              </Link>
-              
-              {isSeller && (
-                <Link to="/seller-settings" className="management-card">
-                  <TrendingUp size={24} />
-                  <div>
-                    <h4>Seller Settings</h4>
-                    <p>Configure your seller profile and preferences</p>
-                  </div>
-                </Link>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>

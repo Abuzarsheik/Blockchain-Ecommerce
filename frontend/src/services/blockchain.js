@@ -132,14 +132,11 @@ class BlockchainService {
   // Verify product on blockchain
   async verifyProduct(productId) {
     try {
-      // This would interact with your ProductRegistry contract
-      // For now, return mock data
-      return {
-        verified: true,
-        timestamp: Date.now(),
-        txHash: '0x' + Math.random().toString(16).substr(2, 64),
-        manufacturer: this.account || '0x0000000000000000000000000000000000000000'
-      };
+      // TODO: Implement actual blockchain verification
+      // This should interact with your ProductRegistry contract
+      // Example: const result = await this.contracts.ProductRegistry.verifyProduct(productId);
+      
+      throw new Error('Product verification not yet implemented');
     } catch (error) {
       console.error('Failed to verify product:', error);
       throw error;
@@ -149,22 +146,15 @@ class BlockchainService {
   // Get product history from blockchain
   async getProductHistory(productId) {
     try {
-      // This would query blockchain events for the product
-      // For now, return mock data
-      return [
-        {
-          event: 'ProductRegistered',
-          timestamp: Date.now() - 86400000, // 1 day ago
-          txHash: '0x' + Math.random().toString(16).substr(2, 64),
-          manufacturer: '0x1234567890123456789012345678901234567890'
-        },
-        {
-          event: 'ProductVerified',
-          timestamp: Date.now() - 43200000, // 12 hours ago
-          txHash: '0x' + Math.random().toString(16).substr(2, 64),
-          verifier: '0x0987654321098765432109876543210987654321'
-        }
-      ];
+      // TODO: Implement actual blockchain history query
+      // This should query blockchain events for the product
+      // Example: const events = await this.contracts.ProductRegistry.getPastEvents('ProductEvent', {
+      //   filter: { productId },
+      //   fromBlock: 0,
+      //   toBlock: 'latest'
+      // });
+      
+      throw new Error('Product history retrieval not yet implemented');
     } catch (error) {
       console.error('Failed to get product history:', error);
       throw error;
@@ -179,28 +169,15 @@ class BlockchainService {
 
     try {
       // Hash the review content
-      keccak256(toUtf8Bytes(content));
+      const contentHash = keccak256(toUtf8Bytes(content));
       
-      // This would interact with your ReviewSystem contract
-      // For now, return mock transaction
-      const mockTx = {
-        hash: '0x' + Math.random().toString(16).substr(2, 64),
-        wait: async () => ({
-          status: 1,
-          transactionHash: '0x' + Math.random().toString(16).substr(2, 64),
-          events: [
-            {
-              args: {
-                reviewId: Math.floor(Math.random() * 1000000),
-                productId: productId,
-                reviewer: this.account
-              }
-            }
-          ]
-        })
-      };
-
-      return mockTx;
+      // TODO: Implement actual blockchain review submission
+      // This should interact with your ReviewSystem contract
+      // Example: const tx = await this.contracts.ReviewSystem.submitReview(
+      //   productId, rating, contentHash
+      // );
+      
+      throw new Error('Review submission to blockchain not yet implemented');
     } catch (error) {
       console.error('Failed to submit review:', error);
       throw error;
