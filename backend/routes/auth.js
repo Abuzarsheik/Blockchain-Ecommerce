@@ -375,6 +375,7 @@ router.post('/login', authLimiter, loginValidation, async (req, res) => {
                 username: user.username,
                 email: user.email,
                 userType: user.userType,
+                role: user.role,
                 wallet_address: user.wallet_address
             }
         });
@@ -632,15 +633,24 @@ router.post('/setup-2fa', auth, async (req, res) => {
             });
         }
 
-        // Generate secret
+        // Generate secret with Google Authenticator optimized settings
         const secret = speakeasy.generateSecret({
-            name: `YourApp (${user.email})`,
-            issuer: 'YourApp',
-            length: 20
+            name: `Blocmerce (${user.email})`,
+            issuer: 'Blocmerce Platform',
+            length: 32, // Increased for better security
+            symbols: false // Disable symbols for better compatibility
         });
 
-        // Generate QR code
-        const qrCodeDataUrl = await QRCode.toDataURL(secret.otpauth_url);
+        // Generate QR code with enhanced settings
+        const qrCodeDataUrl = await QRCode.toDataURL(secret.otpauth_url, {
+            width: 300,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            },
+            errorCorrectionLevel: 'M'
+        });
 
         // Generate backup codes
         const backupCodes = emailService.generateBackupCodes();
@@ -653,11 +663,17 @@ router.post('/setup-2fa', auth, async (req, res) => {
         // Send setup email with QR code
         await emailService.send2FASetupEmail(user, qrCodeDataUrl);
 
+        console.log(`🔐 2FA setup initiated for user: ${user.email}`);
+        console.log(`📱 QR Code generated for Google Authenticator compatibility`);
+        console.log(`🔑 Secret length: ${secret.base32.length} characters`);
+
         res.json({
-            message: '2FA setup initiated. Please scan the QR code with your authenticator app.',
+            message: '2FA setup initiated. Scan the QR code with Google Authenticator or any compatible TOTP app.',
             qrCode: qrCodeDataUrl,
             backupCodes: backupCodes,
-            secret: secret.base32 // For manual entry if QR code doesn't work
+            secret: secret.base32, // For manual entry if QR code doesn't work
+            issuer: 'Blocmerce Platform',
+            accountName: `Blocmerce (${user.email})`
         });
 
     } catch (error) {

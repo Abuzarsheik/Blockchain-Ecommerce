@@ -168,7 +168,7 @@ const SimpleNavigation = memo(() => {
             <IntelligentSearch
               onSearch={handleSearch}
               onFilterChange={handleFilterChange}
-              placeholder="Search NFTs, creators..."
+              placeholder="Search products, brands..."
               aiEnabled={true}
               showTrending={true}
               showRecent={true}
@@ -283,7 +283,7 @@ const SimpleNavigation = memo(() => {
               <IntelligentSearch
                 onSearch={handleSearch}
                 onFilterChange={handleFilterChange}
-                placeholder="Search NFTs..."
+                placeholder="Search products..."
                 aiEnabled={false}
                 showTrending={false}
                 showRecent={true}

@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { ethers } = require('ethers');
+const logger = require('../config/logger');
 
 class GasOptimizationService {
     constructor() {

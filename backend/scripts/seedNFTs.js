@@ -1,6 +1,7 @@
 const NFT = require('../models/NFT');
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const logger = require('../config/logger');
 
 require('dotenv').config();
 

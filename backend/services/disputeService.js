@@ -4,6 +4,7 @@ const Review = require('../models/Review');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const notificationService = require('./notificationService');
+const logger = require('../config/logger');
 
 class DisputeService {
     constructor() {

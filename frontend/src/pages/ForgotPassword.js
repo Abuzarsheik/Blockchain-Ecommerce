@@ -52,23 +52,18 @@ const ForgotPassword = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
+      const response = await api.post('/auth/forgot-password', { email });
+      
+      if (response.data) {
         setStep('sent');
-      } else {
-        setError(data.error || 'Failed to send reset email');
+        toast.success('Password reset email sent successfully!');
       }
     } catch (error) {
-      setError('Network error occurred. Please try again.');
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          'Failed to send reset email. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -161,63 +156,113 @@ const ForgotPassword = () => {
 
   const renderSentConfirmation = () => (
     <>
-      <div className="forgot-password-header">
-        <div className="header-icon success">
-          <CheckCircle size={32} />
+      <div className="forgot-password-header enhanced-success">
+        <div className="header-icon success animated-check">
+          <CheckCircle size={40} />
         </div>
-        <h1>Check Your Email</h1>
-        <p>
-          We've sent password reset instructions to <strong>{email}</strong>
+        <h1 className="success-title">Check Your Email! 📧</h1>
+        <p className="success-subtitle">
+          We've sent password reset instructions to<br />
+          <span className="email-highlight">{email}</span>
         </p>
       </div>
 
-      <div className="confirmation-content">
-        <div className="instructions">
-          <h3>What's next?</h3>
-          <ol>
-            <li>Check your email inbox (and spam folder)</li>
-            <li>Click the reset link in the email</li>
-            <li>Create a new secure password</li>
-            <li>Sign in with your new password</li>
-          </ol>
+      <div className="confirmation-content enhanced">
+        <div className="email-animation">
+          <div className="email-icon">
+            <Mail size={32} />
+          </div>
+          <div className="pulse-ring"></div>
+          <div className="pulse-ring delay-1"></div>
+          <div className="pulse-ring delay-2"></div>
         </div>
 
-        <div className="help-section">
-          <p>Didn't receive the email?</p>
-          <div className="help-actions">
-            <button
-              type="button"
-              className="resend-button"
-              onClick={handleResendEmail}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader className="spinning" size={16} />
-                  Resending...
-                </>
-              ) : (
-                'Resend Email'
-              )}
-            </button>
-            <button
-              type="button"
-              className="change-email-button"
-              onClick={() => {
-                setStep('request');
-                setEmail('');
-                setError('');
-                setTouched(false);
-              }}
-            >
-              Use Different Email
-            </button>
+        <div className="instructions enhanced-instructions">
+          <h3>What's next?</h3>
+          <div className="steps-container">
+            <div className="step-item">
+              <div className="step-number">1</div>
+              <div className="step-content">
+                <strong>Check your email inbox</strong>
+                <span>(and spam folder too!)</span>
+              </div>
+            </div>
+            <div className="step-item">
+              <div className="step-number">2</div>
+              <div className="step-content">
+                <strong>Click the reset link</strong>
+                <span>Look for the blue "Reset Password" button</span>
+              </div>
+            </div>
+            <div className="step-item">
+              <div className="step-number">3</div>
+              <div className="step-content">
+                <strong>Create a new secure password</strong>
+                <span>Make it strong and memorable</span>
+              </div>
+            </div>
+            <div className="step-item">
+              <div className="step-number">4</div>
+              <div className="step-content">
+                <strong>Sign in with your new password</strong>
+                <span>You'll be back in your account!</span>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <div className="help-section enhanced-help">
+          <div className="help-box">
+            <h4>🕐 Didn't receive the email?</h4>
+            <p>It may take a few minutes to arrive. Check your spam folder first!</p>
+            <div className="help-actions enhanced-actions">
+              <button
+                type="button"
+                className="resend-button enhanced-resend"
+                onClick={handleResendEmail}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader className="spinning" size={16} />
+                    Resending...
+                  </>
+                ) : (
+                  <>
+                    <Mail size={16} />
+                    Resend Email
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                className="change-email-button enhanced-change"
+                onClick={() => {
+                  setStep('request');
+                  setEmail('');
+                  setError('');
+                  setTouched(false);
+                }}
+              >
+                <ArrowLeft size={16} />
+                Use Different Email
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="email-tips">
+          <h4>💡 Email Tips</h4>
+          <ul>
+            <li>The link expires in 1 hour for security</li>
+            <li>If you don't see it, try searching for "Blocmerce"</li>
+            <li>Add us to your contacts: noreply@blocmerce.com</li>
+          </ul>
         </div>
       </div>
 
-      <div className="form-footer">
-        <Link to="/login" className="back-link">
+      <div className="form-footer enhanced-footer">
+        <Link to="/login" className="back-link enhanced-back">
           <ArrowLeft size={16} />
           Back to Login
         </Link>

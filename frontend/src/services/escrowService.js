@@ -1,7 +1,8 @@
+import { ethers } from 'ethers';
+import { toast } from 'react-toastify';
+import { logger } from '../utils/logger';
 import { api } from './api';
 import { blockchainService } from './blockchain';
-import { ethers } from 'ethers';
-import { logger } from '../utils/logger';
 
 class EscrowService {
     constructor() {

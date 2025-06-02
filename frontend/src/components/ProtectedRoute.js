@@ -12,13 +12,15 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireSeller = false 
   }
 
   if (requireAdmin && (!user || user.role !== 'admin')) {
-    // Redirect to dashboard if user is not admin
-    return <Navigate to="/dashboard" replace />;
+    // Redirect to appropriate dashboard based on user role
+    const redirectPath = user?.userType === 'seller' || user?.isSeller ? '/seller-dashboard' : '/dashboard';
+    return <Navigate to={redirectPath} replace />;
   }
 
   if (requireSeller && (!user || (user.userType !== 'seller' && user.role !== 'admin'))) {
-    // Redirect to dashboard if user is not a seller or admin
-    return <Navigate to="/dashboard" replace />;
+    // Redirect to appropriate dashboard based on user role
+    const redirectPath = user?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+    return <Navigate to={redirectPath} replace />;
   }
 
   return children;

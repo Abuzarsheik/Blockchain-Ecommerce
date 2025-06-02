@@ -2,6 +2,7 @@ const Notification = require('../models/Notification');
 const Order = require('../models/Order');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const logger = require('../config/logger');
 
 // Mock email service (replace with actual email service like SendGrid, Nodemailer, etc.)
 const emailService = {

@@ -1,4 +1,3 @@
-
 /**
  * CENTRALIZED CONSTANTS FOR BLOCMERCE
  * Eliminates redundant enums and configurations
@@ -18,6 +17,7 @@ const PRODUCT_CATEGORIES = {
   AUTOMOTIVE: 'automotive',
   JEWELRY: 'jewelry',
   ART_COLLECTIBLES: 'art-collectibles',
+  OFFICE_SUPPLIES: 'office-supplies',
   OTHER: 'other'
 };
 
@@ -32,6 +32,7 @@ const PRODUCT_CATEGORY_LABELS = {
   [PRODUCT_CATEGORIES.AUTOMOTIVE]: 'Automotive',
   [PRODUCT_CATEGORIES.JEWELRY]: 'Jewelry & Accessories',
   [PRODUCT_CATEGORIES.ART_COLLECTIBLES]: 'Art & Collectibles',
+  [PRODUCT_CATEGORIES.OFFICE_SUPPLIES]: 'Office Supplies',
   [PRODUCT_CATEGORIES.OTHER]: 'Other'
 };
 
@@ -243,7 +244,7 @@ const CURRENCIES = {
 // ============================================
 const VALIDATION_PATTERNS = {
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PHONE: /^\+?[\d\s\-\(\)]+$/,
+  PHONE: /^\+?[\d\s\-()]+$/,
   POSTAL_CODE: /^[A-Za-z0-9\s\-]{3,10}$/,
   SKU: /^[A-Za-z0-9\-_]{3,50}$/,
   USERNAME: /^[a-zA-Z0-9_]{3,20}$/,

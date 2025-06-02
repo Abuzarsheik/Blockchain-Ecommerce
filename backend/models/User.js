@@ -469,6 +469,23 @@ const userSchema = new mongoose.Schema({
         }
     },
     
+    // Wishlist functionality
+    wishlist: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product'
+    }],
+    wishlistItems: [{
+        productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Product',
+            required: true
+        },
+        dateAdded: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    
     isActive: {
         type: Boolean,
         default: true

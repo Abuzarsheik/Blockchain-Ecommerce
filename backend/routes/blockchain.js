@@ -5,6 +5,7 @@ const Transaction = require('../models/Transaction');
 const express = require('express');
 const { auth, optionalAuth } = require('../middleware/auth');
 const { body, param, query, validationResult } = require('express-validator');
+const logger = require('../config/logger');
 
 // const { query } = require('../config/database'); // Temporarily disabled
 

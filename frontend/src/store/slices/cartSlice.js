@@ -1,7 +1,7 @@
-import { api } from '../../services/api';
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { migrateCartData, cleanCartItems } from '../../utils/cartUtils';
+import { apiEndpoints } from '../../services/api';
 import { logger } from '../../utils/logger';
+import { migrateCartData, cleanCartItems } from '../../utils/cartUtils';
 
 // Helper functions for localStorage
 const saveCartToStorage = (cartState) => {
@@ -65,7 +65,7 @@ const initialState = {
 export const applyCoupon = createAsyncThunk(
   'cart/applyCoupon',
   async (couponCode) => {
-    const response = await api.post('/cart/coupon', { code: couponCode });
+    const response = await apiEndpoints.post('/cart/coupon', { code: couponCode });
     return response.data;
   }
 );

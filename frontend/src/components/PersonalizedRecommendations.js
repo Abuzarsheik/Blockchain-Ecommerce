@@ -7,94 +7,111 @@ import {
   ArrowRight,
   Zap,
   Target,
-  ThumbsUp,
   Stars
 } from 'lucide-react';
 import './PersonalizedRecommendations.css';
 import { logger } from '../utils/logger';
 
-const PersonalizedRecommendations = ({ insights = {}, user }) => {
+const PersonalizedRecommendations = ({ insights = {}, user, realProducts = [], isNewUser = false }) => {
   const [recommendations, setRecommendations] = useState([]);
   const [activeCategory, setActiveCategory] = useState('trending');
   const [loading, setLoading] = useState(false);
 
-  // Mock recommendations based on insights - using useMemo to prevent re-creation
-  const mockRecommendations = useMemo(() => ({
-    trending: [
-      {
-        id: 1,
-        title: 'Trending in Digital Art',
-        type: 'nft',
-        image: '/api/placeholder/200/200',
-        price: 2.5,
-        score: 95,
-        reason: 'Based on your art collection preferences'
-      },
-      {
-        id: 2,
-        title: 'Hot Gaming Assets',
-        type: 'collection',
-        image: '/api/placeholder/200/200',
-        price: 1.8,
-        score: 88,
-        reason: 'Similar to your recent purchases'
-      }
-    ],
-    similar: [
-      {
-        id: 3,
-        title: 'Artists You Might Like',
-        type: 'creator',
-        image: '/api/placeholder/200/200',
-        followers: 1500,
-        score: 92,
-        reason: 'Creates similar style to your favorites'
-      },
-      {
-        id: 4,
-        title: 'Related Collections',
-        type: 'collection',
-        image: '/api/placeholder/200/200',
-        items: 120,
-        score: 85,
-        reason: 'Matches your collection patterns'
-      }
-    ],
-    personalized: [
-      {
-        id: 5,
-        title: 'Custom Pick for You',
-        type: 'nft',
-        image: '/api/placeholder/200/200',
-        price: 3.2,
-        score: 98,
-        reason: 'Perfect match for your taste profile'
-      },
-      {
-        id: 6,
-        title: 'Exclusive Early Access',
-        type: 'drop',
-        image: '/api/placeholder/200/200',
-        launchDate: '2024-01-15',
-        score: 90,
-        reason: 'From creators you follow'
-      }
-    ]
-  }), []);
+  // Generate recommendations based on real product data
+  const generateRecommendations = useMemo(() => {
+    if (!realProducts || realProducts.length === 0) {
+      return {
+        trending: [],
+        similar: [],
+        personalized: []
+      };
+    }
+
+    // Sort products by different criteria
+    const trendingProducts = [...realProducts]
+      .filter(product => product.status === 'active')
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 6)
+      .map(product => ({
+        id: product._id,
+        title: product.name,
+        type: 'product',
+        image: product.images && product.images[0] 
+          ? `http://localhost:5001${product.images[0].url}`
+          : '/api/placeholder/200/200',
+        price: product.price,
+        score: Math.min(95, 70 + Math.floor(Math.random() * 25)),
+        reason: isNewUser ? 'Popular in marketplace' : 'Based on your browsing history',
+        category: product.category,
+        seller: product.seller?.username || 'Verified Seller',
+        views: product.views || 0,
+        productId: product._id
+      }));
+
+    const similarProducts = [...realProducts]
+      .filter(product => product.status === 'active')
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+      .slice(0, 6)
+      .map(product => ({
+        id: product._id,
+        title: product.name,
+        type: 'product',
+        image: product.images && product.images[0] 
+          ? `http://localhost:5001${product.images[0].url}`
+          : '/api/placeholder/200/200',
+        price: product.price,
+        score: Math.min(92, 65 + Math.floor(Math.random() * 27)),
+        reason: isNewUser ? 'Highly rated by customers' : 'Similar to items you liked',
+        category: product.category,
+        seller: product.seller?.username || 'Verified Seller',
+        rating: product.rating || 4.5,
+        productId: product._id
+      }));
+
+    const personalizedProducts = [...realProducts]
+      .filter(product => product.status === 'active')
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 6)
+      .map(product => ({
+        id: product._id,
+        title: product.name,
+        type: 'product',
+        image: product.images && product.images[0] 
+          ? `http://localhost:5001${product.images[0].url}`
+          : '/api/placeholder/200/200',
+        price: product.price,
+        score: Math.min(98, 75 + Math.floor(Math.random() * 23)),
+        reason: isNewUser ? 'New arrival in marketplace' : 'Perfect match for your taste profile',
+        category: product.category,
+        seller: product.seller?.username || 'Verified Seller',
+        isNew: true,
+        productId: product._id
+      }));
+
+    return {
+      trending: trendingProducts,
+      similar: similarProducts,
+      personalized: personalizedProducts
+    };
+  }, [realProducts, isNewUser]);
 
   const fetchRecommendations = useCallback(async () => {
     setLoading(true);
     try {
-      // Simulate API call
+      // Use real product data for recommendations
+      const categoryRecommendations = generateRecommendations[activeCategory] || [];
+      
+      // Simulate API delay for smooth UX
       setTimeout(() => {
-        setRecommendations(mockRecommendations[activeCategory] || []);
+        setRecommendations(categoryRecommendations);
         setLoading(false);
-      }, 500);
+      }, 300);
     } catch (error) {
       logger.error('Failed to fetch recommendations:', error);
+      setRecommendations([]);
       setLoading(false);
     }
-  }, [activeCategory, mockRecommendations]);
+  }, [activeCategory, generateRecommendations]);
 
   useEffect(() => {
     fetchRecommendations();
@@ -108,19 +125,24 @@ const PersonalizedRecommendations = ({ insights = {}, user }) => {
   };
 
   const formatPrice = (price) => {
-    return `${price} ETH`;
+    return `$${parseFloat(price).toFixed(2)}`;
   };
 
   const handleRecommendationClick = (recommendation) => {
-    // Handle navigation to recommendation
-    console.log('Navigate to:', recommendation);
+    // Navigate to product page
+    if (recommendation.productId) {
+      window.location.href = `/product/${recommendation.productId}`;
+    }
   };
 
   if (loading) {
     return (
       <div className="personalized-recommendations">
         <div className="recommendations-header">
-          <h3>Personalized for You</h3>
+          <div className="header-title">
+            <Stars size={20} />
+            <h3>{isNewUser ? 'Discover Products' : 'Personalized for You'}</h3>
+          </div>
         </div>
         <div className="loading-recommendations">
           {[...Array(3)].map((_, i) => (
@@ -138,30 +160,32 @@ const PersonalizedRecommendations = ({ insights = {}, user }) => {
   }
 
   return (
-    <div className="personalized-recommendations">
+    <div className="personalized-recommendations enhanced-recommendations">
       <div className="recommendations-header">
         <div className="header-title">
           <Stars size={20} />
-          <h3>Personalized for You</h3>
+          <h3>{isNewUser ? 'Discover Products' : 'Personalized for You'}</h3>
         </div>
-        <div className="insights-summary">
-          <div className="insight-stat">
-            <Stars size={16} />
-            <span>Match Score: {insights.avgMatchScore || 87}%</span>
+        {!isNewUser && (
+          <div className="insights-summary">
+            <div className="insight-stat">
+              <Stars size={16} />
+              <span>Match Score: {insights.avgMatchScore || 87}%</span>
+            </div>
+            {insights.totalViews && (
+              <span className="insight-stat">
+                <Eye size={14} />
+                {insights.totalViews} views
+              </span>
+            )}
+            {insights.favoriteCategory && (
+              <span className="insight-stat">
+                <Heart size={14} />
+                Loves {insights.favoriteCategory}
+              </span>
+            )}
           </div>
-          {insights.totalViews && (
-            <span className="insight-stat">
-              <Eye size={14} />
-              {insights.totalViews} views
-            </span>
-          )}
-          {insights.favoriteCategory && (
-            <span className="insight-stat">
-              <Heart size={14} />
-              Loves {insights.favoriteCategory}
-            </span>
-          )}
-        </div>
+        )}
       </div>
 
       <div className="category-tabs">
@@ -170,93 +194,94 @@ const PersonalizedRecommendations = ({ insights = {}, user }) => {
           onClick={() => setActiveCategory('trending')}
         >
           <TrendingUp size={16} />
-          Trending
+          {isNewUser ? 'Popular' : 'Trending'}
         </button>
         <button
           className={`tab-btn ${activeCategory === 'similar' ? 'active' : ''}`}
           onClick={() => setActiveCategory('similar')}
         >
           <Target size={16} />
-          Similar
+          {isNewUser ? 'Top Rated' : 'Similar'}
         </button>
         <button
           className={`tab-btn ${activeCategory === 'personalized' ? 'active' : ''}`}
           onClick={() => setActiveCategory('personalized')}
         >
           <Zap size={16} />
-          Just for You
+          {isNewUser ? 'New Arrivals' : 'Just for You'}
         </button>
       </div>
 
       <div className="recommendations-list">
-        {recommendations.map((recommendation) => (
-          <div 
-            key={recommendation.id} 
-            className="recommendation-card"
-            onClick={() => handleRecommendationClick(recommendation)}
-          >
-            <div className="recommendation-image">
-              <img src={recommendation.image} alt={recommendation.title} />
-              <div className={`match-score ${getScoreColor(recommendation.score)}`}>
-                <Star size={12} />
-                {recommendation.score}%
+        {recommendations.length > 0 ? (
+          recommendations.map((recommendation) => (
+            <div 
+              key={recommendation.id} 
+              className="recommendation-card enhanced-card"
+              onClick={() => handleRecommendationClick(recommendation)}
+            >
+              <div className="recommendation-image">
+                <img 
+                  src={recommendation.image} 
+                  alt={recommendation.title}
+                  onError={(e) => {
+                    e.target.src = '/api/placeholder/200/200';
+                  }}
+                />
+                <div className={`match-score ${getScoreColor(recommendation.score)}`}>
+                  {recommendation.score}%
+                </div>
+                {recommendation.isNew && (
+                  <div className="new-badge">NEW</div>
+                )}
+              </div>
+              
+              <div className="recommendation-content">
+                <h4 className="recommendation-title">{recommendation.title}</h4>
+                <p className="recommendation-price">{formatPrice(recommendation.price)}</p>
+                <p className="recommendation-seller">by {recommendation.seller}</p>
+                <p className="recommendation-reason">{recommendation.reason}</p>
+                
+                <div className="recommendation-meta">
+                  {recommendation.views > 0 && (
+                    <span className="meta-item">
+                      <Eye size={12} />
+                      {recommendation.views} views
+                    </span>
+                  )}
+                  {recommendation.rating && (
+                    <span className="meta-item">
+                      <Star size={12} />
+                      {recommendation.rating}
+                    </span>
+                  )}
+                  <span className="meta-item category">
+                    {recommendation.category}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="recommendation-action">
+                <ArrowRight size={16} />
               </div>
             </div>
-            
-            <div className="recommendation-content">
-              <h4 className="recommendation-title">{recommendation.title}</h4>
-              <p className="recommendation-reason">{recommendation.reason}</p>
-              
-              <div className="recommendation-details">
-                {recommendation.type === 'nft' && (
-                  <span className="detail-item price">
-                    {formatPrice(recommendation.price)}
-                  </span>
-                )}
-                {recommendation.type === 'creator' && (
-                  <span className="detail-item followers">
-                    {recommendation.followers} followers
-                  </span>
-                )}
-                {recommendation.type === 'collection' && (
-                  <span className="detail-item items">
-                    {recommendation.items} items
-                  </span>
-                )}
-                {recommendation.type === 'drop' && (
-                  <span className="detail-item launch">
-                    Launches {recommendation.launchDate}
-                  </span>
-                )}
-              </div>
-              
-              <div className="recommendation-actions">
-                <button className="action-btn primary">
-                  View Details
-                  <ArrowRight size={14} />
-                </button>
-                <button className="action-btn secondary">
-                  <ThumbsUp size={14} />
-                </button>
+          ))
+        ) : (
+          <div className="no-recommendations">
+            <div className="no-recommendations-content">
+              <h4>No products available</h4>
+              <p>Check back later for new arrivals!</p>
+              <div className="no-recommendations-actions">
+                <a href="/catalog" className="no-recommendations-btn">
+                  Browse All Products
+                </a>
+                <a href="/sellers" className="no-recommendations-btn secondary">
+                  Explore Sellers
+                </a>
               </div>
             </div>
           </div>
-        ))}
-      </div>
-
-      {recommendations.length === 0 && (
-        <div className="empty-recommendations">
-          <Stars size={48} />
-          <h4>No recommendations available</h4>
-          <p>Browse and interact with NFTs to get personalized recommendations!</p>
-        </div>
-      )}
-
-      <div className="recommendations-footer">
-        <button className="view-all-btn">
-          View All Recommendations
-          <ArrowRight size={16} />
-        </button>
+        )}
       </div>
     </div>
   );

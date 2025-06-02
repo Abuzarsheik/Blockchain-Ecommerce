@@ -2,7 +2,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // Create axios instance with base configuration
-export const api = axios.create({
+const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
   timeout: 20000,
   headers: {
@@ -285,4 +285,5 @@ export const apiEndpoints = {
 };
 
 // Export for backward compatibility
-export default api; 
+export default api;
+export { api }; 

@@ -4,6 +4,7 @@ const User = require('../models/User');
 const crypto = require('crypto');
 const notificationService = require('./notificationService');
 const { ethers } = require('ethers');
+const logger = require('../config/logger');
 
 // Supported cryptocurrencies
 const SUPPORTED_CURRENCIES = {

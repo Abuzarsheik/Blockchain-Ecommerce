@@ -1,4 +1,5 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const logger = require('../config/logger');
 
 class PaymentService {
     constructor() {

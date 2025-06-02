@@ -29,7 +29,16 @@ const Login = () => {
   // Check if already authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
-      const from = location.state?.from?.pathname || '/dashboard';
+      // Determine the appropriate redirect based on user role
+      let redirectPath = '/dashboard'; // Default for buyers
+      
+      if (user.role === 'admin') {
+        redirectPath = '/admin/dashboard';
+      } else if (user.userType === 'seller' || user.isSeller) {
+        redirectPath = '/seller-dashboard';
+      }
+      
+      const from = location.state?.from?.pathname || redirectPath;
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, user, navigate, location]);
@@ -125,7 +134,16 @@ const Login = () => {
             toast.success('Welcome back! Login successful.');
             
             setTimeout(() => {
-              const from = location.state?.from?.pathname || '/dashboard';
+              // Determine the appropriate redirect based on user role
+              let redirectPath = '/dashboard'; // Default for buyers
+              
+              if (result?.user?.role === 'admin') {
+                redirectPath = '/admin/dashboard';
+              } else if (result?.user?.userType === 'seller' || result?.user?.isSeller) {
+                redirectPath = '/seller-dashboard';
+              }
+              
+              const from = location.state?.from?.pathname || redirectPath;
               navigate(from, { replace: true });
             }, 1500);
           }
@@ -163,6 +181,9 @@ const Login = () => {
           toast.success('Two-factor authentication successful!');
           
           setTimeout(() => {
+            // After 2FA verification, user data should be available in Redux
+            // We'll use the useEffect above to handle redirection automatically
+            // But we can also handle it here as backup
             const from = location.state?.from?.pathname || '/dashboard';
             navigate(from, { replace: true });
           }, 1500);

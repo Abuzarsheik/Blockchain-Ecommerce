@@ -16,10 +16,11 @@ import {
   ChevronRight,
   Zap,
   Award,
-  TrendingUp
+  TrendingUp,
+  Package,
+  Truck
 } from 'lucide-react';
 import { addToCart } from '../store/slices/cartSlice';
-import { fetchProductById } from '../store/slices/productsSlice';
 import { toast } from 'react-toastify';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -29,7 +30,11 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
-  const { currentProduct: product, loading, error } = useSelector(state => state.products);
+  // Local state for product data instead of Redux
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
   const { user } = useSelector(state => state.auth);
   
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -38,11 +43,47 @@ const ProductDetail = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
 
+  // Check if user is a seller (sellers shouldn't see purchase options)
+  const isSeller = user?.userType === 'seller' && user?.role !== 'admin';
+
   useEffect(() => {
-    if (id) {
-      dispatch(fetchProductById(id));
+    fetchProduct();
+  }, [id]);
+
+  const fetchProduct = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔍 ProductDetail - Fetching product');
+      console.log('- Product ID from useParams:', id);
+      console.log('- ID type:', typeof id);
+      console.log('- Current URL:', window.location.href);
+      
+      const apiUrl = `http://localhost:5000/api/products/${id}`;
+      console.log('- API URL:', apiUrl);
+      
+      const response = await fetch(apiUrl);
+      
+      console.log('- Response status:', response.status);
+      console.log('- Response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log('- Error response:', errorData);
+        throw new Error('Product not found');
+      }
+      
+      const data = await response.json();
+      console.log('- Response data:', data);
+      setProduct(data.product);
+    } catch (err) {
+      console.error('Error fetching product:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-  }, [dispatch, id]);
+  };
 
   const handleAddToCart = () => {
     if (!user) {
@@ -50,11 +91,21 @@ const ProductDetail = () => {
       navigate('/login');
       return;
     }
+
+    if (isSeller) {
+      toast.info('Sellers cannot purchase items. You can view and manage your own products instead.');
+      return;
+    }
     
     dispatch(addToCart({
-      productId: product.id,
+      productId: product._id,
+      name: product.name,
+      price: product.price,
+      image: product.images?.[0]?.url ? `http://localhost:5000${product.images[0].url}` : null,
+      category: product.category,
       quantity: quantity,
-      price: product.price
+      stock: product.inventory?.quantity || 0,
+      originalPrice: product.originalPrice
     }));
     
     toast.success(`${product.name} added to cart!`);
@@ -66,11 +117,21 @@ const ProductDetail = () => {
       navigate('/login');
       return;
     }
+
+    if (isSeller) {
+      toast.info('Sellers cannot purchase items. You can view and manage your own products instead.');
+      return;
+    }
     
     dispatch(addToCart({
-      productId: product.id,
+      productId: product._id,
+      name: product.name,
+      price: product.price,
+      image: product.images?.[0]?.url ? `http://localhost:5000${product.images[0].url}` : null,
+      category: product.category,
       quantity: quantity,
-      price: product.price
+      stock: product.inventory?.quantity || 0,
+      originalPrice: product.originalPrice
     }));
     
     navigate('/checkout');
@@ -105,6 +166,42 @@ const ProductDetail = () => {
     );
   };
 
+  const getImageUrl = (imageObj) => {
+    if (imageObj && imageObj.url) {
+      return `http://localhost:5000${imageObj.url}`;
+    }
+    return '/api/placeholder/400/400';
+  };
+
+  const getMainImageUrl = () => {
+    if (product?.images && product.images.length > 0) {
+      return getImageUrl(product.images[selectedImageIndex]);
+    }
+    return '/api/placeholder/400/400';
+  };
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(price);
+  };
+
+  const calculateDiscount = () => {
+    if (product?.originalPrice && product.originalPrice > product.price) {
+      return Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+    }
+    return 0;
+  };
+
+  const isOutOfStock = () => {
+    return !product?.inventory?.quantity || product.inventory.quantity <= 0;
+  };
+
+  const isLowStock = () => {
+    return product?.inventory?.quantity <= (product?.inventory?.lowStockThreshold || 5);
+  };
+
   if (loading) {
     return (
       <div className="product-detail-loading">
@@ -129,9 +226,9 @@ const ProductDetail = () => {
 
   const tabs = [
     { id: 'description', label: 'Description' },
-    { id: 'blockchain', label: 'Blockchain Info' },
-    { id: 'reviews', label: `Reviews (${product.reviews?.length || 0})` },
-    { id: 'history', label: 'Transaction History' }
+    { id: 'specifications', label: 'Specifications' },
+    { id: 'shipping', label: 'Shipping & Returns' },
+    { id: 'seller', label: 'Seller Information' }
   ];
 
   return (
@@ -151,7 +248,7 @@ const ProductDetail = () => {
         <div className="product-gallery">
           <div className="main-image-container">
             <img 
-              src={product.images?.[selectedImageIndex] || product.image} 
+              src={getMainImageUrl()} 
               alt={product.name}
               className="main-image"
             />
@@ -167,10 +264,22 @@ const ProductDetail = () => {
               </>
             )}
             
-            {product.isVerified && (
+            {product.status === 'verified' && (
               <div className="verification-badge">
                 <Verified size={20} />
                 <span>Verified</span>
+              </div>
+            )}
+
+            {/* Stock status badge */}
+            {isOutOfStock() && (
+              <div className="stock-badge out-of-stock">
+                Out of Stock
+              </div>
+            )}
+            {isLowStock() && !isOutOfStock() && (
+              <div className="stock-badge low-stock">
+                Low Stock
               </div>
             )}
           </div>
@@ -180,7 +289,7 @@ const ProductDetail = () => {
               {product.images.map((image, index) => (
                 <img
                   key={index}
-                  src={image}
+                  src={getImageUrl(image)}
                   alt={`${product.name} ${index + 1}`}
                   className={`thumbnail ${index === selectedImageIndex ? 'active' : ''}`}
                   onClick={() => setSelectedImageIndex(index)}
@@ -197,13 +306,13 @@ const ProductDetail = () => {
               <h1 className="product-title">{product.name}</h1>
               <div className="product-meta">
                 <span className="product-category">{product.category}</span>
-                {product.isVerified && (
+                {product.status === 'verified' && (
                   <button 
                     className="verification-link"
                     onClick={() => setShowVerification(true)}
                   >
                     <Shield size={16} />
-                    Blockchain Verified
+                    Verified Product
                   </button>
                 )}
               </div>
@@ -222,31 +331,35 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* Creator Info */}
+          {/* Seller Info */}
           <div className="creator-info">
             <img 
-              src={product.creator?.avatar || '/api/placeholder/40/40'} 
-              alt={product.creator?.name}
+              src={product.seller?.avatar || '/api/placeholder/40/40'} 
+              alt={product.seller?.firstName || 'Seller'}
               className="creator-avatar"
             />
             <div className="creator-details">
-              <span className="creator-label">Created by</span>
-              <span className="creator-name">{product.creator?.name}</span>
+              <span className="creator-label">Sold by</span>
+              <span className="creator-name">
+                {product.seller?.sellerProfile?.storeName || 
+                 `${product.seller?.firstName || ''} ${product.seller?.lastName || ''}`.trim() ||
+                 product.seller?.username || 'Unknown Seller'}
+              </span>
             </div>
-            {product.creator?.isVerified && (
+            {product.seller?.isVerified && (
               <Verified className="creator-verified" size={16} />
             )}
           </div>
 
-          {/* Stats */}
+          {/* Product Stats */}
           <div className="product-stats">
             <div className="stat-item">
               <Eye size={16} />
-              <span>{product.views || 0} views</span>
+              <span>{product.sales?.views || 0} views</span>
             </div>
             <div className="stat-item">
-              <Heart size={16} />
-              <span>{product.likes || 0} likes</span>
+              <Package size={16} />
+              <span>{product.inventory?.quantity || 0} in stock</span>
             </div>
             <div className="stat-item">
               <Star size={16} />
@@ -258,93 +371,103 @@ const ProductDetail = () => {
           <div className="purchase-section">
             <div className="price-section">
               <div className="current-price">
-                <span className="price-label">Current Price</span>
+                <span className="price-label">Price</span>
                 <div className="price-value">
-                  <span className="price-amount">${product.price}</span>
-                  <span className="price-currency">USD</span>
+                  <span className="price-amount">{formatPrice(product.price)}</span>
+                  {product.originalPrice && product.originalPrice > product.price && (
+                    <>
+                      <span className="original-price">{formatPrice(product.originalPrice)}</span>
+                      <span className="discount-badge">-{calculateDiscount()}%</span>
+                    </>
+                  )}
                 </div>
-                {product.originalPrice && product.originalPrice > product.price && (
-                  <span className="original-price">${product.originalPrice}</span>
-                )}
               </div>
-              
-              {product.cryptoPrice && (
-                <div className="crypto-price">
+            </div>
+
+            {!isSeller && (
+              <div className="quantity-section">
+                <label htmlFor="quantity">Quantity</label>
+                <div className="quantity-controls">
+                  <button 
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    disabled={quantity <= 1}
+                  >
+                    -
+                  </button>
+                  <input
+                    id="quantity"
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    min="1"
+                    max={product.inventory?.quantity || 999}
+                  />
+                  <button 
+                    onClick={() => setQuantity(quantity + 1)}
+                    disabled={quantity >= (product.inventory?.quantity || 999)}
+                  >
+                    +
+                  </button>
+                </div>
+                <span className="stock-info">
+                  {product.inventory?.quantity || 0} available
+                  {isLowStock() && !isOutOfStock() && ' • Low stock!'}
+                </span>
+              </div>
+            )}
+
+            {!isSeller && (
+              <div className="purchase-buttons">
+                <button 
+                  className="btn-primary btn-buy-now"
+                  onClick={handleBuyNow}
+                  disabled={isOutOfStock()}
+                >
                   <Zap size={16} />
-                  <span>{product.cryptoPrice} ETH</span>
-                </div>
-              )}
-            </div>
-
-            <div className="quantity-section">
-              <label htmlFor="quantity">Quantity</label>
-              <div className="quantity-controls">
-                <button 
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
-                >
-                  -
+                  Buy Now
                 </button>
-                <input
-                  id="quantity"
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  min="1"
-                  max={product.stock || 999}
-                />
                 <button 
-                  onClick={() => setQuantity(quantity + 1)}
-                  disabled={quantity >= (product.stock || 999)}
+                  className="btn-secondary btn-add-cart"
+                  onClick={handleAddToCart}
+                  disabled={isOutOfStock()}
                 >
-                  +
+                  <ShoppingCart size={16} />
+                  Add to Cart
                 </button>
               </div>
-              {product.stock && (
-                <span className="stock-info">{product.stock} available</span>
-              )}
-            </div>
+            )}
 
-            <div className="purchase-buttons">
-              <button 
-                className="btn-primary btn-buy-now"
-                onClick={handleBuyNow}
-                disabled={!product.stock || product.stock === 0}
-              >
-                <Zap size={16} />
-                Buy Now
-              </button>
-              <button 
-                className="btn-secondary btn-add-cart"
-                onClick={handleAddToCart}
-                disabled={!product.stock || product.stock === 0}
-              >
-                <ShoppingCart size={16} />
-                Add to Cart
-              </button>
-            </div>
-
-            {(!product.stock || product.stock === 0) && (
+            {isOutOfStock() && (
               <div className="out-of-stock">
                 <span>Out of Stock</span>
               </div>
             )}
+
+            {isSeller && (
+              <div className="seller-notice">
+                <p>This is a product listing view. Sellers cannot purchase items.</p>
+              </div>
+            )}
           </div>
 
-          {/* Key Features */}
-          {product.features && (
-            <div className="product-features">
-              <h3>Key Features</h3>
-              <ul>
-                {product.features.map((feature, index) => (
-                  <li key={index}>
-                    <Award size={16} />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
+          {/* Shipping Information */}
+          <div className="shipping-info">
+            <div className="shipping-item">
+              <Truck size={16} />
+              <span>
+                {product.shipping?.freeShipping 
+                  ? 'Free Shipping' 
+                  : `Shipping: ${formatPrice(product.shipping?.shippingCost || 0)}`
+                }
+              </span>
             </div>
-          )}
+            {product.shipping?.weight && (
+              <div className="shipping-item">
+                <Package size={16} />
+                <span>Weight: {product.shipping.weight.value} {product.shipping.weight.unit}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -368,143 +491,122 @@ const ProductDetail = () => {
               <h3>Product Description</h3>
               <div className="description-content">
                 <p>{product.description}</p>
-                
-                {product.specifications && (
-                  <div className="specifications">
-                    <h4>Specifications</h4>
-                    <dl>
-                      {Object.entries(product.specifications).map(([key, value]) => (
-                        <div key={key} className="spec-item">
-                          <dt>{key}</dt>
-                          <dd>{value}</dd>
-                        </div>
+                {product.shortDescription && (
+                  <div className="short-description">
+                    <h4>Quick Overview</h4>
+                    <p>{product.shortDescription}</p>
+                  </div>
+                )}
+                {product.tags && product.tags.length > 0 && (
+                  <div className="product-tags">
+                    <h4>Tags</h4>
+                    <div className="tags-list">
+                      {product.tags.map((tag, index) => (
+                        <span key={index} className="tag">{tag}</span>
                       ))}
-                    </dl>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {activeTab === 'blockchain' && (
+          {activeTab === 'specifications' && (
             <div className="tab-pane">
-              <h3>Blockchain Information</h3>
-              <div className="blockchain-info">
-                {product.isVerified ? (
-                  <div className="verified-info">
-                    <div className="verification-status">
-                      <Verified size={24} />
-                      <div>
-                        <h4>Blockchain Verified</h4>
-                        <p>This product has been verified on the blockchain</p>
-                      </div>
-                    </div>
-                    
-                    <div className="blockchain-details">
-                      <div className="detail-item">
-                        <span className="label">Contract Address:</span>
-                        <span className="value">{product.contractAddress || '0x1234...5678'}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="label">Token ID:</span>
-                        <span className="value">{product.tokenId || '#1234'}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="label">Blockchain:</span>
-                        <span className="value">{product.blockchain || 'Ethereum'}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="label">Created:</span>
-                        <span className="value">{new Date(product.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    
-                    <button 
-                      className="view-blockchain-btn"
-                      onClick={() => setShowVerification(true)}
-                    >
-                      <ExternalLink size={16} />
-                      View on Blockchain Explorer
-                    </button>
-                  </div>
-                ) : (
-                  <div className="not-verified">
-                    <p>This product is not yet verified on the blockchain.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'reviews' && (
-            <div className="tab-pane">
-              <h3>Customer Reviews</h3>
-              <div className="reviews-section">
-                {product.reviews && product.reviews.length > 0 ? (
-                  <div className="reviews-list">
-                    {product.reviews.map((review, index) => (
-                      <div key={index} className="review-item">
-                        <div className="review-header">
-                          <div className="reviewer-info">
-                            <img 
-                              src={review.user?.avatar || '/api/placeholder/32/32'} 
-                              alt={review.user?.name}
-                              className="reviewer-avatar"
-                            />
-                            <span className="reviewer-name">{review.user?.name}</span>
-                          </div>
-                          <div className="review-rating">
-                            {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
-                                size={16} 
-                                fill={i < review.rating ? 'currentColor' : 'none'}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                        <p className="review-text">{review.comment}</p>
-                        <span className="review-date">
-                          {new Date(review.createdAt).toLocaleDateString()}
-                        </span>
+              <h3>Product Specifications</h3>
+              <div className="specifications">
+                {product.specifications && product.specifications.length > 0 ? (
+                  <dl>
+                    {product.specifications.map((spec, index) => (
+                      <div key={index} className="spec-item">
+                        <dt>{spec.name}</dt>
+                        <dd>{spec.value}</dd>
                       </div>
                     ))}
-                  </div>
+                  </dl>
                 ) : (
-                  <div className="no-reviews">
-                    <p>No reviews yet. Be the first to review this product!</p>
-                  </div>
+                  <p>No detailed specifications available.</p>
                 )}
+                <div className="basic-specs">
+                  <h4>Basic Information</h4>
+                  <dl>
+                    <div className="spec-item">
+                      <dt>Category</dt>
+                      <dd>{product.category}</dd>
+                    </div>
+                    {product.subcategory && (
+                      <div className="spec-item">
+                        <dt>Subcategory</dt>
+                        <dd>{product.subcategory}</dd>
+                      </div>
+                    )}
+                    <div className="spec-item">
+                      <dt>SKU</dt>
+                      <dd>{product.inventory?.sku || 'N/A'}</dd>
+                    </div>
+                    <div className="spec-item">
+                      <dt>Status</dt>
+                      <dd>{product.status}</dd>
+                    </div>
+                  </dl>
+                </div>
               </div>
             </div>
           )}
 
-          {activeTab === 'history' && (
+          {activeTab === 'shipping' && (
             <div className="tab-pane">
-              <h3>Transaction History</h3>
-              <div className="transaction-history">
-                {product.transactions && product.transactions.length > 0 ? (
-                  <div className="transactions-list">
-                    {product.transactions.map((tx, index) => (
-                      <div key={index} className="transaction-item">
-                        <div className="transaction-icon">
-                          <TrendingUp size={16} />
-                        </div>
-                        <div className="transaction-details">
-                          <span className="transaction-type">{tx.type}</span>
-                          <span className="transaction-amount">${tx.amount}</span>
-                          <span className="transaction-date">
-                            {new Date(tx.date).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+              <h3>Shipping & Returns</h3>
+              <div className="shipping-details">
+                <div className="shipping-section">
+                  <h4>Shipping Information</h4>
+                  <p>
+                    {product.shipping?.freeShipping 
+                      ? 'This item ships for free!'
+                      : `Shipping cost: ${formatPrice(product.shipping?.shippingCost || 0)}`
+                    }
+                  </p>
+                  {product.shipping?.weight && (
+                    <p>Package weight: {product.shipping.weight.value} {product.shipping.weight.unit}</p>
+                  )}
+                  {product.shipping?.dimensions && (
+                    <p>
+                      Dimensions: {product.shipping.dimensions.length}" × {product.shipping.dimensions.width}" × {product.shipping.dimensions.height}"
+                    </p>
+                  )}
+                </div>
+                <div className="return-policy">
+                  <h4>Return Policy</h4>
+                  <p>Returns accepted within 30 days of purchase. Item must be in original condition.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'seller' && (
+            <div className="tab-pane">
+              <h3>Seller Information</h3>
+              <div className="seller-details">
+                <div className="seller-profile">
+                  <img 
+                    src={product.seller?.avatar || '/api/placeholder/80/80'} 
+                    alt="Seller avatar"
+                    className="seller-avatar-large"
+                  />
+                  <div className="seller-info">
+                    <h4>
+                      {product.seller?.sellerProfile?.storeName || 
+                       `${product.seller?.firstName || ''} ${product.seller?.lastName || ''}`.trim() ||
+                       product.seller?.username || 'Unknown Seller'}
+                    </h4>
+                    {product.seller?.sellerProfile?.storeDescription && (
+                      <p>{product.seller.sellerProfile.storeDescription}</p>
+                    )}
+                    <div className="seller-stats">
+                      <span>Member since: {new Date(product.seller?.createdAt || Date.now()).getFullYear()}</span>
+                    </div>
                   </div>
-                ) : (
-                  <div className="no-transactions">
-                    <p>No transaction history available.</p>
-                  </div>
-                )}
+                </div>
               </div>
             </div>
           )}

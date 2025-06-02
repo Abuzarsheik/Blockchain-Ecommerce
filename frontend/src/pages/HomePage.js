@@ -12,15 +12,15 @@ const HomePage = () => {
       <section className="hero">
         <div className="hero-content">
           <h1>The Future of Commerce is Decentralized</h1>
-          <p>Discover, buy, and sell verified digital assets on the blockchain</p>
+          <p>Discover, buy, and sell verified products on the blockchain</p>
           <div className="hero-actions">
             <Link to="/catalog" className="cta-button primary">
               Explore Marketplace
               <ArrowRight size={20} />
             </Link>
             {(isAuthenticated && (user?.userType === 'seller' || user?.role === 'admin')) && (
-              <Link to="/create-nft" className="cta-button secondary">
-                Create NFT
+              <Link to="/create-product" className="cta-button secondary">
+                List Product
               </Link>
             )}
           </div>
@@ -42,7 +42,7 @@ const HomePage = () => {
           <div className="stat-item">
             <Verified size={24} />
             <span className="stat-number">50K+</span>
-            <span className="stat-label">NFTs Listed</span>
+            <span className="stat-label">Products Listed</span>
           </div>
         </div>
       </section>
@@ -70,7 +70,7 @@ const HomePage = () => {
             <div className="feature-card">
               <Users size={32} />
               <h3>Global Marketplace</h3>
-              <p>Connect with creators and collectors worldwide</p>
+              <p>Connect with sellers and buyers worldwide</p>
               <Link to="/about" className="feature-link">
                 About Us <ArrowRight size={16} />
               </Link>
@@ -86,7 +86,7 @@ const HomePage = () => {
             <div className="user-feature-card">
               <User size={48} />
               <h3>Manage Your Profile</h3>
-              <p>Track your NFT collection, view transaction history, and customize your account settings</p>
+              <p>Track your product purchases, view transaction history, and customize your account settings</p>
               <Link to="/profile" className="user-feature-link">
                 View Profile <ArrowRight size={16} />
               </Link>

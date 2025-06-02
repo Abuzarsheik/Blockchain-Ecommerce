@@ -23,7 +23,6 @@ const disputeRoutes = require('./backend/routes/disputes');
 const escrowRoutes = require('./backend/routes/escrow');
 const ipfsRoutes = require('./backend/routes/ipfs');
 const monitoringRoutes = require('./backend/routes/monitoring');
-const nftRoutes = require('./backend/routes/nfts');
 const notificationRoutes = require('./backend/routes/notifications');
 const orderRoutes = require('./backend/routes/orders');
 const paymentRoutes = require('./backend/routes/payments');
@@ -31,15 +30,14 @@ const productRoutes = require('./backend/routes/products');
 const profileRoutes = require('./backend/routes/profile');
 const reviewRoutes = require('./backend/routes/reviews');
 const trackingRoutes = require('./backend/routes/tracking');
+const userRoutes = require('./backend/routes/users');
+const wishlistRoutes = require('./backend/routes/wishlist');
 
 // Config imports
 const logger = require('./backend/config/logger');
-const { globalErrorHandler, catchAsync } = require('./backend/utils/errorHandler');
+const { globalErrorHandler } = require('./backend/utils/errorHandler');
 const { initDatabase } = require('./backend/config/database');
 const { performanceMiddleware } = require('./backend/middleware/monitoring');
-
-// Initialize Stripe after environment variables are loaded
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Initialize logger first
 
@@ -145,7 +143,6 @@ const initializeServices = async () => {
 
 // Create uploads directories if they don't exist
 const uploadsDir = path.join(__dirname, 'uploads');
-const nftUploadsDir = path.join(uploadsDir, 'nfts');
 const kycUploadsDir = path.join(uploadsDir, 'kyc');
 const avatarUploadsDir = path.join(uploadsDir, 'avatars');
 const productUploadsDir = path.join(uploadsDir, 'products');
@@ -154,7 +151,7 @@ const reviewUploadsDir = path.join(uploadsDir, 'reviews');
 const ipfsFallbackDir = path.join(uploadsDir, 'ipfs-fallback');
 
 // Create directories
-[uploadsDir, nftUploadsDir, kycUploadsDir, avatarUploadsDir, 
+[uploadsDir, kycUploadsDir, avatarUploadsDir, 
  productUploadsDir, disputeUploadsDir, reviewUploadsDir, ipfsFallbackDir].forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -253,13 +250,10 @@ app.get('/api/ping', (req, res) => {
 // 🛣️ API ROUTES CONFIGURATION
 // ===========================================
 
-// Route imports
-
 // Apply routes with error handling
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/nfts', nftRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/escrow', escrowRoutes);
 app.use('/api/blockchain', blockchainRoutes);
@@ -268,38 +262,19 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/tracking', trackingRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/ipfs', ipfsRoutes);
 app.use('/api/monitoring', monitoringRoutes);
 
 // ===========================================
-// 🔗 STATIC FILE SERVING
-// ===========================================
-
-// Serve frontend build files (if exists)
-const frontendBuildPath = path.join(__dirname, 'frontend', 'build');
-if (fs.existsSync(frontendBuildPath)) {
-    app.use(express.static(frontendBuildPath));
-    
-    // Handle React routing (serve index.html for all non-API routes)
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(frontendBuildPath, 'index.html'));
-    });
-    
-    logger.info('✅ Frontend build ready');
-} else {
-    logger.warn('⚠️ Frontend build not found');
-}
-
-// ===========================================
-// 🚨 CENTRALIZED ERROR HANDLING
+// 🚨 API ERROR HANDLING (BEFORE STATIC FILES)
 // ===========================================
 
 // 404 handler for API routes
 app.use('/api/*', (req, res) => {
-    // Simple 404 logging without verbose JSON
-    
     res.status(404).json({
         success: false,
         error: {
@@ -310,25 +285,40 @@ app.use('/api/*', (req, res) => {
     });
 });
 
-// Catch 404 for non-API routes
-app.use((req, res) => {
-    if (!req.path.startsWith('/api/')) {
-        // Serve index.html for frontend routes
-        const indexPath = path.join(frontendBuildPath, 'index.html');
-        if (fs.existsSync(indexPath)) {
-            res.sendFile(indexPath);
+// ===========================================
+// 🔗 STATIC FILE SERVING (AFTER API ROUTES)
+// ===========================================
+
+// Serve frontend build files (if exists)
+const frontendBuildPath = path.join(__dirname, 'frontend', 'build');
+if (fs.existsSync(frontendBuildPath)) {
+    app.use(express.static(frontendBuildPath));
+    
+    // Handle React routing (serve index.html for all NON-API routes only)
+    app.get('*', (req, res) => {
+        if (!req.path.startsWith('/api/')) {
+            res.sendFile(path.join(frontendBuildPath, 'index.html'));
         } else {
+            // This should not happen since API 404 is handled above
             res.status(404).json({
                 success: false,
                 error: {
                     type: 'NOT_FOUND',
-                    message: 'Page not found',
+                    message: `API endpoint '${req.originalUrl}' not found`,
                     timestamp: new Date().toISOString()
                 }
             });
         }
-    }
-});
+    });
+    
+    logger.info('✅ Frontend build ready');
+} else {
+    logger.warn('⚠️ Frontend build not found');
+}
+
+// ===========================================
+// 🚨 FINAL ERROR HANDLING
+// ===========================================
 
 // Global error handler (MUST be last middleware)
 app.use(globalErrorHandler);
@@ -371,7 +361,7 @@ initializeServices().then(() => {
             process.exit(1);
         }
     });
-
+    
     setupGracefulShutdown(server);
 }).catch(error => {
     console.log('❌ Failed to initialize services:', error.message);
@@ -399,7 +389,7 @@ function setupGracefulShutdown(server) {
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
     // Handle unhandled promise rejections
-    process.on('unhandledRejection', (reason, promise) => {
+    process.on('unhandledRejection', (reason, _promise) => {
         console.log('❌ Unhandled Rejection:', reason);
         process.exit(1);
     });

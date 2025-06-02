@@ -8,6 +8,7 @@ const notificationService = require('../services/notificationService');
 const path = require('path');
 const { auth, optionalAuth } = require('../middleware/auth');
 const { body, param, query, validationResult } = require('express-validator');
+const logger = require('../config/logger');
 
 // const { query } = require('../config/database'); // Temporarily disabled
 

@@ -1,7 +1,153 @@
 import '../styles/ProductCatalog.css';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, Grid, List, ChevronDown, Star, DollarSign, Package, Verified, X } from 'lucide-react';
+import { Search, Filter, Grid, List, ChevronDown, Star, DollarSign, Package, Verified, X, ShoppingCart, Heart, Eye } from 'lucide-react';
 import { logger } from '../utils/logger';
+import { Link } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { addToCart } from '../store/slices/cartSlice';
+import { toast } from 'react-toastify';
+
+// Local ProductCard component for catalog
+const ProductCard = ({ product, viewMode }) => {
+    const dispatch = useDispatch();
+    const { user } = useSelector(state => state.auth);
+    const isSeller = user?.userType === 'seller' && user?.role !== 'admin';
+
+    // Handle both _id and id fields (backend transforms _id to id)
+    const productId = product._id || product.id;
+    
+    // Debug logging for product data
+    if (!productId) {
+        console.warn('ProductCard: Product missing both _id and id:', product);
+    }
+
+    const handleAddToCart = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!user) {
+            toast.error('Please login to add items to cart');
+            return;
+        }
+
+        if (isSeller) {
+            toast.info('Sellers cannot purchase items. You can view and manage your own products instead.');
+            return;
+        }
+        
+        dispatch(addToCart({
+            productId: productId,
+            name: product.name,
+            price: product.price,
+            image: product.images?.[0]?.url ? `http://localhost:5000${product.images[0].url}` : null,
+            category: product.category,
+            quantity: 1,
+            stock: product.inventory?.quantity || 0
+        }));
+        
+        toast.success(`${product.name} added to cart!`);
+    };
+
+    const getImageUrl = () => {
+        if (product.images && product.images.length > 0) {
+            return `http://localhost:5000${product.images[0].url}`;
+        }
+        return '/api/placeholder/280/200';
+    };
+
+    // Don't render products without valid IDs
+    if (!productId) {
+        console.error('ProductCard: Cannot render product without _id or id:', product);
+        return null;
+    }
+
+    if (viewMode === 'list') {
+        return (
+            <div className="product-card list">
+                <Link to={`/product/${productId}`} className="product-link">
+                    <div className="product-image">
+                        <img 
+                            src={getImageUrl()} 
+                            alt={product.name}
+                            onError={(e) => {
+                                e.target.src = '/api/placeholder/280/200';
+                            }}
+                        />
+                        {product.inventory?.quantity <= product.inventory?.lowStockThreshold && (
+                            <div className="low-stock-badge">Low Stock</div>
+                        )}
+                    </div>
+                    <div className="product-info">
+                        <h3 className="product-title">{product.name}</h3>
+                        <p className="product-description">{product.shortDescription || product.description}</p>
+                        <div className="product-meta">
+                            <span className="product-category">{product.category}</span>
+                            <span className="product-price">${product.price}</span>
+                            <span className="product-stock">Stock: {product.inventory?.quantity || 0}</span>
+                        </div>
+                    </div>
+                </Link>
+                {!isSeller && (
+                    <div className="product-actions">
+                        <button 
+                            className="add-to-cart-button"
+                            onClick={handleAddToCart}
+                            disabled={!product.inventory?.quantity || product.inventory.quantity <= 0}
+                        >
+                            <ShoppingCart size={16} />
+                            Add to Cart
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="product-card grid">
+            <Link to={`/product/${productId}`} className="product-link">
+                <div className="product-image">
+                    <img 
+                        src={getImageUrl()} 
+                        alt={product.name}
+                        onError={(e) => {
+                            e.target.src = '/api/placeholder/280/200';
+                        }}
+                    />
+                    {product.inventory?.quantity <= product.inventory?.lowStockThreshold && (
+                        <div className="low-stock-badge">Low Stock</div>
+                    )}
+                    {product.status === 'verified' && (
+                        <div className="verified-badge">
+                            <Verified size={12} />
+                        </div>
+                    )}
+                </div>
+                <div className="product-info">
+                    <h3 className="product-title">{product.name}</h3>
+                    <div className="product-meta">
+                        <span className="product-category">{product.category}</span>
+                        <span className="product-price">${product.price}</span>
+                    </div>
+                    <p className="product-description">{product.shortDescription || product.description?.substring(0, 100)}...</p>
+                    <div className="product-footer">
+                        <div className="product-stock">Stock: {product.inventory?.quantity || 0}</div>
+                        {!isSeller && (
+                            <button 
+                                className="add-to-cart-button"
+                                onClick={handleAddToCart}
+                                disabled={!product.inventory?.quantity || product.inventory.quantity <= 0}
+                            >
+                                <ShoppingCart size={16} />
+                                Add to Cart
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </Link>
+        </div>
+    );
+};
 
 const ProductCatalog = () => {
     const [products, setProducts] = useState([]);
@@ -36,7 +182,7 @@ const ProductCatalog = () => {
             const response = await fetch('http://localhost:5000/api/products/categories');
             if (response.ok) {
                 const data = await response.json();
-                setCategories(data.categories);
+                setCategories(data.data?.options || []);
             }
         } catch (error) {
             logger.error('Error fetching categories:', error);
@@ -73,21 +219,40 @@ const ProductCatalog = () => {
             if (searchTerm) params.append('search', searchTerm);
             if (selectedCategory) params.append('category', selectedCategory);
 
+            console.log('🔍 ProductCatalog - Fetching products');
+            console.log('- API URL:', `http://localhost:5000/api/products?${params}`);
+
             const response = await fetch(`http://localhost:5000/api/products?${params}`);
             if (response.ok) {
                 const data = await response.json();
                 let filteredProducts = data.products || [];
 
+                console.log('- Raw products received:', filteredProducts.length);
+                console.log('- Sample product:', filteredProducts[0]);
+                
+                // Check for products missing both _id and id (backend transforms _id to id)
+                const productsWithoutId = filteredProducts.filter(p => !p._id && !p.id);
+                if (productsWithoutId.length > 0) {
+                    console.warn('- Products missing both _id and id:', productsWithoutId.length);
+                    console.warn('- Examples:', productsWithoutId.slice(0, 3));
+                } else {
+                    console.log('- All products have valid IDs (using field:', filteredProducts[0]?._id ? '_id' : 'id', ')');
+                }
+
                 // Apply client-side filters that the backend doesn't handle
                 filteredProducts = applyAdvancedFilters(filteredProducts);
+
+                console.log('- Filtered products:', filteredProducts.length);
 
                 setProducts(filteredProducts);
                 setTotalItems(data.pagination?.total_items || 0);
             } else {
+                console.error('- Response not ok:', response.status, response.statusText);
                 setError('Failed to fetch products');
             }
         } catch (error) {
             logger.error('Error fetching products:', error);
+            console.error('- Fetch error:', error);
             setError('Error fetching products');
         }
     }, [currentPage, searchTerm, selectedCategory, sortBy, applyAdvancedFilters]);
@@ -405,7 +570,66 @@ const ProductCatalog = () => {
 
                 {/* Products Grid/List */}
                 <div className="catalog-main">
-                    {/* ... rest of the component code remains unchanged ... */}
+                    {products.length === 0 ? (
+                        <div className="catalog-empty">
+                            <h3>No Products Found</h3>
+                            <p>
+                                {searchTerm || selectedCategory || getActiveFiltersCount() > 0
+                                    ? 'Try adjusting your search criteria or filters.'
+                                    : 'Check back later for new products.'}
+                            </p>
+                            {(searchTerm || selectedCategory || getActiveFiltersCount() > 0) && (
+                                <button className="reset-btn" onClick={clearFilters}>
+                                    Reset Filters
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            <div className={`products-${viewMode}`}>
+                                {products
+                                    .filter(product => product && (product._id || product.id)) // Filter out products without valid IDs
+                                    .map((product) => (
+                                        <ProductCard 
+                                            key={product._id || product.id} 
+                                            product={product} 
+                                            viewMode={viewMode}
+                                        />
+                                    ))
+                                }
+                            </div>
+
+                            {/* Pagination */}
+                            {totalItems > itemsPerPage && (
+                                <div className="pagination">
+                                    <button
+                                        className="pagination-btn"
+                                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                        disabled={currentPage === 1}
+                                    >
+                                        Previous
+                                    </button>
+                                    
+                                    <div className="pagination-info">
+                                        <span>
+                                            Page {currentPage} of {Math.ceil(totalItems / itemsPerPage)}
+                                        </span>
+                                        <span className="item-count">
+                                            Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} products
+                                        </span>
+                                    </div>
+                                    
+                                    <button
+                                        className="pagination-btn"
+                                        onClick={() => setCurrentPage(Math.min(Math.ceil(totalItems / itemsPerPage), currentPage + 1))}
+                                        disabled={currentPage >= Math.ceil(totalItems / itemsPerPage)}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
         </div>

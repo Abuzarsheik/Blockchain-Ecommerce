@@ -7,6 +7,7 @@ const path = require('path');
 const { auth, adminAuth, optionalAuth } = require('../middleware/auth');
 const { getCategoryOptions } = require('../config/constants');
 const logger = require('../utils/logger');
+const mongoose = require('mongoose');
 
 const router = express.Router();
 
@@ -75,7 +76,7 @@ router.get('/my', auth, async (req, res) => {
 
         // Get summary statistics
         const stats = await Product.aggregate([
-            { $match: { seller: req.user._id } },
+            { $match: { seller: new mongoose.Types.ObjectId(req.user.id) } },
             {
                 $group: {
                     _id: null,
@@ -137,7 +138,7 @@ router.get('/my', auth, async (req, res) => {
 // GET /api/products/low-stock - Get low stock products for current seller
 router.get('/low-stock', auth, async (req, res) => {
     try {
-        const products = await Product.findLowStock(req.user._id);
+        const products = await Product.findLowStock(new mongoose.Types.ObjectId(req.user.id));
         res.json({ products });
     } catch (error) {
         logger.error('Error fetching low stock products:', error);
@@ -480,8 +481,16 @@ router.get('/:id/history', async (req, res) => {
 // GET /api/products/:id - Get single product
 router.get('/:id', async (req, res) => {
     try {
+        // Debug logging
+        console.log('🔍 GET /api/products/:id - Request received');
+        console.log('- Requested ID:', req.params.id);
+        console.log('- ID type:', typeof req.params.id);
+        console.log('- URL path:', req.path);
+        console.log('- Original URL:', req.originalUrl);
+        
         // Check if the ID is actually "categories" which should not match this route
         if (req.params.id === 'categories') {
+            console.log('❌ ID is "categories", returning 404');
             return res.status(404).json({
         success: false,
         error: {
@@ -491,10 +500,23 @@ router.get('/:id', async (req, res) => {
       });
         }
 
+        // Validate ObjectId format
+        if (!req.params.id || req.params.id === 'undefined' || req.params.id.length !== 24) {
+            console.log('❌ Invalid ObjectId format:', req.params.id);
+            return res.status(400).json({
+                success: false,
+                error: {
+                    message: 'Invalid product ID format',
+                    timestamp: new Date().toISOString()
+                }
+            });
+        }
+
         const product = await Product.findById(req.params.id)
             .populate('seller', 'firstName lastName username sellerProfile');
         
         if (!product) {
+            console.log('❌ Product not found for ID:', req.params.id);
             return res.status(404).json({
         success: false,
         error: {
@@ -503,6 +525,8 @@ router.get('/:id', async (req, res) => {
         }
       });
         }
+
+        console.log('✅ Product found:', product.name);
 
         // Increment view count
         await Product.findByIdAndUpdate(req.params.id, {
@@ -512,6 +536,7 @@ router.get('/:id', async (req, res) => {
         res.json({ product });
     } catch (error) {
         // Environment-aware logging
+        console.log('❌ Error in GET /api/products/:id:', error.message);
         if (process.env.NODE_ENV !== 'production') {
             logger.error('Get product error:', error);
         }
@@ -556,7 +581,7 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
             shippingCost,
             metaTitle,
             metaDescription,
-            status = 'draft',
+            status = 'active',
             quantity = 0,
             lowStockThreshold = 5,
             trackInventory = true,
@@ -564,27 +589,71 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
             sku
         } = req.body;
 
+        // Debug logging to track the exact category value received
+        console.log('🔍 DEBUG - Product creation request:');
+        console.log('- Name:', name);
+        console.log('- Category received:', `"${category}"`);
+        console.log('- Category type:', typeof category);
+        console.log('- All form data keys:', Object.keys(req.body));
+        
         // Validation
         if (!name || !description || !price || !category) {
             return res.status(400).json({
-        success: false,
-        error: {
-          message: 'Error occurred',
-          timestamp: new Date().toISOString()
+                success: false,
+                message: 'Missing required fields: name, description, price, and category are required',
+                error: {
+                    message: 'Missing required fields',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
-      });
+
+        // Validate category against allowed enum values
+        const { PRODUCT_CATEGORY_ENUM } = require('../config/constants');
+        console.log('🔍 DEBUG - Valid categories:', PRODUCT_CATEGORY_ENUM);
+        
+        if (!PRODUCT_CATEGORY_ENUM.includes(category)) {
+            console.log('❌ DEBUG - Category validation failed!');
+            console.log('- Received:', `"${category}"`);
+            console.log('- Valid options:', PRODUCT_CATEGORY_ENUM);
+            
+            return res.status(400).json({
+                success: false,
+                message: `Invalid category "${category}". Allowed categories are: ${PRODUCT_CATEGORY_ENUM.join(', ')}`,
+                error: {
+                    message: 'Invalid category',
+                    allowedCategories: PRODUCT_CATEGORY_ENUM,
+                    receivedCategory: category,
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
+        
+        console.log('✅ DEBUG - Category validation passed!');
 
         // Additional price validation
         if (price < 0) {
             return res.status(400).json({
-        success: false,
-        error: {
-          message: 'Error occurred',
-          timestamp: new Date().toISOString()
+                success: false,
+                message: 'Price must be greater than or equal to 0',
+                error: {
+                    message: 'Invalid price',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
-      });
-        }
+
+        // Helper function to safely parse JSON
+        const safeJsonParse = (value, fallback = []) => {
+            if (!value || value === 'undefined' || value === 'null') return fallback;
+            if (typeof value === 'object') return value;
+            try {
+                return JSON.parse(value);
+            } catch (e) {
+                logger.warn('JSON parse error for value:', value, e.message);
+                return fallback;
+            }
+        };
 
         // Handle image uploads
         const images = [];
@@ -608,10 +677,10 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
             discountPercentage: discountPercentage ? parseFloat(discountPercentage) : 0,
             category,
             subcategory,
-            tags: tags ? (typeof tags === 'string' ? JSON.parse(tags) : tags) : [],
+            tags: safeJsonParse(tags, []),
             images,
-            specifications: specifications ? (typeof specifications === 'string' ? JSON.parse(specifications) : specifications) : {},
-            status,
+            specifications: safeJsonParse(specifications, []),
+            status: status || 'active',
             seller: req.user.id,
             inventory: {
                 quantity: parseInt(quantity),
@@ -629,7 +698,7 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
                     value: 0,
                     unit: 'lbs'
                 },
-                dimensions: dimensions ? (typeof dimensions === 'string' ? JSON.parse(dimensions) : dimensions) : { length: 0, width: 0, height: 0 },
+                dimensions: safeJsonParse(dimensions, { length: 0, width: 0, height: 0 }),
                 freeShipping: freeShipping === 'true',
                 shippingCost: shippingCost ? parseFloat(shippingCost) : 0
             },
@@ -657,18 +726,49 @@ router.post('/', auth, upload.array('images', 5), async (req, res) => {
         }
 
         res.status(201).json({ 
-            message: 'Product created successfully', 
+            success: true,
+            message: 'Product created successfully and is now live in the marketplace', 
             product 
         });
     } catch (error) {
+        // Handle Mongoose validation errors specifically
+        if (error.name === 'ValidationError') {
+            const validationErrors = Object.values(error.errors).map(err => {
+                if (err.kind === 'enum' && err.path === 'category') {
+                    return {
+                        field: err.path,
+                        message: `Invalid category "${err.value}". Valid categories are: ${err.properties.enumValues.join(', ')}`,
+                        value: err.value,
+                        allowedValues: err.properties.enumValues
+                    };
+                }
+                return {
+                    field: err.path,
+                    message: err.message,
+                    value: err.value
+                };
+            });
+
+            return res.status(400).json({
+                success: false,
+                message: 'Product validation failed',
+                error: {
+                    message: 'Validation error',
+                    details: validationErrors,
+                    timestamp: new Date().toISOString()
+                }
+            });
+        }
+
         logger.error('Error creating product:', error);
         res.status(500).json({
-        success: false,
-        error: {
-          message: 'Error occurred',
-          timestamp: new Date().toISOString()
-        }
-      });
+            success: false,
+            message: 'Failed to create product. Please try again.',
+            error: {
+                message: 'Internal server error',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -930,6 +1030,34 @@ router.delete('/:id', auth, async (req, res) => {
           timestamp: new Date().toISOString()
         }
       });
+    }
+});
+
+// ==== UTILITY ROUTES ====
+
+// GET /api/products/categories - Get valid product categories
+router.get('/categories', (req, res) => {
+    try {
+        const { PRODUCT_CATEGORY_ENUM, PRODUCT_CATEGORY_LABELS, getCategoryOptions } = require('../config/constants');
+        
+        res.json({
+            success: true,
+            data: {
+                categories: PRODUCT_CATEGORY_ENUM,
+                labels: PRODUCT_CATEGORY_LABELS,
+                options: getCategoryOptions()
+            }
+        });
+    } catch (error) {
+        logger.error('Error fetching categories:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch categories',
+            error: {
+                message: 'Internal server error',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 

@@ -4,6 +4,7 @@ const ipfsService = require('../services/ipfsService');
 const multer = require('multer');
 const path = require('path');
 const { auth } = require('../middleware/auth');
+const logger = require('../config/logger');
 
 const router = express.Router();
 

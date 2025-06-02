@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const Review = require('../models/Review');
 const User = require('../models/User');
 const notificationService = require('./notificationService');
+const logger = require('../config/logger');
 
 class ReviewService {
   // Get reviews for a product with statistics

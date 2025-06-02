@@ -1,5 +1,6 @@
 const compression = require('compression');
 const crypto = require('crypto');
+const logger = require('../config/logger');
 
 // const redis = require('redis'); // Removed - Redis dependency was uninstalled
 

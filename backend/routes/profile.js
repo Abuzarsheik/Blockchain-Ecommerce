@@ -7,6 +7,7 @@ const multer = require('multer');
 const path = require('path');
 const { auth, adminAuth } = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
+const logger = require('../config/logger');
 
 const router = express.Router();
 
@@ -308,24 +309,43 @@ router.post('/kyc/personal-info', auth, [
     body('dateOfBirth').isISO8601().withMessage('Invalid date of birth'),
     body('nationality').isLength({ min: 2, max: 2 }).withMessage('Nationality must be 2-character country code'),
     body('countryOfResidence').isLength({ min: 2, max: 2 }).withMessage('Country of residence must be 2-character country code'),
-    body('phoneNumber').isMobilePhone().withMessage('Invalid phone number'),
+    body('phoneNumber').isLength({ min: 7, max: 20 }).matches(/^[\+]?[0-9\s\-\(\)]+$/).withMessage('Invalid phone number format'),
     body('address.street').isLength({ min: 1 }).withMessage('Street address is required'),
     body('address.city').isLength({ min: 1 }).withMessage('City is required'),
     body('address.country').isLength({ min: 2, max: 2 }).withMessage('Country must be 2-character country code'),
+    body('address.postalCode').optional().isLength({ min: 1, max: 20 }).withMessage('Invalid postal code'),
+    body('address.state').optional().isLength({ min: 1, max: 100 }).withMessage('Invalid state/province'),
     body('occupation').isLength({ min: 1 }).withMessage('Occupation is required'),
     body('sourceOfFunds').isIn(['employment', 'business', 'investments', 'inheritance', 'other']).withMessage('Invalid source of funds'),
 ], async (req, res) => {
     try {
+        logger.info(`KYC personal info submission attempt for user: ${req.user.id}`);
+        logger.info('Request body:', JSON.stringify(req.body, null, 2));
+
+        // Validate input
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
+            logger.warn('KYC validation errors:', errors.array());
+            return res.status(400).json({ 
+                success: false,
+                errors: errors.array() 
+            });
         }
 
         const personalInfo = req.body;
         
-        // Validate age (must be 18+)
-        const age = new Date().getFullYear() - new Date(personalInfo.dateOfBirth).getFullYear();
+        // Enhanced age validation
+        const birthDate = new Date(personalInfo.dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        
         if (age < 18) {
+            logger.warn(`Age validation failed: ${age} years old`);
             return res.status(400).json({
                 success: false,
                 error: {
@@ -335,35 +355,62 @@ router.post('/kyc/personal-info', auth, [
             });
         }
 
+        // Find user with error handling
         const user = await User.findById(req.user.id);
         if (!user) {
+            logger.error(`User not found: ${req.user.id}`);
             return res.status(404).json({
-        success: false,
-        error: {
-          message: 'Error occurred',
-          timestamp: new Date().toISOString()
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
-      });
+
+        logger.info(`Found user: ${user.email}`);
+
+        // Ensure kyc object exists
+        if (!user.kyc) {
+            user.kyc = {
+                status: 'pending',
+                personalInfo: {},
+                documents: {},
+                history: []
+            };
         }
 
         // Update personal information
-        user.kyc.personalInfo = personalInfo;
-        await user.save();
+        user.kyc.personalInfo = {
+            ...user.kyc.personalInfo,
+            ...personalInfo
+        };
+
+        // Save with error handling
+        const savedUser = await user.save();
+        logger.info(`User saved successfully, completion: ${savedUser.kycCompletionPercentage}%`);
 
         res.json({
+            success: true,
             message: 'Personal information saved successfully',
-            completionPercentage: user.kycCompletionPercentage
+            completionPercentage: savedUser.kycCompletionPercentage || 0
         });
 
     } catch (error) {
-        logger.error('KYC personal info error:', error);
+        logger.error('KYC personal info error details:', {
+            message: error.message,
+            stack: error.stack,
+            userId: req.user?.id,
+            requestBody: req.body
+        });
+        
         res.status(500).json({
-        success: false,
-        error: {
-          message: 'Error occurred',
-          timestamp: new Date().toISOString()
-        }
-      });
+            success: false,
+            error: {
+                message: 'Internal server error while saving personal information',
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 
@@ -382,13 +429,16 @@ router.post('/kyc/documents', auth, kycService.getUploadMiddleware(), async (req
 
         if (!req.files || Object.keys(req.files).length === 0) {
             return res.status(400).json({
-        success: false,
-        error: {
-          message: 'Error occurred',
-          timestamp: new Date().toISOString()
+                success: false,
+                error: {
+                    message: 'No documents were uploaded. Please select at least one document to upload.',
+                    timestamp: new Date().toISOString()
+                }
+            });
         }
-      });
-        }
+
+        logger.info(`📤 Starting KYC document upload for user ${req.user.id}`);
+        logger.info(`📋 Files received: ${Object.keys(req.files).join(', ')}`);
 
         const result = await kycService.uploadDocuments(req.user.id, req.files);
 
@@ -401,20 +451,49 @@ router.post('/kyc/documents', auth, kycService.getUploadMiddleware(), async (req
             user.kyc.documents.identity.issueDate = identityIssueDate;
             user.kyc.documents.identity.expiryDate = identityExpiryDate;
             user.kyc.documents.identity.issuingAuthority = identityIssuingAuthority;
+            logger.info(`📝 Identity document metadata updated: ${identityType}`);
         }
 
         if (proofOfAddressType && req.files.proofOfAddress) {
             user.kyc.documents.proofOfAddress.type = proofOfAddressType;
             user.kyc.documents.proofOfAddress.issueDate = proofOfAddressIssueDate;
+            logger.info(`📝 Proof of address metadata updated: ${proofOfAddressType}`);
         }
 
         await user.save();
+        
+        logger.info(`✅ KYC documents successfully saved for user ${req.user.id}`);
+        logger.info(`📊 Upload summary: ${result.savedDocuments.length} documents saved`);
 
-        res.json(result);
+        // Enhanced response with detailed confirmation
+        const enhancedResult = {
+            ...result,
+            message: `🎉 SUCCESS! ${result.savedDocuments.length} document(s) have been uploaded and saved securely.`,
+            details: {
+                uploadedAt: new Date().toISOString(),
+                userId: req.user.id,
+                totalDocuments: result.savedDocuments.length,
+                savedFiles: result.savedDocuments.map(doc => ({
+                    type: doc.type,
+                    filename: doc.filename,
+                    size: `${(doc.size / 1024 / 1024).toFixed(2)} MB`,
+                    status: '✅ SAVED'
+                })),
+                nextSteps: result.completionPercentage >= 80 
+                    ? 'Your KYC application is now ready for submission!'
+                    : 'Please complete any remaining steps to submit your KYC application.'
+            }
+        };
+
+        res.json(enhancedResult);
 
     } catch (error) {
-        logger.error('KYC document upload error:', error);
-        res.status(500).json({ error: error.message || 'Failed to upload documents' });
+        logger.error('❌ KYC document upload error:', error);
+        res.status(500).json({ 
+            success: false,
+            error: error.message || 'Failed to upload documents',
+            timestamp: new Date().toISOString()
+        });
     }
 });
 
@@ -602,6 +681,104 @@ router.get('/kyc/admin/application/:userId', adminAuth, async (req, res) => {
           timestamp: new Date().toISOString()
         }
       });
+    }
+});
+
+// Test endpoint to verify document storage (for development/testing)
+router.get('/kyc/verify-documents', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id)
+            .select('firstName lastName kyc.documents kyc.status');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: {
+                    message: 'User not found',
+                    timestamp: new Date().toISOString()
+                }
+            });
+        }
+
+        const fs = require('fs');
+        const path = require('path');
+        
+        const documentVerification = {
+            userId: req.user.id,
+            userName: `${user.firstName} ${user.lastName}`,
+            kycStatus: user.kyc.status,
+            timestamp: new Date().toISOString(),
+            documents: {
+                identity: {
+                    front: {
+                        path: user.kyc.documents.identity.frontImage,
+                        exists: user.kyc.documents.identity.frontImage ? 
+                            fs.existsSync(path.join(__dirname, '..', user.kyc.documents.identity.frontImage)) : false,
+                        verified: user.kyc.documents.identity.verified
+                    },
+                    back: {
+                        path: user.kyc.documents.identity.backImage,
+                        exists: user.kyc.documents.identity.backImage ? 
+                            fs.existsSync(path.join(__dirname, '..', user.kyc.documents.identity.backImage)) : false,
+                        verified: user.kyc.documents.identity.verified
+                    },
+                    type: user.kyc.documents.identity.type,
+                    documentNumber: user.kyc.documents.identity.documentNumber
+                },
+                proofOfAddress: {
+                    path: user.kyc.documents.proofOfAddress.image,
+                    exists: user.kyc.documents.proofOfAddress.image ? 
+                        fs.existsSync(path.join(__dirname, '..', user.kyc.documents.proofOfAddress.image)) : false,
+                    verified: user.kyc.documents.proofOfAddress.verified,
+                    type: user.kyc.documents.proofOfAddress.type
+                },
+                selfie: {
+                    path: user.kyc.documents.selfie.image,
+                    exists: user.kyc.documents.selfie.image ? 
+                        fs.existsSync(path.join(__dirname, '..', user.kyc.documents.selfie.image)) : false,
+                    verified: user.kyc.documents.selfie.verified
+                }
+            }
+        };
+
+        const totalDocuments = [
+            documentVerification.documents.identity.front.exists,
+            documentVerification.documents.identity.back.exists,
+            documentVerification.documents.proofOfAddress.exists,
+            documentVerification.documents.selfie.exists
+        ].filter(Boolean).length;
+
+        const allDocumentsExist = 
+            documentVerification.documents.identity.front.path && documentVerification.documents.identity.front.exists &&
+            documentVerification.documents.proofOfAddress.path && documentVerification.documents.proofOfAddress.exists &&
+            documentVerification.documents.selfie.path && documentVerification.documents.selfie.exists;
+
+        logger.info(`🔍 Document verification requested for user ${req.user.id}`);
+        logger.info(`📊 Documents found: ${totalDocuments}/4 (identity back is optional)`);
+
+        res.json({
+            success: true,
+            message: allDocumentsExist ? 
+                '✅ All required documents are properly saved and accessible!' : 
+                '⚠️ Some documents may be missing or inaccessible.',
+            verification: documentVerification,
+            summary: {
+                totalDocuments,
+                allRequiredDocuments: allDocumentsExist,
+                status: allDocumentsExist ? '✅ COMPLETE' : '⚠️ INCOMPLETE'
+            }
+        });
+
+    } catch (error) {
+        logger.error('❌ Document verification error:', error);
+        res.status(500).json({
+            success: false,
+            error: {
+                message: 'Failed to verify documents',
+                details: error.message,
+                timestamp: new Date().toISOString()
+            }
+        });
     }
 });
 

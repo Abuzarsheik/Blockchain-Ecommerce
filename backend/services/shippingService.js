@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const axios = require('axios');
 const notificationService = require('./notificationService');
+const logger = require('../config/logger');
 
 class ShippingService {
     constructor() {

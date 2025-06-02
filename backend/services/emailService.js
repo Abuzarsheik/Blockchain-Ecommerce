@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const logger = require('../config/logger');
 
 class EmailService {
     constructor() {

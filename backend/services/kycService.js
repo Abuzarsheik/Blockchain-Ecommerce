@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
+const logger = require('../config/logger');
 
 class KYCService {
     constructor() {
@@ -97,7 +98,7 @@ class KYCService {
             }
 
             // Update KYC status
-            user.kyc.status = 'in_review';
+            user.kyc.status = 'under_review';
             user.kyc.submissionDate = new Date();
 
             // Add to history
@@ -186,24 +187,41 @@ class KYCService {
     // Upload KYC documents
     async uploadDocuments(userId, files) {
         try {
+            logger.info(`Starting KYC document upload for user: ${userId}`);
+            
             const user = await User.findById(userId);
             if (!user) {
                 throw new Error('User not found');
             }
 
             const uploadedDocs = {};
+            const savedDocuments = [];
 
             // Process identity documents
             if (files.identityFront && files.identityFront[0]) {
                 const frontPath = `/uploads/kyc/${files.identityFront[0].filename}`;
                 uploadedDocs.identityFront = frontPath;
                 await user.addKycDocument('identity', { frontImage: frontPath });
+                savedDocuments.push({
+                    type: 'Identity Front',
+                    filename: files.identityFront[0].filename,
+                    path: frontPath,
+                    size: files.identityFront[0].size
+                });
+                logger.info(`✅ Identity front document saved: ${files.identityFront[0].filename}`);
             }
 
             if (files.identityBack && files.identityBack[0]) {
                 const backPath = `/uploads/kyc/${files.identityBack[0].filename}`;
                 uploadedDocs.identityBack = backPath;
                 await user.addKycDocument('identity', { backImage: backPath });
+                savedDocuments.push({
+                    type: 'Identity Back',
+                    filename: files.identityBack[0].filename,
+                    path: backPath,
+                    size: files.identityBack[0].size
+                });
+                logger.info(`✅ Identity back document saved: ${files.identityBack[0].filename}`);
             }
 
             // Process proof of address
@@ -211,6 +229,13 @@ class KYCService {
                 const addressPath = `/uploads/kyc/${files.proofOfAddress[0].filename}`;
                 uploadedDocs.proofOfAddress = addressPath;
                 await user.addKycDocument('proofOfAddress', { image: addressPath });
+                savedDocuments.push({
+                    type: 'Proof of Address',
+                    filename: files.proofOfAddress[0].filename,
+                    path: addressPath,
+                    size: files.proofOfAddress[0].size
+                });
+                logger.info(`✅ Proof of address document saved: ${files.proofOfAddress[0].filename}`);
             }
 
             // Process selfie
@@ -218,17 +243,50 @@ class KYCService {
                 const selfiePath = `/uploads/kyc/${files.selfie[0].filename}`;
                 uploadedDocs.selfie = selfiePath;
                 await user.addKycDocument('selfie', { image: selfiePath });
+                savedDocuments.push({
+                    type: 'Selfie',
+                    filename: files.selfie[0].filename,
+                    path: selfiePath,
+                    size: files.selfie[0].size
+                });
+                logger.info(`✅ Selfie document saved: ${files.selfie[0].filename}`);
             }
+
+            // Save user with updated document information
+            await user.save();
+            
+            logger.info(`📁 All KYC documents successfully saved to database for user: ${userId}`);
+            logger.info(`📊 Total documents saved: ${savedDocuments.length}`);
+            
+            // Verify documents are actually saved by checking the database
+            const verificationUser = await User.findById(userId).select('kyc.documents');
+            const hasIdentityFront = !!verificationUser.kyc.documents.identity.frontImage;
+            const hasIdentityBack = !!verificationUser.kyc.documents.identity.backImage;
+            const hasProofOfAddress = !!verificationUser.kyc.documents.proofOfAddress.image;
+            const hasSelfie = !!verificationUser.kyc.documents.selfie.image;
+            
+            logger.info(`🔍 Database verification completed:`);
+            logger.info(`   - Identity Front: ${hasIdentityFront ? '✅ SAVED' : '❌ NOT SAVED'}`);
+            logger.info(`   - Identity Back: ${hasIdentityBack ? '✅ SAVED' : '❌ NOT SAVED'}`);
+            logger.info(`   - Proof of Address: ${hasProofOfAddress ? '✅ SAVED' : '❌ NOT SAVED'}`);
+            logger.info(`   - Selfie: ${hasSelfie ? '✅ SAVED' : '❌ NOT SAVED'}`);
 
             return {
                 success: true,
-                message: 'Documents uploaded successfully',
+                message: 'Documents uploaded and saved successfully',
                 uploadedDocuments: uploadedDocs,
-                completionPercentage: user.kycCompletionPercentage
+                savedDocuments: savedDocuments,
+                completionPercentage: user.kycCompletionPercentage,
+                verification: {
+                    identityFront: hasIdentityFront,
+                    identityBack: hasIdentityBack,
+                    proofOfAddress: hasProofOfAddress,
+                    selfie: hasSelfie
+                }
             };
 
         } catch (error) {
-            logger.error('Document upload error:', error);
+            logger.error('❌ Document upload error:', error);
             throw error;
         }
     }
@@ -364,7 +422,7 @@ class KYCService {
     async getPendingApplications(page = 1, limit = 10) {
         try {
             const applications = await User.find({
-                'kyc.status': { $in: ['in_review', 'pending'] }
+                'kyc.status': { $in: ['under_review', 'submitted'] }
             })
             .select('firstName lastName email kyc.status kyc.submissionDate kyc.level')
             .sort({ 'kyc.submissionDate': -1 })
@@ -372,7 +430,7 @@ class KYCService {
             .skip((page - 1) * limit);
 
             const total = await User.countDocuments({
-                'kyc.status': { $in: ['in_review', 'pending'] }
+                'kyc.status': { $in: ['under_review', 'submitted'] }
             });
 
             return {

@@ -1,6 +1,7 @@
 import { api } from './api';
 import { blockchainService } from './blockchain';
 import { ethers } from 'ethers';
+import { toast } from 'react-toastify';
 import { logger } from '../utils/logger';
 
 // Mock ethers for build compatibility

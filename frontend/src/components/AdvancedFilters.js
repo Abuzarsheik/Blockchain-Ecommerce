@@ -179,7 +179,7 @@ const AdvancedFilters = ({
           <div className="filter-section">
             <label className="filter-label">
               <Search size={16} />
-              Search NFTs
+              Search Products
             </label>
             <input
               type="text"

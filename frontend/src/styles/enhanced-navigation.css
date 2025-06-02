@@ -272,7 +272,7 @@
 }
 
 .comparison-badge {
-  background: var(--nft-purple);
+  background: var(--primary-purple);
 }
 
 .notification-badge.unread {

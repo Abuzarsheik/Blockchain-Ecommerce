@@ -2,6 +2,7 @@
             const emailService = require('./emailService');
 const axios = require('axios');
 const crypto = require('crypto');
+const logger = require('../config/logger');
 
 class TrackingService {
     constructor() {

@@ -32,9 +32,9 @@ const Footer = () => {
         <div className="footer-links">
           <div className="link-column">
             <h4>Marketplace</h4>
-            <Link to="/catalog">Browse NFTs</Link>
+            <Link to="/catalog">Browse Products</Link>
             {(isAuthenticated && (user?.userType === 'seller' || user?.role === 'admin')) && (
-              <Link to="/create-nft">Create NFT</Link>
+              <Link to="/create-product">Create Product</Link>
             )}
             <Link to="/technology">Technology</Link>
             <Link to="/about">About Us</Link>

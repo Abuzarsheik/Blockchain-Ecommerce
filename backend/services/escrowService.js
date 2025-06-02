@@ -3,6 +3,7 @@ const User = require('../models/User');
 const crypto = require('crypto');
 const escrowContractABI = require('../contracts/EscrowContract.json');
 const { ethers } = require('ethers');
+const logger = require('../config/logger');
 
 class EscrowService {
     constructor() {

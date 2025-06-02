@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const logger = require('../config/logger');
 
 /**
  * Custom Error Classes for better error handling
@@ -105,7 +106,7 @@ const handleCastErrorDB = (err) => {
 };
 
 const handleDuplicateFieldsDB = (err) => {
-  const value = err.errmsg ? err.errmsg.match(/(["'])(\\?.)*?\1/)[0] : 'duplicate value';
+  const value = err.errmsg ? err.errmsg.match(/(['"])((?:(?!\1)[^\\]|\\.)*)?\1/)[0] : 'duplicate value';
   const message = `Duplicate field value: ${value}. Please use another value!`;
   return new ConflictError(message);
 };
@@ -164,9 +165,9 @@ const asyncErrorHandler = (fn) => {
 /**
  * 404 Not Found Handler
  */
-const notFoundHandler = (req, res, next) => {
+const notFoundHandler = (req, res, _next) => {
   const err = new NotFoundError(`Cannot find ${req.originalUrl} on this server!`);
-  next(err);
+  _next(err);
 };
 
 /**

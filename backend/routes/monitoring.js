@@ -1,6 +1,7 @@
 const express = require('express');
 const { adminAuth } = require('../middleware/auth');
 const { monitor } = require('../middleware/monitoring');
+const logger = require('../config/logger');
 
 const router = express.Router();
 

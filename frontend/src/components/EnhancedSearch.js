@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
 const EnhancedSearch = ({
   onSearch,
   onFilterChange,
-  placeholder = "Search NFTs, creators, collections...",
+  placeholder = "Search products, brands, categories...",
   showFilters = true,
   recentSearches = [],
   trendingSearches = [],

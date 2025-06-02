@@ -38,6 +38,7 @@ const auth = async (req, res, next) => {
             email: user.email, 
             wallet_address: user.wallet_address,
             userType: user.userType || 'user',
+            role: user.role || 'user',
             isVerified: user.isVerified || false
         };
         next();
@@ -91,6 +92,7 @@ const optionalAuth = async (req, res, next) => {
             email: user.email, 
             wallet_address: user.wallet_address,
             userType: user.userType || 'user',
+            role: user.role || 'user',
             isVerified: user.isVerified || false
         } : null;
         next();

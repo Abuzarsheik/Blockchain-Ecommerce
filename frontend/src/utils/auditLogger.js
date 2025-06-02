@@ -1,5 +1,5 @@
-import { apiEndpoints } from '../services/api';
 import { logger } from './logger';
+import { apiEndpoints } from '../services/api';
 
 class AuditLogger {
   static instance = null;

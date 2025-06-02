@@ -43,13 +43,24 @@ const EnhancedUserNavigation = memo(() => {
   // Determine user role
   const userRole = user?.role || user?.userType || 'buyer';
   const isAdmin = userRole === 'admin' || user?.isAdmin;
-  const isSeller = userRole === 'seller' || user?.isSeller;
+  const isSeller = userRole === 'seller' || user?.isSeller || user?.userType === 'seller';
+
+  // Debug logging for role detection
+  console.log('Navigation Debug:', {
+    user: user,
+    userRole: userRole,
+    isAdmin: isAdmin,
+    isSeller: isSeller,
+    userTypeFromObject: user?.userType,
+    roleFromObject: user?.role,
+    isSellerFlag: user?.isSeller,
+    navigationShouldShowSeller: isSeller
+  });
 
   // Base navigation items for all users
   const baseNavItems = useMemo(() => [
     { label: 'Home', path: '/', icon: Home },
-    { label: 'NFT Marketplace', path: '/catalog', icon: ShoppingCart },
-    { label: 'Products', path: '/products', icon: Package },
+    { label: 'Product Catalog', path: '/catalog', icon: ShoppingCart },
     { label: 'About', path: '/about', icon: User },
   ], []);
 
@@ -65,7 +76,7 @@ const EnhancedUserNavigation = memo(() => {
   // Seller-specific navigation items
   const sellerNavItems = useMemo(() => [
     { label: 'Seller Dashboard', path: '/seller-dashboard', icon: TrendingUp, category: 'Management' },
-    { label: 'Create NFT', path: '/create-nft', icon: ShoppingCart, category: 'Creation' },
+    { label: 'Create Product', path: '/create-product', icon: ShoppingCart, category: 'Creation' },
     { label: 'My Listings', path: '/seller/listings', icon: Package, category: 'Inventory' },
     { label: 'Sales Analytics', path: '/seller/analytics', icon: TrendingUp, category: 'Analytics' },
     { label: 'Customer Orders', path: '/seller/orders', icon: ShoppingCart, category: 'Orders' },
@@ -100,7 +111,13 @@ const EnhancedUserNavigation = memo(() => {
   // Get role-specific navigation items
   const roleSpecificItems = useMemo(() => {
     if (isAdmin) return adminNavItems;
-    if (isSeller) return [...buyerNavItems, ...sellerNavItems];
+    if (isSeller) {
+      // Filter out cart-related items for sellers
+      const filteredBuyerItems = buyerNavItems.filter(item => 
+        item.path !== '/cart' && !item.label.toLowerCase().includes('cart')
+      );
+      return [...filteredBuyerItems, ...sellerNavItems];
+    }
     return buyerNavItems;
   }, [isAdmin, isSeller, adminNavItems, buyerNavItems, sellerNavItems]);
 
@@ -122,35 +139,6 @@ const EnhancedUserNavigation = memo(() => {
     
     return items;
   }, [commonUserMenuItems, isAuthenticated, isSeller, isAdmin]);
-
-  // Quick action items based on role
-  const quickActions = useMemo(() => {
-    const actions = [];
-    
-    if (isAuthenticated) {
-      if (isSeller) {
-        actions.push(
-          { label: 'Create NFT', path: '/create-nft', icon: ShoppingCart, color: 'primary' },
-          { label: 'View Sales', path: '/seller/analytics', icon: TrendingUp, color: 'success' }
-        );
-      }
-      
-      if (isAdmin) {
-        actions.push(
-          { label: 'User Management', path: '/admin/users', icon: User, color: 'warning' },
-          { label: 'System Monitor', path: '/admin/analytics', icon: Activity, color: 'info' }
-        );
-      }
-      
-      // Common actions for all authenticated users
-      actions.push(
-        { label: 'Orders', path: '/orders', icon: ShoppingCart, color: 'secondary' },
-        { label: 'Support', path: '/help', icon: HelpCircle, color: 'muted' }
-      );
-    }
-    
-    return actions;
-  }, [isAuthenticated, isSeller, isAdmin]);
 
   const handleLogout = useCallback(() => {
     dispatch(logout());
@@ -259,14 +247,26 @@ const EnhancedUserNavigation = memo(() => {
 
           {/* Role-specific quick links */}
           {isAuthenticated && isSeller && (
-            <Link
-              to="/create-nft"
-              className={`nav-link create-nft-link ${location.pathname === '/create-nft' ? 'active' : ''}`}
-              aria-label="Create new NFT"
-            >
-              <ShoppingCart size={18} aria-hidden="true" />
-              <span>Create NFT</span>
-            </Link>
+            <>
+              <Link
+                to="/create-product"
+                className={`nav-link create-product-link highlight ${location.pathname === '/create-product' ? 'active' : ''}`}
+                aria-label="Create new product"
+                title="Add a new product to your store"
+              >
+                <ShoppingCart size={18} aria-hidden="true" />
+                <span>Create Product</span>
+              </Link>
+              <Link
+                to="/seller-dashboard"
+                className={`nav-link seller-dashboard-link ${location.pathname === '/seller-dashboard' ? 'active' : ''}`}
+                aria-label="Seller dashboard"
+                title="Manage your seller account"
+              >
+                <TrendingUp size={18} aria-hidden="true" />
+                <span>Seller Dashboard</span>
+              </Link>
+            </>
           )}
 
           {isAuthenticated && isAdmin && (
@@ -288,33 +288,13 @@ const EnhancedUserNavigation = memo(() => {
             <IntelligentSearch
               onSearch={handleSearch}
               onFilterChange={handleFilterChange}
-              placeholder={`Search ${isSeller ? 'marketplace & your items' : 'NFTs, creators'}...`}
+              placeholder={`Search ${isSeller ? 'marketplace & your items' : 'products, brands'}...`}
               aiEnabled={true}
               showTrending={true}
               showRecent={true}
               className="nav-search"
             />
           </div>
-
-          {/* Quick Actions */}
-          {isAuthenticated && quickActions.length > 0 && (
-            <div className="quick-actions">
-              {quickActions.slice(0, 2).map((action, index) => {
-                const Icon = action.icon;
-                return (
-                  <Link
-                    key={action.path}
-                    to={action.path}
-                    className={`quick-action-btn ${action.color}`}
-                    aria-label={action.label}
-                    title={action.label}
-                  >
-                    <Icon size={16} aria-hidden="true" />
-                  </Link>
-                );
-              })}
-            </div>
-          )}
 
           {/* Real-time Notifications */}
           {isAuthenticated && <RealTimeNotifications />}
@@ -342,7 +322,7 @@ const EnhancedUserNavigation = memo(() => {
           )}
 
           {/* Cart (for buyers) */}
-          {isAuthenticated && !isAdmin && (
+          {isAuthenticated && !isAdmin && !isSeller && (
             <Link to="/cart" className="cart-link" aria-label="Shopping cart">
               <ShoppingCart size={18} aria-hidden="true" />
             </Link>
@@ -489,7 +469,7 @@ const EnhancedUserNavigation = memo(() => {
               <IntelligentSearch
                 onSearch={handleSearch}
                 onFilterChange={handleFilterChange}
-                placeholder="Search NFTs..."
+                placeholder="Search products..."
                 aiEnabled={false}
                 showTrending={false}
                 showRecent={true}

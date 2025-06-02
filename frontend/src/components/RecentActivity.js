@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Clock, 
   ShoppingCart, 
@@ -15,102 +15,33 @@ import {
 } from 'lucide-react';
 import './RecentActivity.css';
 
-const RecentActivity = () => {
+const RecentActivity = ({ hasRealData = false, isNewUser = false }) => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all');
 
-  // Mock recent activities - using useMemo to prevent re-creation
-  const mockActivities = useMemo(() => [
-    {
-      id: 1,
-      type: 'purchase',
-      title: 'Purchased NFT',
-      description: 'Digital Dreams #42',
-      value: '2.5 ETH',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-      icon: ShoppingCart,
-      status: 'completed',
-      image: '/api/placeholder/40/40'
-    },
-    {
-      id: 2,
-      type: 'like',
-      title: 'Liked NFT',
-      description: 'Cosmic Cat Collection',
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-      icon: Heart,
-      status: 'completed',
-      image: '/api/placeholder/40/40'
-    },
-    {
-      id: 3,
-      type: 'sale',
-      title: 'NFT Sold',
-      description: 'Abstract Vision #12',
-      value: '1.8 ETH',
-      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
-      icon: TrendingUp,
-      status: 'completed',
-      image: '/api/placeholder/40/40'
-    },
-    {
-      id: 4,
-      type: 'view',
-      title: 'Viewed Collection',
-      description: 'Futuristic Cities',
-      timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000), // 8 hours ago
-      icon: Eye,
-      status: 'completed'
-    },
-    {
-      id: 5,
-      type: 'follow',
-      title: 'New Follower',
-      description: 'CryptoArtist123 followed you',
-      timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12 hours ago
-      icon: User,
-      status: 'completed'
-    },
-    {
-      id: 6,
-      type: 'bid',
-      title: 'Bid Placed',
-      description: 'Neon Lights Collection',
-      value: '0.5 ETH',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-      icon: Package,
-      status: 'pending',
-      image: '/api/placeholder/40/40'
-    },
-    {
-      id: 7,
-      type: 'review',
-      title: 'Left Review',
-      description: 'Rated Digital Art #23',
-      timestamp: new Date(Date.now() - 36 * 60 * 60 * 1000), // 1.5 days ago
-      icon: Star,
-      status: 'completed'
-    },
-    {
-      id: 8,
-      type: 'comment',
-      title: 'Comment Added',
-      description: 'Commented on Pixel Warriors',
-      timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000), // 2 days ago
-      icon: MessageCircle,
-      status: 'completed'
-    }
-  ], []);
-
+  // Show appropriate content based on user status
   useEffect(() => {
+    if (isNewUser && !hasRealData) {
+      // Don't show any activities for new users
+      setActivities([]);
+      return;
+    }
+
     setLoading(true);
-    // Simulate API call
+    // TODO: Fetch real user activities from API
+    // For now, simulate with empty data for new users
     setTimeout(() => {
-      setActivities(mockActivities);
+      if (hasRealData) {
+        // Show real activities when user has actual data
+        // This would come from API call: await api.get('/users/activities')
+        setActivities([]);
+      } else {
+        setActivities([]);
+      }
       setLoading(false);
-    }, 500);
-  }, [mockActivities]);
+    }, 300);
+  }, [hasRealData, isNewUser]);
 
   const getActivityIcon = (type) => {
     const icons = {
@@ -166,6 +97,11 @@ const RecentActivity = () => {
     return activity.type === filter;
   });
 
+  // Don't render the component for new users without activities
+  if (isNewUser && !hasRealData) {
+    return null;
+  }
+
   if (loading) {
     return (
       <div className="recent-activity">
@@ -173,7 +109,7 @@ const RecentActivity = () => {
           <h3>Recent Activity</h3>
         </div>
         <div className="loading-activities">
-          {[...Array(5)].map((_, i) => (
+          {[...Array(3)].map((_, i) => (
             <div key={i} className="activity-skeleton">
               <div className="skeleton-icon"></div>
               <div className="skeleton-content">
@@ -188,83 +124,88 @@ const RecentActivity = () => {
   }
 
   return (
-    <div className="recent-activity">
+    <div className="recent-activity enhanced-activity">
       <div className="activity-header">
         <h3>Recent Activity</h3>
-        <div className="activity-filters">
-          <select 
-            value={filter} 
-            onChange={(e) => setFilter(e.target.value)}
-            className="filter-select"
-          >
-            <option value="all">All Activities</option>
-            <option value="purchase">Purchases</option>
-            <option value="sale">Sales</option>
-            <option value="like">Likes</option>
-            <option value="view">Views</option>
-            <option value="follow">Follows</option>
-            <option value="bid">Bids</option>
-          </select>
-        </div>
+        {activities.length > 0 && (
+          <div className="activity-filters">
+            <select 
+              value={filter} 
+              onChange={(e) => setFilter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">All Activities</option>
+              <option value="purchase">Purchases</option>
+              <option value="like">Likes</option>
+              <option value="view">Views</option>
+              <option value="review">Reviews</option>
+              <option value="follow">Follows</option>
+            </select>
+          </div>
+        )}
       </div>
 
-      <div className="activity-list">
-        {filteredActivities.map((activity) => {
-          const IconComponent = getActivityIcon(activity.type);
-          return (
-            <div 
-              key={activity.id} 
-              className={`activity-item ${getActivityColor(activity.type, activity.status)}`}
-            >
-              <div className="activity-icon">
-                <IconComponent size={18} />
-              </div>
-              
-              <div className="activity-content">
-                <div className="activity-main">
-                  <h4 className="activity-title">{activity.title}</h4>
-                  <p className="activity-description">{activity.description}</p>
+      <div className="activities-list">
+        {filteredActivities.length > 0 ? (
+          filteredActivities.map((activity) => {
+            const IconComponent = getActivityIcon(activity.type);
+            return (
+              <div 
+                key={activity.id} 
+                className={`activity-item ${getActivityColor(activity.type, activity.status)}`}
+              >
+                <div className="activity-icon">
+                  <IconComponent size={16} />
                 </div>
                 
-                <div className="activity-meta">
-                  {activity.value && (
-                    <span className="activity-value">{activity.value}</span>
-                  )}
-                  <span className="activity-time">
-                    <Clock size={12} />
-                    {formatTimeAgo(activity.timestamp)}
-                  </span>
+                <div className="activity-content">
+                  <div className="activity-main">
+                    <h4 className="activity-title">{activity.title}</h4>
+                    <p className="activity-description">{activity.description}</p>
+                  </div>
+                  
+                  <div className="activity-meta">
+                    <span className="activity-time">
+                      <Clock size={12} />
+                      {formatTimeAgo(activity.timestamp)}
+                    </span>
+                    {activity.value && (
+                      <span className="activity-value">{activity.value}</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-
-              {activity.image && (
-                <div className="activity-image">
-                  <img src={activity.image} alt="" />
-                </div>
-              )}
-
-              {activity.status === 'pending' && (
-                <div className="activity-status pending">
+                
+                {activity.image && (
+                  <div className="activity-image">
+                    <img src={activity.image} alt="" />
+                  </div>
+                )}
+                
+                <div className={`activity-status ${activity.status}`}>
                   <div className="status-indicator"></div>
                 </div>
-              )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="no-activities">
+            <div className="no-activities-content">
+              <Activity size={48} />
+              <h4>No Activity Yet</h4>
+              <p>Start browsing and interacting with products to see your activity here!</p>
+              <div className="activity-suggestions">
+                <a href="/catalog" className="suggestion-link">
+                  <ShoppingCart size={16} />
+                  Browse Products
+                </a>
+                <a href="/wishlist" className="suggestion-link">
+                  <Heart size={16} />
+                  Create Wishlist
+                </a>
+              </div>
             </div>
-          );
-        })}
-      </div>
-
-      {filteredActivities.length === 0 && (
-        <div className="empty-activity">
-          <Activity size={48} />
-          <h4>No Activities Yet</h4>
-          <p>Start exploring NFTs to see your activity here!</p>
-        </div>
-      )}
-
-      <div className="activity-footer">
-        <button className="view-all-btn">
-          View All Activity
-        </button>
+          </div>
+        )}
       </div>
     </div>
   );

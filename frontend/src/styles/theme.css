@@ -41,16 +41,16 @@
   --danger-500: #ef4444;
   --danger-600: #dc2626;
 
-  /* === NFT MARKETPLACE SPECIFIC === */
-  --nft-purple: #8b5cf6;
-  --nft-pink: #ec4899;
-  --nft-cyan: #06b6d4;
-  --nft-gold: #f59e0b;
+  /* === PRODUCT MARKETPLACE SPECIFIC === */
+  --primary-purple: #8b5cf6;
+  --accent-pink: #ec4899;
+  --accent-cyan: #06b6d4;
+  --premium-gold: #f59e0b;
   
   /* === GRADIENTS === */
-  --gradient-primary: linear-gradient(135deg, var(--primary-500) 0%, var(--nft-purple) 100%);
-  --gradient-secondary: linear-gradient(135deg, var(--nft-pink) 0%, var(--nft-cyan) 100%);
-  --gradient-premium: linear-gradient(135deg, var(--nft-gold) 0%, var(--warning-600) 100%);
+  --gradient-primary: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-purple) 100%);
+  --gradient-secondary: linear-gradient(135deg, var(--accent-pink) 0%, var(--accent-cyan) 100%);
+  --gradient-premium: linear-gradient(135deg, var(--premium-gold) 0%, var(--warning-600) 100%);
   
   /* === TYPOGRAPHY === */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -75,7 +75,7 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow-glow: 0 0 20px rgb(59 130 246 / 0.3);
-  --shadow-nft: 0 8px 32px rgb(139 92 246 / 0.2);
+  --shadow-product: 0 8px 32px rgb(139 92 246 / 0.2);
 
   /* === BORDERS === */
   --border-radius-sm: 0.25rem;
@@ -150,12 +150,12 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.nft-glow {
-  box-shadow: var(--shadow-nft);
+.product-glow {
+  box-shadow: var(--shadow-product);
   transition: box-shadow var(--transition-normal);
 }
 
-.nft-glow:hover {
+.product-glow:hover {
   box-shadow: 0 12px 40px rgb(139 92 246 / 0.4);
 }
 
@@ -214,7 +214,7 @@ body {
   transform: translateY(-4px);
 }
 
-.nft-card {
+.product-card {
   background: white;
   border-radius: var(--border-radius-xl);
   overflow: hidden;
@@ -223,7 +223,7 @@ body {
   position: relative;
 }
 
-.nft-card::before {
+.product-card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -235,13 +235,13 @@ body {
   transition: opacity var(--transition-fast);
 }
 
-.nft-card:hover::before {
+.product-card:hover::before {
   opacity: 1;
 }
 
-.nft-card:hover {
+.product-card:hover {
   transform: translateY(-8px);
-  box-shadow: var(--shadow-nft);
+  box-shadow: var(--shadow-product);
 }
 
 /* === ANIMATION KEYFRAMES === */

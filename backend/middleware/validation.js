@@ -1,6 +1,7 @@
-  const rateLimit = require('express-rate-limit');
+const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const { body, param, query, validationResult } = require('express-validator');
+const { PRODUCT_CATEGORY_ENUM } = require('../config/constants');
 
 /**
  * Handle validation errors
@@ -88,7 +89,7 @@ const validationRules = {
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('Category must be between 2 and 50 characters')
-    .isIn(['Electronics', 'Clothing', 'Books', 'Home', 'Sports', 'Other'])
+    .isIn(PRODUCT_CATEGORY_ENUM)
     .withMessage('Invalid category'),
 
   // Quantity validation

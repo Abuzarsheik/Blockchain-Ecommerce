@@ -36,7 +36,7 @@ const notificationTypes = {
   like: {
     icon: <Heart size={16} />,
     color: 'red',
-    title: 'NFT Liked'
+    title: 'Product Liked'
   },
   system: {
     icon: <Shield size={16} />,
@@ -55,8 +55,8 @@ const mockNotifications = [
   {
     id: 1,
     type: 'bid',
-    title: 'New bid on your NFT',
-    message: 'Someone placed a bid of 2.5 ETH on "Cosmic Dreams #001"',
+    title: 'New offer on your product',
+    message: 'Someone made an offer of $199.99 on "Wireless Gaming Headset"',
     timestamp: new Date(Date.now() - 300000),
     read: false,
     priority: 'high'
@@ -64,8 +64,8 @@ const mockNotifications = [
   {
     id: 2,
     type: 'sale',
-    title: 'NFT sold successfully',
-    message: '"Digital Landscape #42" has been sold for 1.8 ETH',
+    title: 'Product sold successfully',
+    message: '"Vintage Leather Wallet" has been sold for $75.99',
     timestamp: new Date(Date.now() - 3600000),
     read: false,
     priority: 'high'
@@ -74,7 +74,7 @@ const mockNotifications = [
     id: 3,
     type: 'follow',
     title: 'New follower',
-    message: 'CryptoArtist started following you',
+    message: 'ElectronicsStore started following you',
     timestamp: new Date(Date.now() - 7200000),
     read: true,
     priority: 'low'
@@ -631,7 +631,7 @@ const NotificationItem = ({ notification, type, onMarkRead, onDelete }) => {
 
         .notification-icon.purple {
           background: rgba(139, 92, 246, 0.2);
-          color: var(--nft-purple);
+          color: #8b5cf6;
         }
 
         .notification-icon.red {

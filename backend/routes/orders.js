@@ -5,6 +5,7 @@ const notificationService = require('../services/notificationService');
 const shippingService = require('../services/shippingService');
 const { auth, adminAuth } = require('../middleware/auth');
 const { body, param, query, validationResult } = require('express-validator');
+const logger = require('../config/logger');
 
 const router = express.Router();
 
