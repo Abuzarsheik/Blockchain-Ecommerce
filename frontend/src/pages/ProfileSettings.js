@@ -23,6 +23,7 @@ import { api } from '../services/api';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { logger } from '../utils/logger';
+import { logDebug, logError } from '../utils/logger.production';
 
 const ProfileSettings = () => {
     // Profile Settings Component - Updated
@@ -580,12 +581,10 @@ const ProfileSettings = () => {
     const handleKycPersonalInfo = async (e) => {
         e.preventDefault();
         
-        // Clear previous errors
-        setFormErrors({});
-        
-        // Validate form before submission
-        if (!validateKYCForm()) {
-            toast.error('Please fix the form errors before continuing');
+        const errors = validateKYCForm();
+        if (Object.keys(errors).length > 0) {
+            setFormErrors(errors);
+            toast.error('Please fix all validation errors before submitting');
             return;
         }
 
@@ -597,8 +596,8 @@ const ProfileSettings = () => {
         try {
             setSaving(true);
             
-            // Log the data being sent for debugging
-            console.log('Sending KYC personal info:', kyc.personalInfo);
+            // Remove debug logging for production
+            logDebug('Sending KYC personal info:', kyc.personalInfo);
             
             // Add timeout to the request
             const timeout = new Promise((_, reject) =>
@@ -616,8 +615,8 @@ const ProfileSettings = () => {
         } catch (error) {
             const errorMessage = handleApiError(error, 'Saving KYC personal info');
             
-            // Log detailed error information for debugging
-            console.error('KYC Error Details:', {
+            // Log detailed error information for debugging (development only)
+            logError('KYC Error Details:', {
                 status: error.response?.status,
                 statusText: error.response?.statusText,
                 data: error.response?.data,
@@ -701,7 +700,7 @@ const ProfileSettings = () => {
                     },
                     onUploadProgress: (progressEvent) => {
                         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                        console.log(`Upload progress: ${progress}%`);
+                        logDebug(`Upload progress: ${progress}%`);
                     }
                 }),
                 timeout

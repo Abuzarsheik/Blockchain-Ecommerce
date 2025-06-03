@@ -4,6 +4,7 @@ import { User, Mail, Phone, MapPin, Edit3, Camera, Wallet, Award, TrendingUp } f
 import { toast } from 'react-toastify';
 import { useSelector } from 'react-redux';
 import { logger } from '../utils/logger';
+import { generateUserAvatar } from '../utils/imageUtils';
 
 const UserProfile = () => {
   const { user, isAuthenticated } = useSelector(state => state.auth);
@@ -90,7 +91,7 @@ const UserProfile = () => {
           <div className="profile-avatar-section">
             <div className="profile-avatar">
               <img 
-                src={user?.avatar || '/api/placeholder/120/120'} 
+                src={user?.avatar || generateUserAvatar(user?.firstName, user?.lastName)} 
                 alt="Profile"
               />
               <button className="avatar-edit-btn">

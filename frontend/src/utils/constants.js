@@ -77,11 +77,13 @@ export const ORDER_STATUS = {
 };
 
 // Default export for convenience
-export default {
+const constants = {
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_LABELS,
   getCategoryOptions,
   PRODUCT_STATUS,
   PRODUCT_STATUS_LABELS,
   ORDER_STATUS
-}; 
+};
+
+export default constants; 

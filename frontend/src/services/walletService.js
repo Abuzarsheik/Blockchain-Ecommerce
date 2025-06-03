@@ -1,17 +1,6 @@
 import { api } from './api';
-import { blockchainService } from './blockchain';
-import { ethers } from 'ethers';
-import { toast } from 'react-toastify';
 import { logger } from '../utils/logger';
-
-// Mock ethers for build compatibility
-const mockEthers = {
-  BrowserProvider: class MockBrowserProvider {},
-  formatEther: (value) => value,
-  parseEther: (value) => value,
-  isAddress: (address) => typeof address === 'string' && address.length === 42,
-  Contract: class MockContract {}
-};
+import { ethers } from 'ethers';
 
 // Supported wallet types
 export const WALLET_TYPES = {
@@ -175,7 +164,8 @@ class WalletService {
    */
   async connectMetaMask() {
     if (!this.isMetaMaskInstalled()) {
-      throw new Error('MetaMask is not installed');
+      const installMessage = 'MetaMask is not installed. Please install MetaMask extension from https://metamask.io';
+      throw new Error(installMessage);
     }
 
     try {
@@ -185,7 +175,7 @@ class WalletService {
       });
 
       if (accounts.length === 0) {
-        throw new Error('No accounts found');
+        throw new Error('No accounts found. Please unlock MetaMask and try again.');
       }
 
       this.account = accounts[0];
@@ -199,20 +189,38 @@ class WalletService {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
+      // Store wallet info
       this.connectedWallet = {
+        type: WALLET_TYPES.METAMASK,
+        name: 'MetaMask',
         account: this.account,
+        address: this.account,
         chainId: this.chainId,
         provider,
         signer
       };
 
+      // Load initial balances
       await this.loadBalances();
+
+      // Set up event listeners
+      this.setupEventListeners();
+
+      // Record connection in backend
       await this.recordConnection();
 
+      logger.info('✅ MetaMask connected successfully:', this.account);
       return this.connectedWallet;
+
     } catch (error) {
-      logger.error('Failed to connect MetaMask:', error);
-      throw error;
+      logger.error('❌ MetaMask connection failed:', error);
+      if (error.code === 4001) {
+        throw new Error('Connection rejected by user. Please try again and approve the connection.');
+      } else if (error.code === -32002) {
+        throw new Error('MetaMask is already processing a request. Please check MetaMask and try again.');
+      } else {
+        throw new Error(`Failed to connect to MetaMask: ${error.message}`);
+      }
     }
   }
 
@@ -246,11 +254,21 @@ class WalletService {
   }
 
   /**
-   * Connect WalletConnect (placeholder for future implementation)
+   * Connect WalletConnect wallet
    */
   async connectWalletConnect() {
-    // This would implement WalletConnect integration
-    throw new Error('WalletConnect integration coming soon');
+    // For now, provide a fallback that works with any injected wallet
+    try {
+      if (typeof window.ethereum !== 'undefined') {
+        // Use the same method as MetaMask for now
+        return await this.connectMetaMask();
+      } else {
+        throw new Error('No wallet detected. Please install MetaMask or another Web3 wallet.');
+      }
+    } catch (error) {
+      logger.error('WalletConnect fallback failed:', error);
+      throw new Error('WalletConnect integration is being updated. Please use MetaMask for now.');
+    }
   }
 
   /**
@@ -604,6 +622,43 @@ class WalletService {
   }
 
   /**
+   * Set up event listeners for wallet
+   */
+  setupEventListeners() {
+    if (!this.ethereum) return;
+
+    // Listen for account changes
+    this.ethereum.on('accountsChanged', (accounts) => {
+      if (accounts.length === 0) {
+        logger.info('🔓 Wallet disconnected');
+        this.disconnect();
+      } else {
+        this.account = accounts[0];
+        if (this.connectedWallet) {
+          this.connectedWallet.account = accounts[0];
+          this.connectedWallet.address = accounts[0];
+        }
+        logger.info('🔄 Account changed to:', accounts[0]);
+      }
+    });
+
+    // Listen for chain changes
+    this.ethereum.on('chainChanged', (chainId) => {
+      this.chainId = chainId;
+      if (this.connectedWallet) {
+        this.connectedWallet.chainId = chainId;
+      }
+      logger.info('🔄 Chain changed to:', chainId);
+    });
+
+    // Listen for disconnection
+    this.ethereum.on('disconnect', (error) => {
+      logger.info('🔓 Wallet disconnected:', error);
+      this.disconnect();
+    });
+  }
+
+  /**
    * Record wallet connection for analytics
    */
   async recordConnection() {
@@ -686,6 +741,17 @@ class WalletService {
   }
 
   /**
+   * Format wallet address for display (truncated)
+   * @param {string} address - Address to format
+   * @returns {string} Formatted address
+   */
+  formatAddress(address) {
+    if (!address) return '';
+    if (address.length <= 10) return address;
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  }
+
+  /**
    * Validate wallet address
    * @param {string} address - Address to validate
    * @param {string} currency - Currency type
@@ -697,13 +763,14 @@ class WalletService {
              /^bc1[a-z0-9]{39,59}$/.test(address);
     } else {
       // Ethereum address validation
-      return this.ethereum.isAddress(address);
+      return ethers.isAddress(address);
     }
   }
 
   // Check if MetaMask is installed
   isMetaMaskInstalled() {
-    return typeof window.ethereum !== 'undefined';
+    return typeof window.ethereum !== 'undefined' && 
+           (window.ethereum.isMetaMask || window.ethereum.providers?.some(provider => provider.isMetaMask));
   }
 
   // Get account balance

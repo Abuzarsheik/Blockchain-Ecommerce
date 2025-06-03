@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import './PersonalizedRecommendations.css';
 import { logger } from '../utils/logger';
+import { getImageUrl } from '../config/api';
 
 const PersonalizedRecommendations = ({ insights = {}, user, realProducts = [], isNewUser = false }) => {
   const [recommendations, setRecommendations] = useState([]);
@@ -37,7 +38,7 @@ const PersonalizedRecommendations = ({ insights = {}, user, realProducts = [], i
         title: product.name,
         type: 'product',
         image: product.images && product.images[0] 
-          ? `http://localhost:5001${product.images[0].url}`
+          ? getImageUrl(product.images[0].url)
           : '/api/placeholder/200/200',
         price: product.price,
         score: Math.min(95, 70 + Math.floor(Math.random() * 25)),
@@ -57,7 +58,7 @@ const PersonalizedRecommendations = ({ insights = {}, user, realProducts = [], i
         title: product.name,
         type: 'product',
         image: product.images && product.images[0] 
-          ? `http://localhost:5001${product.images[0].url}`
+          ? getImageUrl(product.images[0].url)
           : '/api/placeholder/200/200',
         price: product.price,
         score: Math.min(92, 65 + Math.floor(Math.random() * 27)),
@@ -77,7 +78,7 @@ const PersonalizedRecommendations = ({ insights = {}, user, realProducts = [], i
         title: product.name,
         type: 'product',
         image: product.images && product.images[0] 
-          ? `http://localhost:5001${product.images[0].url}`
+          ? getImageUrl(product.images[0].url)
           : '/api/placeholder/200/200',
         price: product.price,
         score: Math.min(98, 75 + Math.floor(Math.random() * 23)),

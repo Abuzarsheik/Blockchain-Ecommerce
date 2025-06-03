@@ -3,7 +3,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import OrderTracking from '../components/OrderTracking';
 import React, { useEffect, useState } from 'react';
 import { fetchOrderById } from '../store/slices/ordersSlice';
-import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
+import { getImageUrl, handleImageError } from '../utils/imageUtils';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
@@ -21,7 +21,14 @@ import {
   User,
   Mail,
   Phone,
-  ExternalLink
+  ExternalLink,
+  Shield,
+  Link as LinkIcon,
+  Eye,
+  Copy,
+  Info,
+  Zap,
+  Lock
 } from 'lucide-react';
 
 const OrderDetail = () => {
@@ -31,12 +38,30 @@ const OrderDetail = () => {
   
   const { currentOrder: order, loading, error } = useSelector(state => state.orders);
   const [showTracking, setShowTracking] = useState(false);
+  const [blockchainLoading, setBlockchainLoading] = useState(false);
+  const [blockchainError, setBlockchainError] = useState(null);
+  const [copySuccess, setCopySuccess] = useState('');
 
   useEffect(() => {
     if (orderId) {
+      console.log('🔍 Fetching order with ID:', orderId);
       dispatch(fetchOrderById(orderId));
     }
   }, [dispatch, orderId]);
+
+  // Debug: Log order data when it changes
+  useEffect(() => {
+    if (order) {
+      console.log('📦 Order Data Received:', order);
+      console.log('🔗 Blockchain Fields Check:', {
+        blockchainTx: order.blockchainTx,
+        escrowId: order.escrowId,
+        escrow_tx_hash: order.escrow_tx_hash,
+        escrow_id: order.escrow_id,
+        payment_method: order.payment_method
+      });
+    }
+  }, [order]);
 
   const getStatusIcon = (status) => {
     switch (status?.toLowerCase()) {
@@ -84,11 +109,14 @@ const OrderDetail = () => {
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      month: 'short',
+      day: 'numeric'
     });
+  };
+
+  const formatCurrency = (value) => {
+    const numValue = parseFloat(value);
+    return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
   };
 
   const hasTrackingInfo = () => {
@@ -98,6 +126,94 @@ const OrderDetail = () => {
   const isTrackableStatus = () => {
     const trackableStatuses = ['shipped', 'in_transit', 'out_for_delivery', 'delivered'];
     return trackableStatuses.includes(order?.status?.toLowerCase());
+  };
+
+  const hasBlockchainData = () => {
+    const result = order?.blockchainTx || order?.escrowId || order?.escrow_tx_hash;
+    
+    // Debug: Log blockchain data check
+    console.log('🔍 Blockchain Data Check:', {
+      orderNumber: order?.orderNumber,
+      blockchainTx: order?.blockchainTx,
+      escrowId: order?.escrowId,  
+      escrow_tx_hash: order?.escrow_tx_hash,
+      hasData: !!result
+    });
+    
+    return result;
+  };
+
+  const isEscrowOrder = () => {
+    return order?.payment_method === 'escrow' || order?.escrowId || order?.escrow_id;
+  };
+
+  const copyToClipboard = async (text, type) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopySuccess(type);
+      setTimeout(() => setCopySuccess(''), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const getBlockchainExplorerUrl = (txHash, network = 'ethereum') => {
+    const explorers = {
+      ethereum: `https://etherscan.io/tx/${txHash}`,
+      sepolia: `https://sepolia.etherscan.io/tx/${txHash}`,
+      polygon: `https://polygonscan.com/tx/${txHash}`,
+      mumbai: `https://mumbai.polygonscan.com/tx/${txHash}`,
+      bsc: `https://bscscan.com/tx/${txHash}`,
+      bscTestnet: `https://testnet.bscscan.com/tx/${txHash}`
+    };
+    
+    return explorers[network] || explorers.ethereum;
+  };
+
+  const getContractExplorerUrl = (contractAddress, network = 'ethereum') => {
+    const explorers = {
+      ethereum: `https://etherscan.io/address/${contractAddress}`,
+      sepolia: `https://sepolia.etherscan.io/address/${contractAddress}`,
+      polygon: `https://polygonscan.com/address/${contractAddress}`,
+      mumbai: `https://mumbai.polygonscan.com/address/${contractAddress}`,
+      bsc: `https://bscscan.com/address/${contractAddress}`,
+      bscTestnet: `https://testnet.bscscan.com/address/${contractAddress}`
+    };
+    
+    return explorers[network] || explorers.ethereum;
+  };
+
+  const getCurrentNetwork = () => {
+    const networkId = process.env.REACT_APP_NETWORK_ID || '11155111';
+    const networks = {
+      '1': 'ethereum',
+      '11155111': 'sepolia',
+      '137': 'polygon', 
+      '80001': 'mumbai',
+      '56': 'bsc',
+      '97': 'bscTestnet'
+    };
+    
+    return networks[networkId] || 'sepolia';
+  };
+
+  const getNetworkDisplayName = () => {
+    const network = getCurrentNetwork();
+    const names = {
+      ethereum: 'Ethereum Mainnet',
+      sepolia: 'Sepolia Testnet',
+      polygon: 'Polygon Mainnet',
+      mumbai: 'Mumbai Testnet',
+      bsc: 'BSC Mainnet',
+      bscTestnet: 'BSC Testnet'
+    };
+    
+    return names[network] || 'Unknown Network';
+  };
+
+  const formatHash = (hash) => {
+    if (!hash) return 'N/A';
+    return `${hash.slice(0, 8)}...${hash.slice(-8)}`;
   };
 
   if (loading) {
@@ -169,7 +285,7 @@ const OrderDetail = () => {
                 <DollarSign size={16} />
                 <div>
                   <span className="label">Total Amount</span>
-                  <span className="value">${order.total.toFixed(2)}</span>
+                  <span className="value">${formatCurrency(order.total)}</span>
                 </div>
               </div>
               <div className="info-item">
@@ -280,6 +396,209 @@ const OrderDetail = () => {
             </div>
           )}
 
+          {/* Enhanced Blockchain Verification Section */}
+          {hasBlockchainData() && (
+            <div className="blockchain-verification-card">
+              <div className="blockchain-header">
+                <div className="blockchain-title">
+                  <Shield size={24} className="blockchain-shield-icon" />
+                  <div>
+                    <h2>Blockchain Verification</h2>
+                    <p className="blockchain-subtitle">
+                      This order is secured and verified on the {getNetworkDisplayName()}
+                    </p>
+                  </div>
+                </div>
+                <div className="blockchain-status-badge">
+                  <CheckCircle size={16} />
+                  <span>Verified</span>
+                </div>
+              </div>
+
+              <div className="verification-description">
+                <Info size={16} />
+                <div>
+                  <p>
+                    Your transaction is permanently recorded on the blockchain, providing complete 
+                    transparency and immutability. Use the verification tools below to independently 
+                    confirm your order's authenticity.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="blockchain-info-grid">
+                {(order.blockchainTx || order.escrow_tx_hash) && (
+                  <div className="blockchain-item transaction-item">
+                    <div className="blockchain-item-header">
+                      <div className="item-icon">
+                        <LinkIcon size={20} />
+                      </div>
+                      <div className="item-title">
+                        <h3>Transaction Hash</h3>
+                        <p>Blockchain transaction identifier</p>
+                      </div>
+                    </div>
+                    
+                    <div className="blockchain-item-content">
+                      <div className="hash-display">
+                        <span className="hash-value">
+                          {formatHash(order.blockchainTx || order.escrow_tx_hash)}
+                        </span>
+                        <button 
+                          onClick={() => copyToClipboard(order.blockchainTx || order.escrow_tx_hash, 'tx')}
+                          className="copy-button"
+                          title="Copy full transaction hash"
+                        >
+                          <Copy size={14} />
+                          {copySuccess === 'tx' && <span className="copy-success">Copied!</span>}
+                        </button>
+                      </div>
+                      
+                      <div className="blockchain-actions">
+                        <Link 
+                          to={`/blockchain/verify/${order.blockchainTx || order.escrow_tx_hash}`}
+                          className="btn-verify internal"
+                        >
+                          <Eye size={16} />
+                          <span>Verify Transaction</span>
+                        </Link>
+                        <a 
+                          href={getBlockchainExplorerUrl(order.blockchainTx || order.escrow_tx_hash, getCurrentNetwork())}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-verify external"
+                        >
+                          <ExternalLink size={16} />
+                          <span>View on Explorer</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {order.escrowId && (
+                  <div className="blockchain-item escrow-item">
+                    <div className="blockchain-item-header">
+                      <div className="item-icon escrow-icon">
+                        <Shield size={20} />
+                      </div>
+                      <div className="item-title">
+                        <h3>Smart Contract Escrow</h3>
+                        <p>Secure fund management contract</p>
+                      </div>
+                    </div>
+                    
+                    <div className="blockchain-item-content">
+                      <div className="hash-display">
+                        <span className="hash-value">
+                          {formatHash(order.escrowId)}
+                        </span>
+                        <button 
+                          onClick={() => copyToClipboard(order.escrowId, 'escrow')}
+                          className="copy-button"
+                          title="Copy contract address"
+                        >
+                          <Copy size={14} />
+                          {copySuccess === 'escrow' && <span className="copy-success">Copied!</span>}
+                        </button>
+                      </div>
+                      
+                      <div className="blockchain-actions">
+                        <Link 
+                          to={`/escrow/details/${order.escrowId}`}
+                          className="btn-verify internal"
+                        >
+                          <Eye size={16} />
+                          <span>View Contract Details</span>
+                        </Link>
+                        <a 
+                          href={getContractExplorerUrl(order.escrowId, getCurrentNetwork())}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-verify external"
+                        >
+                          <ExternalLink size={16} />
+                          <span>View on Explorer</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {isEscrowOrder() && (
+                  <div className="blockchain-item security-features-item">
+                    <div className="blockchain-item-header">
+                      <div className="item-icon security-icon">
+                        <Lock size={20} />
+                      </div>
+                      <div className="item-title">
+                        <h3>Security Guarantees</h3>
+                        <p>Blockchain-powered protection</p>
+                      </div>
+                    </div>
+                    
+                    <div className="blockchain-item-content">
+                      <div className="security-features">
+                        <div className="feature">
+                          <CheckCircle size={16} className="feature-icon" />
+                          <div className="feature-content">
+                            <span className="feature-title">Escrow Protection</span>
+                            <span className="feature-desc">Funds secured in smart contract</span>
+                          </div>
+                        </div>
+                        <div className="feature">
+                          <Zap size={16} className="feature-icon" />
+                          <div className="feature-content">
+                            <span className="feature-title">Instant Verification</span>
+                            <span className="feature-desc">Real-time blockchain confirmation</span>
+                          </div>
+                        </div>
+                        <div className="feature">
+                          <Shield size={16} className="feature-icon" />
+                          <div className="feature-content">
+                            <span className="feature-title">Dispute Resolution</span>
+                            <span className="feature-desc">Automated conflict handling</span>
+                          </div>
+                        </div>
+                        <div className="feature">
+                          <Package size={16} className="feature-icon" />
+                          <div className="feature-content">
+                            <span className="feature-title">Delivery Guarantee</span>
+                            <span className="feature-desc">Complete buyer protection</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="verification-footer">
+                <div className="network-info">
+                  <div className="network-badge">
+                    <div className="network-indicator"></div>
+                    <span>{getNetworkDisplayName()}</span>
+                  </div>
+                  <span className="network-desc">
+                    All transactions are publicly verifiable and immutable
+                  </span>
+                </div>
+                
+                <div className="help-section">
+                  <AlertCircle size={16} />
+                  <div>
+                    <span className="help-text">
+                      Need help understanding blockchain verification?
+                    </span>
+                    <Link to="/help" className="help-link">
+                      Learn More
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Order Items */}
           <div className="order-items-card">
             <h2>Order Items ({order.items?.length || 0})</h2>
@@ -288,7 +607,7 @@ const OrderDetail = () => {
                 <div key={index} className="order-item">
                   <div className="item-image">
                     <img 
-                      src={getNFTImageUrl(item.image)} 
+                      src={getImageUrl(item.image)} 
                       alt={item.name}
                       onError={handleImageError}
                     />
@@ -298,11 +617,11 @@ const OrderDetail = () => {
                     <p className="item-category">{item.category}</p>
                     <div className="item-price-qty">
                       <span className="quantity">Qty: {item.quantity}</span>
-                      <span className="price">${item.price.toFixed(2)} each</span>
+                      <span className="price">${formatCurrency(item.price)} each</span>
                     </div>
                   </div>
                   <div className="item-total">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    ${formatCurrency(item.price * item.quantity)}
                   </div>
                 </div>
               ))}
@@ -312,25 +631,25 @@ const OrderDetail = () => {
             <div className="price-breakdown">
               <div className="price-row">
                 <span>Subtotal</span>
-                <span>${order.subtotal?.toFixed(2) || '0.00'}</span>
+                <span>${formatCurrency(order.subtotal)}</span>
               </div>
               {order.discount > 0 && (
                 <div className="price-row discount">
                   <span>Discount</span>
-                  <span>-${order.discount.toFixed(2)}</span>
+                  <span>-${formatCurrency(order.discount)}</span>
                 </div>
               )}
               <div className="price-row">
                 <span>Shipping</span>
-                <span>${order.shipping_cost?.toFixed(2) || '0.00'}</span>
+                <span>${formatCurrency(order.shipping_cost)}</span>
               </div>
               <div className="price-row">
                 <span>Tax</span>
-                <span>${order.tax?.toFixed(2) || '0.00'}</span>
+                <span>${formatCurrency(order.tax)}</span>
               </div>
               <div className="price-row total">
                 <span>Total</span>
-                <span>${order.total.toFixed(2)}</span>
+                <span>${formatCurrency(order.total)}</span>
               </div>
             </div>
           </div>

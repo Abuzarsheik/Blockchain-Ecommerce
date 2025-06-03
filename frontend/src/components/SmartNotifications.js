@@ -15,6 +15,7 @@ import {
   Filter
 } from 'lucide-react';
 import { logger } from '../utils/logger';
+import { getWebSocketUrl } from '../config/api';
 
 // Notification types configuration - moved outside component to prevent re-renders
 const notificationTypes = {
@@ -87,6 +88,7 @@ const SmartNotifications = ({ isOpen, onClose, userId }) => {
   const [filter, setFilter] = useState('all');
   const notificationRef = useRef(null);
   const wsRef = useRef(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   // Fetch initial notifications
   const fetchNotifications = useCallback(async () => {
@@ -112,35 +114,43 @@ const SmartNotifications = ({ isOpen, onClose, userId }) => {
 
   // WebSocket connection for real-time notifications
   useEffect(() => {
-    if (!userId || !isOpen) return;
-
-    const ws = new WebSocket(`ws://localhost:5000/notifications/${userId}`);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-    };
-
-    ws.onmessage = (event) => {
-      const notification = JSON.parse(event.data);
-      setNotifications(prev => [notification, ...prev]);
+    if (userId && isOpen) {
+      // Connect to WebSocket for real-time notifications
+      const ws = new WebSocket(getWebSocketUrl(`/notifications/${userId}`));
       
-      // Show toast for important notifications
-      if (notification.priority === 'high') {
-        toast.success(notification.message, {
-          icon: notificationTypes[notification.type]?.icon
-        });
-      }
-    };
-
-    ws.onerror = (error) => {
-      logger.error('WebSocket error:', error);
-    };
-
-    return () => {
-      if (ws.readyState === WebSocket.OPEN) {
+      ws.onopen = () => {
+        setIsConnected(true);
+        logger.info('WebSocket connected for notifications');
+      };
+      
+      ws.onmessage = (event) => {
+        const notification = JSON.parse(event.data);
+        setNotifications(prev => [notification, ...prev]);
+        
+        // Show toast for important notifications
+        if (notification.priority === 'high') {
+          toast.success(notification.message, {
+            icon: notificationTypes[notification.type]?.icon
+          });
+        }
+      };
+      
+      ws.onclose = () => {
+        setIsConnected(false);
+        logger.info('WebSocket disconnected');
+      };
+      
+      ws.onerror = (error) => {
+        logger.error('WebSocket error:', error);
+        setIsConnected(false);
+      };
+      
+      wsRef.current = ws;
+      
+      return () => {
         ws.close();
-      }
-    };
+      };
+    }
   }, [userId, isOpen]);
 
   useEffect(() => {

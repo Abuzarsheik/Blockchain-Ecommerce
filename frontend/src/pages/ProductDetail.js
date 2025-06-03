@@ -1,29 +1,29 @@
 import '../styles/ProductDetail.css';
-import BlockchainVerification from '../components/BlockchainVerification';
-import LoadingSpinner from '../components/LoadingSpinner';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { logDebug, logError } from '../utils/logger.production';
 import { 
-  ArrowLeft, 
   Heart, 
   Share2, 
-  Shield, 
-  Verified, 
-  Star, 
   ShoppingCart, 
-  Eye,
-  ExternalLink,
+  Star, 
+  ArrowLeft, 
+  Shield,
+  Truck,
   ChevronLeft,
   ChevronRight,
-  Zap,
-  Award,
-  TrendingUp,
+  Verified,
+  Eye,
   Package,
-  Truck
+  Zap
 } from 'lucide-react';
+import BlockchainVerification from '../components/BlockchainVerification';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { getApiUrl, getImageUrl } from '../config/api';
+import { generatePlaceholder, handleImageError, generateUserAvatar } from '../utils/imageUtils';
 import { addToCart } from '../store/slices/cartSlice';
 import { toast } from 'react-toastify';
-import { useDispatch, useSelector } from 'react-redux';
-import { useParams, useNavigate } from 'react-router-dom';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -46,44 +46,44 @@ const ProductDetail = () => {
   // Check if user is a seller (sellers shouldn't see purchase options)
   const isSeller = user?.userType === 'seller' && user?.role !== 'admin';
 
-  useEffect(() => {
-    fetchProduct();
-  }, [id]);
-
-  const fetchProduct = async () => {
+  const fetchProduct = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 ProductDetail - Fetching product');
-      console.log('- Product ID from useParams:', id);
-      console.log('- ID type:', typeof id);
-      console.log('- Current URL:', window.location.href);
+      logDebug('ProductDetail - Fetching product');
+      logDebug('Product ID from useParams:', id);
+      logDebug('ID type:', typeof id);
+      logDebug('Current URL:', window.location.href);
       
-      const apiUrl = `http://localhost:5000/api/products/${id}`;
-      console.log('- API URL:', apiUrl);
+      const apiUrl = getApiUrl(`/products/${id}`);
+      logDebug('API URL:', apiUrl);
       
       const response = await fetch(apiUrl);
       
-      console.log('- Response status:', response.status);
-      console.log('- Response ok:', response.ok);
+      logDebug('Response status:', response.status);
+      logDebug('Response ok:', response.ok);
       
       if (!response.ok) {
         const errorData = await response.json();
-        console.log('- Error response:', errorData);
+        logDebug('Error response:', errorData);
         throw new Error('Product not found');
       }
       
       const data = await response.json();
-      console.log('- Response data:', data);
+      logDebug('Response data:', data);
       setProduct(data.product);
     } catch (err) {
-      console.error('Error fetching product:', err);
+      logError('Error fetching product:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchProduct();
+  }, [fetchProduct]);
 
   const handleAddToCart = () => {
     if (!user) {
@@ -96,12 +96,23 @@ const ProductDetail = () => {
       toast.info('Sellers cannot purchase items. You can view and manage your own products instead.');
       return;
     }
+
+    // Get product ID from available fields
+    const productId = product._id || product.id;
+    
+    if (!productId) {
+      console.error('Product missing ID fields:', product);
+      toast.error('Unable to add product to cart - missing product ID');
+      return;
+    }
+    
+    console.log('Adding to cart - Product ID:', productId, 'Product:', product);
     
     dispatch(addToCart({
-      productId: product._id,
+      productId: productId,
       name: product.name,
       price: product.price,
-      image: product.images?.[0]?.url ? `http://localhost:5000${product.images[0].url}` : null,
+      image: getImageUrl(product.images?.[0]?.url),
       category: product.category,
       quantity: quantity,
       stock: product.inventory?.quantity || 0,
@@ -122,12 +133,21 @@ const ProductDetail = () => {
       toast.info('Sellers cannot purchase items. You can view and manage your own products instead.');
       return;
     }
+
+    // Get product ID from available fields
+    const productId = product._id || product.id;
+    
+    if (!productId) {
+      console.error('Product missing ID fields:', product);
+      toast.error('Unable to purchase product - missing product ID');
+      return;
+    }
     
     dispatch(addToCart({
-      productId: product._id,
+      productId: productId,
       name: product.name,
       price: product.price,
-      image: product.images?.[0]?.url ? `http://localhost:5000${product.images[0].url}` : null,
+      image: getImageUrl(product.images?.[0]?.url),
       category: product.category,
       quantity: quantity,
       stock: product.inventory?.quantity || 0,
@@ -146,7 +166,7 @@ const ProductDetail = () => {
           url: window.location.href,
         });
       } catch (err) {
-        console.log('Error sharing:', err);
+        logDebug('Error sharing:', err);
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
@@ -166,18 +186,29 @@ const ProductDetail = () => {
     );
   };
 
-  const getImageUrl = (imageObj) => {
-    if (imageObj && imageObj.url) {
-      return `http://localhost:5000${imageObj.url}`;
+  const getProductImageUrl = (imageObj) => {
+    if (!imageObj) {
+      return generatePlaceholder(400, 400, 'Product Image');
     }
-    return '/api/placeholder/400/400';
+    
+    // If it's an object with url property, extract the url
+    if (typeof imageObj === 'object' && imageObj.url) {
+      return getImageUrl(imageObj.url);
+    }
+    
+    // If it's just a string, use it directly
+    if (typeof imageObj === 'string') {
+      return getImageUrl(imageObj);
+    }
+    
+    return generatePlaceholder(400, 400, 'Product Image');
   };
 
   const getMainImageUrl = () => {
     if (product?.images && product.images.length > 0) {
-      return getImageUrl(product.images[selectedImageIndex]);
+      return getProductImageUrl(product.images[selectedImageIndex]);
     }
-    return '/api/placeholder/400/400';
+    return generatePlaceholder(400, 400, 'Product Image');
   };
 
   const formatPrice = (price) => {
@@ -289,7 +320,7 @@ const ProductDetail = () => {
               {product.images.map((image, index) => (
                 <img
                   key={index}
-                  src={getImageUrl(image)}
+                  src={getProductImageUrl(image)}
                   alt={`${product.name} ${index + 1}`}
                   className={`thumbnail ${index === selectedImageIndex ? 'active' : ''}`}
                   onClick={() => setSelectedImageIndex(index)}
@@ -334,9 +365,10 @@ const ProductDetail = () => {
           {/* Seller Info */}
           <div className="creator-info">
             <img 
-              src={product.seller?.avatar || '/api/placeholder/40/40'} 
+              src={product.seller?.avatar || generateUserAvatar(product.seller?.firstName || 'Seller', 40)} 
               alt={product.seller?.firstName || 'Seller'}
               className="creator-avatar"
+              onError={handleImageError}
             />
             <div className="creator-details">
               <span className="creator-label">Sold by</span>
@@ -589,9 +621,10 @@ const ProductDetail = () => {
               <div className="seller-details">
                 <div className="seller-profile">
                   <img 
-                    src={product.seller?.avatar || '/api/placeholder/80/80'} 
+                    src={product.seller?.avatar || generateUserAvatar(product.seller?.firstName || 'Seller', 80)} 
                     alt="Seller avatar"
                     className="seller-avatar-large"
+                    onError={handleImageError}
                   />
                   <div className="seller-info">
                     <h4>

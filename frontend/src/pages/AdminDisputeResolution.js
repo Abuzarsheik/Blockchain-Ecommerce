@@ -1,29 +1,22 @@
 import '../styles/AdminDisputeResolution.css';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { 
   AlertTriangle,
-  Users,
   Clock,
-  CheckCircle,
-  X,
   Eye,
   MessageSquare,
   DollarSign,
   User,
   Package,
   Calendar,
-  Filter,
   Search,
-  FileText,
   Scale,
-  Shield,
-  Send,
   ArrowLeft,
-  Star,
   Download
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { getApiUrl } from '../config/api';
+import { logError } from '../utils/logger.production';
 
 const AdminDisputeResolution = () => {
   const [disputes, setDisputes] = useState([]);
@@ -31,8 +24,8 @@ const AdminDisputeResolution = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [resolutionNotes, setResolutionNotes] = useState({});
   const [resolution, setResolution] = useState('');
-  const [processing, setProcessing] = useState(false);
 
   const disputeStatuses = [
     { value: 'all', label: 'All Disputes', color: 'gray' },
@@ -51,10 +44,9 @@ const AdminDisputeResolution = () => {
   const fetchDisputes = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/admin/disputes', {
+      const response = await fetch(getApiUrl('/admin/disputes'), {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         }
       });
@@ -66,42 +58,7 @@ const AdminDisputeResolution = () => {
         throw new Error('Failed to fetch disputes');
       }
     } catch (error) {
-      console.error('Error fetching disputes:', error);
-      toast.error('Failed to load disputes');
-      // Mock data for demonstration
-      setDisputes([
-        {
-          id: 'DISP001',
-          title: 'Payment not received',
-          description: 'Seller claims payment was not received for order #12345',
-          status: 'open',
-          priority: 'high',
-          createdAt: new Date().toISOString(),
-          buyer: { id: 'buyer1', name: 'John Doe', email: 'john@example.com' },
-          seller: { id: 'seller1', name: 'Tech Store', email: 'store@example.com' },
-          order: { id: 'ORD12345', amount: 299.99, product: 'Gaming Laptop' },
-          messages: [
-            {
-              id: 1,
-              sender: 'buyer',
-              message: 'I paid for this order but seller says they didn\'t receive payment',
-              timestamp: new Date().toISOString()
-            }
-          ]
-        },
-        {
-          id: 'DISP002',
-          title: 'Product not as described',
-          description: 'Buyer received damaged product',
-          status: 'investigating',
-          priority: 'medium',
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          buyer: { id: 'buyer2', name: 'Jane Smith', email: 'jane@example.com' },
-          seller: { id: 'seller2', name: 'Electronics Hub', email: 'hub@example.com' },
-          order: { id: 'ORD12346', amount: 89.99, product: 'Wireless Headphones' },
-          messages: []
-        }
-      ]);
+      logError('Error fetching disputes:', error);
     } finally {
       setLoading(false);
     }
@@ -124,56 +81,56 @@ const AdminDisputeResolution = () => {
 
   const handleResolveDispute = async (disputeId, resolution) => {
     try {
-      setProcessing(true);
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`http://localhost:5000/api/admin/disputes/${disputeId}/resolve`, {
+      const response = await fetch(getApiUrl(`/admin/disputes/${disputeId}/resolve`), {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ resolution })
+        body: JSON.stringify({
+          resolution,
+          adminNotes: resolutionNotes[disputeId] || ''
+        })
       });
 
       if (response.ok) {
         toast.success('Dispute resolved successfully');
-        fetchDisputes();
-        setSelectedDispute(null);
-        setResolution('');
+        fetchDisputes(); // Refresh the list
+        setResolutionNotes(prev => ({
+          ...prev,
+          [disputeId]: ''
+        }));
       } else {
-        throw new Error('Failed to resolve dispute');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to resolve dispute');
       }
     } catch (error) {
-      console.error('Error resolving dispute:', error);
+      logError('Error resolving dispute:', error);
       toast.error('Failed to resolve dispute');
-    } finally {
-      setProcessing(false);
     }
   };
 
-  const handleStatusChange = async (disputeId, newStatus) => {
+  const handleStatusUpdate = async (disputeId, newStatus) => {
     try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`http://localhost:5000/api/admin/disputes/${disputeId}/status`, {
+      const response = await fetch(getApiUrl(`/admin/disputes/${disputeId}/status`), {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ status: newStatus })
       });
 
       if (response.ok) {
-        toast.success('Status updated successfully');
-        fetchDisputes();
+        toast.success('Dispute status updated');
+        fetchDisputes(); // Refresh the list
       } else {
-        throw new Error('Failed to update status');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update status');
       }
     } catch (error) {
-      console.error('Error updating status:', error);
-      toast.error('Failed to update status');
+      logError('Error updating status:', error);
+      toast.error('Failed to update dispute status');
     }
   };
 
@@ -331,7 +288,7 @@ const AdminDisputeResolution = () => {
                   <label>Update Status:</label>
                   <select 
                     value={selectedDispute.status}
-                    onChange={(e) => handleStatusChange(selectedDispute.id, e.target.value)}
+                    onChange={(e) => handleStatusUpdate(selectedDispute.id, e.target.value)}
                   >
                     {disputeStatuses.slice(1).map(status => (
                       <option key={status.value} value={status.value}>
@@ -354,9 +311,9 @@ const AdminDisputeResolution = () => {
                   <button 
                     className="resolve-button"
                     onClick={() => handleResolveDispute(selectedDispute.id, resolution)}
-                    disabled={!resolution.trim() || processing}
+                    disabled={!resolution.trim()}
                   >
-                    {processing ? 'Processing...' : 'Resolve Dispute'}
+                    Resolve Dispute
                   </button>
                 </div>
               </div>
@@ -373,21 +330,6 @@ const AdminDisputeResolution = () => {
         <div className="header-content">
           <h1>🛡️ Dispute Resolution Center</h1>
           <p>Manage and resolve user disputes efficiently</p>
-        </div>
-        
-        <div className="header-stats">
-          <div className="stat-item">
-            <span className="stat-value">{disputes.length}</span>
-            <span className="stat-label">Total Disputes</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-value">{disputes.filter(d => d.status === 'open').length}</span>
-            <span className="stat-label">Open</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-value">{disputes.filter(d => d.status === 'resolved').length}</span>
-            <span className="stat-label">Resolved</span>
-          </div>
         </div>
       </div>
 

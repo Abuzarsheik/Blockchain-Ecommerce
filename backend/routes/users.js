@@ -101,4 +101,41 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
+// Update user profile (needed for wallet address)
+router.put('/profile', auth, async (req, res) => {
+  try {
+    const { wallet_address, ...updateData } = req.body;
+    
+    // Update user profile
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { 
+        ...updateData,
+        ...(wallet_address && { wallet_address }),
+        updatedAt: new Date()
+      },
+      { new: true }
+    ).select('-password_hash');
+
+    if (!updatedUser) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating profile' 
+    });
+  }
+});
+
 module.exports = router; 

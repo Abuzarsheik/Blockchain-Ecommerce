@@ -1,16 +1,17 @@
 import '../styles/SellerDashboard.css';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { logger } from '../utils/logger';
-import { api } from '../services/api';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { 
-  BarChart3, Users, ShoppingCart, DollarSign, TrendingUp, 
-  AlertTriangle, Package, Plus, Eye, Edit3, Trash2,
-  User, Star, CheckCircle 
+import { logDebug, logError } from '../utils/logger.production';
+import { logger } from '../utils/logger';
+import { getApiUrl, getImageUrl } from '../config/api';
+import { api } from '../services/api';
+import {
+    Star, User, CheckCircle
 } from 'lucide-react';
 import { getCategoryOptions } from '../utils/constants';
+import { generatePlaceholder } from '../utils/imageUtils';
 
 const SellerDashboard = () => {
     const { user } = useSelector(state => state.auth);
@@ -25,14 +26,14 @@ const SellerDashboard = () => {
     }, [user, navigate]);
     
     // Determine initial tab based on URL
-    const getInitialTab = () => {
+    const getInitialTab = useCallback(() => {
         const path = location.pathname;
         if (path.includes('/analytics')) return 'analytics';
         if (path.includes('/listings')) return 'products';
         if (path.includes('/inventory')) return 'inventory';
         if (path.includes('/revenue')) return 'analytics';
         return 'overview';
-    };
+    }, [location.pathname]);
     
     const [activeTab, setActiveTab] = useState(getInitialTab());
     const [products, setProducts] = useState([]);
@@ -146,7 +147,7 @@ const SellerDashboard = () => {
             const token = localStorage.getItem('token') || localStorage.getItem('authToken');
             
             if (!token) {
-                console.error('No authentication token found');
+                logError('No authentication token found');
                 setProducts([]);
                 setStats({});
                 return;
@@ -159,35 +160,35 @@ const SellerDashboard = () => {
                 ...(statusFilter && { status: statusFilter })
             });
 
-            console.log('Fetching products from:', `http://localhost:5000/api/products/my?${params}`);
+            logDebug('Fetching products from:', getApiUrl(`/products/my?${params}`));
 
-            const response = await fetch(`http://localhost:5000/api/products/my?${params}`, {
+            const response = await fetch(getApiUrl(`/products/my?${params}`), {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
 
-            console.log('Products fetch response status:', response.status);
+            logDebug('Products fetch response status:', response.status);
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('Products data received:', data);
+                logDebug('Products data received:', data);
                 setProducts(data.products || []);
                 setPagination(data.pagination || {});
                 setStats(data.stats || {});
             } else {
                 const errorData = await response.json();
-                console.error('Failed to fetch products:', response.status, errorData);
+                logError('Failed to fetch products:', response.status, errorData);
                 
                 if (response.status === 401) {
-                    console.error('Authentication failed - token may be expired');
+                    logError('Authentication failed - token may be expired');
                     // Optionally redirect to login or refresh token
                 }
             }
         } catch (error) {
             logger.error('Error fetching products:', error);
-            console.error('Error fetching products:', error);
+            logError('Error fetching products:', error);
             setProducts([]);
             setStats({});
         } finally {
@@ -208,8 +209,7 @@ const SellerDashboard = () => {
                 }));
             }
         } catch (error) {
-            logger.error('Error fetching analytics:', error);
-            console.error('Analytics fetch failed:', error);
+            logError('Analytics fetch failed:', error);
         } finally {
             setAnalyticsLoading(false);
         }
@@ -262,180 +262,104 @@ const SellerDashboard = () => {
                 fetchAnalytics();
             }
         }
-    }, [location.pathname, activeTab, fetchAnalytics]);
+    }, [location.pathname, activeTab, fetchAnalytics, getInitialTab]);
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
         
-        // Reset form errors
-        setFormErrors({});
-        
-        // Validate all steps before submission
-        const allErrors = validateAllSteps();
-        if (Object.keys(allErrors).length > 0) {
-            setFormErrors(allErrors);
-            // Find the first step with errors and navigate to it
-            const errorSteps = {
-                1: ['name', 'category', 'description'],
-                2: ['images'],
-                3: ['price', 'quantity'],
-                4: []
-            };
-            
-            for (let step = 1; step <= 4; step++) {
-                const hasStepError = errorSteps[step].some(field => allErrors[field]);
-                if (hasStepError) {
-                    setCurrentStep(step);
-                    break;
-                }
-            }
+        if (!validateAllSteps()) {
+            setCurrentStep(1); // Go back to first step with errors
             return;
         }
 
         setIsSubmitting(true);
 
         try {
-            const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-            
-            if (!token) {
-                setFormErrors({ submit: 'Authentication required. Please log in again.' });
-                return;
-            }
-
-            console.log('Creating product with data:', {
-                name: formData.name,
-                category: formData.category,
-                price: formData.price,
-                description: formData.description,
-                specifications: formData.specifications
-            });
-
-            // Debug logging to track what's being sent
-            console.log('🔍 FRONTEND DEBUG - SellerDashboard form submission:');
-            console.log('- Category from formData:', `"${formData.category}"`);
-            console.log('- Available categories:', categories);
-            console.log('- Selected category details:', categories.find(c => c.value === formData.category));
-
             const productData = new FormData();
             
-            // Basic product information
-            productData.append('name', formData.name);
-            productData.append('description', formData.description);
-            productData.append('shortDescription', formData.shortDescription);
-            productData.append('price', formData.price);
-            productData.append('category', formData.category);
-            productData.append('subcategory', formData.subcategory);
-            productData.append('status', formData.status || 'active'); // Set to active by default
-
-            // Debug what's actually being sent in FormData
-            console.log('🔍 FRONTEND DEBUG - FormData contents:');
-            for (let [key, value] of productData.entries()) {
-                console.log(`- ${key}:`, `"${value}"`);
-            }
-
-            // Process specifications correctly - only include complete specs
-            const validSpecs = formData.specifications?.filter(spec => 
-                spec && spec.name && spec.name.trim() !== '' && spec.value && spec.value.trim() !== ''
-            ) || [];
+            // Remove debug logging for production
+            logDebug('SellerDashboard form submission');
+            logDebug('Category from formData:', formData.category);
+            logDebug('Available categories:', categories);
+            logDebug('Selected category details:', categories.find(c => c.value === formData.category));
             
-            console.log('Valid specifications:', validSpecs);
+            // Add all form fields
+            Object.keys(formData).forEach(key => {
+                if (key === 'specifications') {
+                    const validSpecs = formData.specifications.filter(spec => 
+                        spec.name && spec.name.trim() && spec.value && spec.value.trim()
+                    );
+                    productData.append('specifications', JSON.stringify(validSpecs));
+                    logDebug('Valid specifications:', validSpecs);
+                } else if (key === 'tags') {
+                    if (Array.isArray(formData.tags)) {
+                        productData.append('tags', JSON.stringify(formData.tags));
+                    } else {
+                        productData.append('tags', formData.tags);
+                    }
+                } else if (key === 'dimensions') {
+                    productData.append('dimensions', JSON.stringify(formData.dimensions));
+                } else if (formData[key] !== null && formData[key] !== undefined) {
+                    productData.append(key, formData[key]);
+                }
+            });
+
+            // Add images
+            selectedImages.forEach((file, index) => {
+                productData.append('images', file);
+            });
+
+            logDebug('FormData contents prepared');
+
+            const url = editingProduct 
+                ? getApiUrl(`/products/${editingProduct._id}`)
+                : getApiUrl('/products');
             
-            // Only send specifications if there are valid ones
-            if (validSpecs.length > 0) {
-                productData.append('specifications', JSON.stringify(validSpecs));
-            }
-
-            // Process tags correctly
-            const tagsToSend = Array.isArray(formData.tags) 
-                ? formData.tags.filter(tag => tag && tag.trim() !== '')
-                : typeof formData.tags === 'string' 
-                    ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
-                    : [];
-
-            // Optional fields
-            if (formData.originalPrice) productData.append('originalPrice', formData.originalPrice);
-            if (formData.discountPercentage) productData.append('discountPercentage', formData.discountPercentage);
-            if (tagsToSend.length > 0) {
-                productData.append('tags', JSON.stringify(tagsToSend));
-            }
-
-            // Inventory information
-            productData.append('quantity', formData.quantity);
-            if (formData.lowStockThreshold) productData.append('lowStockThreshold', formData.lowStockThreshold);
-            if (formData.trackInventory !== undefined) productData.append('trackInventory', formData.trackInventory);
-            if (formData.allowBackorders !== undefined) productData.append('allowBackorders', formData.allowBackorders);
-            if (formData.sku) productData.append('sku', formData.sku);
-
-            // Shipping information
-            if (formData.weight) productData.append('weight', formData.weight);
-            if (formData.dimensions && (formData.dimensions.length || formData.dimensions.width || formData.dimensions.height)) {
-                productData.append('dimensions', JSON.stringify(formData.dimensions));
-            }
-            if (formData.freeShipping !== undefined) productData.append('freeShipping', formData.freeShipping);
-            if (formData.shippingCost) productData.append('shippingCost', formData.shippingCost);
-
-            // SEO information
-            if (formData.metaTitle) productData.append('metaTitle', formData.metaTitle);
-            if (formData.metaDescription) productData.append('metaDescription', formData.metaDescription);
-
-            // Handle images
-            if (selectedImages.length > 0) {
-                selectedImages.forEach((image) => {
-                    productData.append('images', image);
-                });
-            }
-
-            console.log('Submitting to:', editingProduct ? 
-                `http://localhost:5000/api/products/${editingProduct._id}` : 
-                'http://localhost:5000/api/products');
-
-            const url = editingProduct ? 
-                `http://localhost:5000/api/products/${editingProduct._id}` : 
-                'http://localhost:5000/api/products';
             const method = editingProduct ? 'PUT' : 'POST';
+            
+            logDebug('Submitting to:', editingProduct 
+                ? getApiUrl(`/products/${editingProduct._id}`)
+                : getApiUrl('/products'));
 
             const response = await fetch(url, {
                 method: method,
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'multipart/form-data'
                 },
                 body: productData
             });
 
-            console.log('Response status:', response.status);
+            logDebug('Response status:', response.status);
+            
             const result = await response.json();
-            console.log('Response data:', result);
+            logDebug('Response data:', result);
 
             if (response.ok) {
-                // Show success message
-                toast.success(editingProduct ? 'Product updated successfully!' : 'Product created successfully and is now live in the marketplace!');
-                
-                // Reset form and close
+                toast.success(
+                    editingProduct 
+                        ? 'Product updated successfully!' 
+                        : 'Product created successfully!'
+                );
+
+                resetForm();
                 setShowProductForm(false);
                 setEditingProduct(null);
-                resetForm();
                 
-                // Refresh all data
-                await Promise.all([
-                    fetchProducts(),
-                    fetchAnalytics()
-                ]);
+                // Refresh products list
+                fetchProducts();
                 
-                // Switch to products tab to show the new/updated product
-                handleTabChange('products');
+                // Refresh analytics
+                fetchAnalytics();
                 
+                // Navigate to products tab to see the new/updated product
+                setActiveTab('products');
             } else {
-                const errorData = await response.json();
-                setFormErrors({ 
-                    submit: errorData.message || 'Failed to save product. Please try again.' 
-                });
+                throw new Error(result.message || 'Failed to save product');
             }
         } catch (error) {
-            console.error('Error saving product:', error);
-            logger.error('Error saving product:', error);
-            setFormErrors({ 
-                submit: 'Network error. Please check your connection and try again.' 
-            });
+            logError('Error saving product:', error);
+            toast.error('Failed to save product. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -481,7 +405,7 @@ const SellerDashboard = () => {
             errors.discountPercentage = 'Discount percentage must be between 0 and 100';
         }
         
-        return errors;
+        return Object.keys(errors).length === 0;
     };
 
     // Step-by-step validation
@@ -525,6 +449,10 @@ const SellerDashboard = () => {
             case 4:
                 // Step 4 is optional, no required validation
                 break;
+                
+            default:
+                // No validation needed for other steps
+                break;
         }
         
         return errors;
@@ -551,17 +479,6 @@ const SellerDashboard = () => {
     const handlePreviousStep = () => {
         setFormErrors({}); // Clear errors when going back
         setCurrentStep(prev => Math.max(1, prev - 1));
-    };
-
-    // Form validation function
-    const validateForm = () => {
-        return validateAllSteps();
-    };
-
-    // Notification helper function
-    const showNotification = (message, type = 'info') => {
-        // You can implement a toast notification here
-        alert(message); // For now, using alert
     };
 
     // Enhanced image handling
@@ -696,27 +613,30 @@ const SellerDashboard = () => {
     };
 
     const handleDelete = async (productId) => {
-        if (window.confirm('Are you sure you want to delete this product?')) {
-            try {
-                const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-                const response = await fetch(`http://localhost:5000/api/products/${productId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+        if (!window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+            return;
+        }
 
-                if (response.ok) {
-                    alert('Product deleted successfully!');
-                    fetchProducts();
-                } else {
-                    const result = await response.json();
-                    alert(result.message || 'Failed to delete product.');
+        try {
+            const response = await fetch(getApiUrl(`/products/${productId}`), {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
                 }
-            } catch (error) {
-                logger.error('Error deleting product:', error);
-                alert('An error occurred while deleting the product.');
+            });
+
+            if (response.ok) {
+                toast.success('Product deleted successfully');
+                fetchProducts(); // Refresh the list
+                fetchAnalytics(); // Refresh analytics
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to delete product');
             }
+        } catch (error) {
+            logError('Error deleting product:', error);
+            toast.error('Failed to delete product');
         }
     };
 
@@ -921,11 +841,13 @@ const SellerDashboard = () => {
                         {products.slice(0, 5).map(product => (
                             <div key={product._id} className="product-item">
                                 <div className="product-image">
-                                    {product.images[0] ? (
-                                        <img src={`http://localhost:5000${product.images[0].url}`} alt={product.name} />
-                                    ) : (
-                                        <div className="no-image">📷</div>
-                                    )}
+                                    <img 
+                                        src={getImageUrl(product.images[0]?.url)} 
+                                        alt={product.name} 
+                                        onError={(e) => {
+                                            e.target.src = generatePlaceholder(40, 40);
+                                        }}
+                                    />
                                 </div>
                                 <div className="product-info">
                                     <h4>{product.name}</h4>
@@ -1198,15 +1120,19 @@ const SellerDashboard = () => {
                                 {products.map(product => (
                                     <tr key={product._id}>
                                         <td>
-                                            {product.images[0] ? (
+                                            <div className="product-cell">
                                                 <img 
-                                                    src={`http://localhost:5000${product.images[0].url}`} 
-                                                    alt={product.name}
-                                                    className="table-product-image"
+                                                    src={getImageUrl(product.images?.[0]?.url)} 
+                                                    alt={product.name} 
+                                                    onError={(e) => {
+                                                        e.target.src = generatePlaceholder(40, 40);
+                                                    }}
                                                 />
-                                            ) : (
-                                                <div className="no-image-small">📷</div>
-                                            )}
+                                                <div className="product-info">
+                                                    <h4>{product.name}</h4>
+                                                    <p>{product.category}</p>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td>
                                             <div className="product-name-cell">
@@ -1363,15 +1289,11 @@ const SellerDashboard = () => {
                                     <tr key={product._id} className={product.isLowStock ? 'low-stock-row' : ''}>
                                         <td>
                                             <div className="product-info-cell">
-                                                {product.images[0] ? (
-                                                    <img 
-                                                        src={`http://localhost:5000${product.images[0].url}`} 
-                                                        alt={product.name}
-                                                        className="table-product-image"
-                                                    />
-                                                ) : (
-                                                    <div className="no-image-small">📷</div>
-                                                )}
+                                                <img 
+                                                    src={getImageUrl(product.images[0]?.url)} 
+                                                    alt={product.name}
+                                                    className="table-product-image"
+                                                />
                                                 <div className="product-details">
                                                     <strong>{product.name}</strong>
                                                     <span className="product-price">${product.price}</span>

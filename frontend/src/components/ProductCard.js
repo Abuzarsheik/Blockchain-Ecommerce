@@ -32,9 +32,20 @@ const ProductCard = memo(({ product, viewMode = 'grid' }) => {
       toast.info('Sellers cannot purchase items. You can view and create NFTs instead.');
       return;
     }
+
+    // Get product ID from available fields
+    const productId = product._id || product.id;
+    
+    if (!productId) {
+      console.error('Product missing ID fields:', product);
+      toast.error('Unable to add product to cart - missing product ID');
+      return;
+    }
+    
+    console.log('ProductCard - Adding to cart - Product ID:', productId, 'Product:', product);
     
     dispatch(addToCart({
-      productId: product._id || product.id,
+      productId: productId,
       name: product.name,
       price: product.price,
       image: product.image_url,

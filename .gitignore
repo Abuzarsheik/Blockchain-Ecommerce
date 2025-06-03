@@ -9,9 +9,98 @@ build/
 dist/
 .next/
 out/
+frontend/build/
+
+# Environment variables - ALL env files should be ignored for security
+.env
+.env.*
+*.env
+production.env
+development.env
+staging.env
+
+# Logs - should not be committed
+logs/
+*.log
+combined.log
+error.log
+security.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database
+*.sqlite
+*.db
+
+# Uploads directory - user generated content
+uploads/
+backend/uploads/
+
+# Development files that might slow down git
+.eslintcache
+.parcel-cache/
+.cache/
+
+# Security - prevent private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+private/
+secrets/
+
+# Test files and coverage
+test-results/
+tests/results/
+*.test.local.js
+
+# OS and editor temporary files
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# Blockchain development
+artifacts/
+cache/
+typechain/
+
+# Package manager lockfiles for better collaboration
+package-lock.json
+yarn.lock
 
 # Environment variables (keep production.env tracked)
-.env
 .env.local
 .env.development.local
 .env.test.local

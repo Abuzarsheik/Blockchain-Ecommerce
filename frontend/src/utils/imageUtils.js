@@ -1,208 +1,250 @@
-
 // Image utility functions for consistent NFT image handling
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002';
-
-// Hash function to create consistent numeric values from strings
-const hashCode = (str) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return hash;
-};
-
-const generateAbstractArt = (seed, idHash) => {
-  // Use Lorem Picsum with specific seeds for consistent abstract images
-  return `https://picsum.photos/seed/${seed}${idHash}/400/400?blur=1&grayscale=0`;
-};
-
-const generatePixelArt = (seed) => {
-  // Use DiceBear for pixel art style
-  return `https://api.dicebear.com/7.x/pixel-art/svg?seed=${seed}&size=400&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd6cc,ffdfba`;
-};
-
-const generateGameAsset = (seed, idHash) => {
-  // Gaming themed images
-  const themes = ['cyberpunk', 'fantasy', 'scifi', 'retro', 'neon'];
-  const theme = themes[Math.abs(hashCode(seed)) % themes.length];
-  return `https://picsum.photos/seed/gaming${theme}${idHash}/400/400`;
-};
-
-const generateMusicVisualization = (seed, idHash) => {
-  // Music themed with wave patterns
-  return `https://api.dicebear.com/7.x/shapes/svg?seed=${seed}&size=400&backgroundColor=667eea,764ba2,f093fb,4facfe&shape1Color=ffffff&shape2Color=f8fafc`;
-};
-
-const generatePhotography = (seed, idHash) => {
-  // High quality photography
-  const photoId = Math.abs(hashCode(seed + idHash)) % 1000 + 1;
-  return `https://picsum.photos/id/${photoId}/400/400`;
-};
-
-const generateSportsImage = (seed, idHash) => {
-  // Sports themed
-  return `https://picsum.photos/seed/sports${seed}${idHash}/400/400`;
-};
-
-const generateUtilityIcon = (seed) => {
-  // Clean geometric shapes for utility NFTs
-  return `https://api.dicebear.com/7.x/shapes/svg?seed=${seed}&size=400&backgroundColor=667eea,4f46e5,7c3aed,db2777&shape1Color=ffffff`;
-};
-
-const generateGenericArt = (seed, idHash) => {
-  // Fallback with artistic blur effect
-  return `https://picsum.photos/seed/${seed}${idHash}/400/400?blur=2`;
-};
-
 /**
- * Get the full URL for an NFT image
- * @param {string} imagePath - The image path from the NFT data
- * @returns {string} - The full URL to the image
+ * Image utilities for the Blocmerce frontend
  */
-export const getNFTImageUrl = (imagePath) => {
-  if (!imagePath) {
-    return 'https://via.placeholder.com/400x400?text=NFT+Image';
-  }
+
+// Data URI placeholders to avoid external dependencies
+const createSVGPlaceholder = (width, height, text, bgColor = '#f0f0f0', textColor = '#666') => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    <rect width="100%" height="100%" fill="${bgColor}"/>
+    <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="14" fill="${textColor}" text-anchor="middle" dy="0.3em">${text}</text>
+  </svg>`;
   
-  // If it's already a full URL, return as is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
+  // Use btoa with proper Unicode handling
+  try {
+    // Convert Unicode to UTF-8 bytes that btoa can handle
+    const utf8Svg = unescape(encodeURIComponent(svg));
+    return `data:image/svg+xml;base64,${btoa(utf8Svg)}`;
+  } catch (error) {
+    // Fallback: use encodeURIComponent if btoa fails
+    return `data:image/svg+xml,${encodeURIComponent(svg)}`;
   }
-  
-  // If it's an upload path, construct the full URL
-  if (imagePath.startsWith('/uploads/')) {
-    return `${API_BASE_URL}${imagePath}`;
-  }
-  
-  // For other cases, assume it's a relative path
-  return `${API_BASE_URL}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
 };
 
 /**
- * Get a placeholder image URL
+ * Get NFT image URL with fallback
+ * @param {string} imageUrl - Original image URL
+ * @returns {string} Image URL or fallback
+ */
+export const getNFTImageUrl = (imageUrl) => {
+  if (!imageUrl) {
+    return createSVGPlaceholder(400, 400, 'NFT Image');
+  }
+  
+  // Handle different URL formats
+  if (typeof imageUrl === 'string') {
+    // If it's already a complete URL, return it
+    if (imageUrl.startsWith('http') || imageUrl.startsWith('data:')) {
+      return imageUrl;
+    }
+    
+    // If it's a relative path, prepend the API base URL
+    if (imageUrl.startsWith('/')) {
+      return `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}${imageUrl}`;
+    }
+    
+    // If it's just a filename, assume it's in uploads
+    return `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/uploads/${imageUrl}`;
+  }
+  
+  // If it's an object with url property
+  if (imageUrl && typeof imageUrl === 'object' && imageUrl.url) {
+    return getNFTImageUrl(imageUrl.url);
+  }
+  
+  return createSVGPlaceholder(400, 400, 'NFT Image');
+};
+
+/**
+ * Generate placeholder image URL
  * @param {number} width - Image width
  * @param {number} height - Image height
  * @param {string} text - Placeholder text
- * @returns {string} - Placeholder image URL
+ * @returns {string} Placeholder image URL
  */
-export const getPlaceholderImageUrl = (width = 400, height = 400, text = 'No Image') => {
-  return `https://via.placeholder.com/${width}x${height}?text=${encodeURIComponent(text)}`;
+export const generatePlaceholder = (width = 400, height = 400, text = 'Image') => {
+  return createSVGPlaceholder(width, height, text);
 };
 
-// Utility functions for generating NFT images (fallback when no real image)
-export const generateNFTImage = (nft) => {
-  const { name, category, _id } = nft;
-  const seed = name.replace(/\s+/g, '').toLowerCase();
-  const idHash = _id ? _id.slice(-8) : Math.random().toString(36).substr(2, 8);
-  
-  // Different image generation strategies based on category
-  const imageGenerators = {
-    'digital art': () => generateAbstractArt(seed, idHash),
-    'art': () => generateAbstractArt(seed, idHash),
-    'collectibles': () => generatePixelArt(seed),
-    'gaming': () => generateGameAsset(seed, idHash),
-    'music': () => generateMusicVisualization(seed, idHash),
-    'photography': () => generatePhotography(seed, idHash),
-    'sports': () => generateSportsImage(seed, idHash),
-    'utility': () => generateUtilityIcon(seed),
-    'default': () => generateGenericArt(seed, idHash)
-  };
-
-  const generator = imageGenerators[category.toLowerCase()] || imageGenerators.default;
-  return generator();
+/**
+ * Handle image loading errors
+ * @param {Event} event - Image error event
+ * @param {string} fallbackText - Text for fallback image
+ */
+export const handleImageError = (event, fallbackText = 'No Image') => {
+  if (event.target && event.target.tagName === 'IMG') {
+    // Prevent infinite loop by checking if already showing placeholder
+    if (!event.target.src.startsWith('data:image/svg+xml')) {
+      const { width = 400, height = 400 } = event.target;
+      event.target.src = createSVGPlaceholder(
+        width || 400, 
+        height || 400, 
+        fallbackText
+      );
+    }
+  }
 };
 
-// Fallback images for when external services fail
-export const getFallbackImage = (nft) => {
+/**
+ * Generate user avatar with initials and gradient background
+ * @param {string} username - User's name
+ * @param {number} size - Avatar size
+ * @returns {string} Data URL for the avatar
+ */
+export const generateUserAvatar = (username = 'User', size = 120) => {
   const colors = [
-    '667eea,764ba2', // Purple gradient
-    '4facfe,00f2fe', // Blue gradient  
-    'a8edea,fed6e3', // Teal to pink
-    'ffecd2,fcb69f', // Orange gradient
-    'ff9a9e,fecfef', // Pink gradient
-    'a18cd1,fbc2eb', // Purple to pink
+    ['#FF6B6B', '#4ECDC4'],
+    ['#45B7D1', '#96CEB4'],
+    ['#FECA57', '#FF9FF3'],
+    ['#54A0FF', '#5F27CD'],
+    ['#00D2D3', '#FF9F43'],
+    ['#F8C291', '#6C5CE7']
   ];
   
-  const colorPair = colors[Math.abs(hashCode(nft.name)) % colors.length];
-  const shortName = nft.name.substring(0, 15) + (nft.name.length > 15 ? '...' : '');
+  const shortName = username.split(' ').map(n => n[0]).join('').toUpperCase();
+  const colorIndex = shortName.charCodeAt(0) % colors.length;
+  const [bgColor, textColor] = colors[colorIndex];
   
-  return `https://via.placeholder.com/400x400/${colorPair.replace(',', '/')}/ffffff?text=${encodeURIComponent(shortName)}`;
+  return createSVGPlaceholder(size, size, shortName, bgColor, textColor);
 };
 
-// Create a data URL for a simple gradient background
-export const createGradientDataURL = (nft) => {
+/**
+ * Create product placeholder
+ * @param {number} width - Image width
+ * @param {number} height - Image height
+ * @param {string} category - Product category
+ * @returns {string} Product placeholder URL
+ */
+export const createProductPlaceholder = (width = 300, height = 300, category = 'Product') => {
+  // Use text labels instead of emojis to avoid Unicode issues
+  const labels = {
+    'electronics': 'TECH',
+    'clothing': 'WEAR',
+    'home-garden': 'HOME',
+    'sports': 'SPORT',
+    'books': 'BOOK',
+    'beauty': 'BEAUTY',
+    'toys': 'TOY',
+    'automotive': 'AUTO',
+    'jewelry': 'GEM',
+    'art-collectibles': 'ART',
+    'office-supplies': 'OFFICE',
+    'other': 'ITEM'
+  };
+  
+  const label = labels[category] || 'PRODUCT';
+  return createSVGPlaceholder(width, height, label, '#f8f9fa', '#6c757d');
+};
+
+/**
+ * Get image URL with proper fallback
+ * @param {string} imagePath - Image path
+ * @param {string} fallbackText - Fallback text
+ * @returns {string} Image URL
+ */
+export const getImageUrl = (imagePath, fallbackText = 'Image') => {
+  if (!imagePath) {
+    return createSVGPlaceholder(400, 400, fallbackText);
+  }
+  
+  if (imagePath.startsWith('data:') || imagePath.startsWith('http')) {
+    return imagePath;
+  }
+  
+  if (imagePath.startsWith('/')) {
+    return `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}${imagePath}`;
+  }
+  
+  return `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/uploads/${imagePath}`;
+};
+
+/**
+ * Create gradient data URL for backgrounds
+ * @param {Array} colors - Array of color stops
+ * @param {string} direction - Gradient direction
+ * @returns {string} Data URL
+ */
+export const createGradientDataURL = (colors = ['#667eea', '#764ba2'], direction = 'to right') => {
   const canvas = document.createElement('canvas');
-  canvas.width = 400;
-  canvas.height = 400;
+  canvas.width = 100;
+  canvas.height = 100;
   const ctx = canvas.getContext('2d');
   
-  // Create gradient based on NFT name
-  const gradient = ctx.createLinearGradient(0, 0, 400, 400);
-  const hue1 = Math.abs(hashCode(nft.name)) % 360;
-  const hue2 = (hue1 + 60) % 360;
-  
-  gradient.addColorStop(0, `hsl(${hue1}, 70%, 60%)`);
-  gradient.addColorStop(1, `hsl(${hue2}, 70%, 40%)`);
+  const gradient = ctx.createLinearGradient(0, 0, 100, 0);
+  colors.forEach((color, index) => {
+    gradient.addColorStop(index / (colors.length - 1), color);
+  });
   
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 400, 400);
-  
-  // Add some geometric shapes
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-  for (let i = 0; i < 5; i++) {
-    const x = (hashCode(nft.name + i) % 300) + 50;
-    const y = (hashCode(nft.name + i + 'y') % 300) + 50;
-    const radius = (hashCode(nft.name + i + 'r') % 50) + 20;
-    
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, 2 * Math.PI);
-    ctx.fill();
-  }
+  ctx.fillRect(0, 0, 100, 100);
   
   return canvas.toDataURL();
 };
 
 /**
- * Get the real NFT image URL with fallback to generated image
- * @param {Object} nft - The NFT object
- * @returns {string} - The image URL to use
+ * Generate NFT-style image with metadata
+ * @param {Object} nft - NFT metadata
+ * @returns {string} Generated image URL
  */
-export const getRealNFTImage = (nft) => {
-  // Priority 1: Use the actual uploaded image if available
-  if (nft.image_url) {
-    return getNFTImageUrl(nft.image_url);
-  }
+export const generateNFTImage = (nft) => {
+  const traits = nft.attributes || [];
+  const rarity = nft.rarity || 'common';
   
-  // Priority 2: Use metadata image if available
-  if (nft.metadata && nft.metadata.image) {
-    return getNFTImageUrl(nft.metadata.image);
-  }
+  // Create a unique visual based on traits
+  const traitHash = traits.map(t => `${t.trait_type}:${t.value}`).join('|');
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3'];
+  const bgColor = colors[traitHash.length % colors.length];
   
-  // Priority 3: Fall back to generated image
-  return generateNFTImage(nft);
+  return createSVGPlaceholder(300, 300, `${nft.name || 'NFT'}\n${rarity.toUpperCase()}`, bgColor, '#ffffff');
 };
 
 /**
- * Handle image error by setting a fallback
- * @param {Event} event - The error event
- * @param {string} fallbackUrl - Optional custom fallback URL
+ * Get fallback image for when primary fails
+ * @param {string} type - Type of fallback needed
+ * @returns {string} Fallback image URL
  */
-export const handleImageError = (event, fallbackUrl = null) => {
-  const fallback = fallbackUrl || getPlaceholderImageUrl();
-  event.target.src = fallback;
+export const getFallbackImage = (type = 'general') => {
+  const fallbacks = {
+    user: createSVGPlaceholder(120, 120, 'USER', '#e9ecef', '#6c757d'),
+    product: createSVGPlaceholder(300, 300, 'PRODUCT', '#f8f9fa', '#6c757d'),
+    nft: createSVGPlaceholder(400, 400, 'NFT', '#f1f3f4', '#5f6368'),
+    avatar: createSVGPlaceholder(80, 80, 'AVATAR', '#e3f2fd', '#1976d2'),
+    general: createSVGPlaceholder(400, 400, 'IMAGE', '#f5f5f5', '#757575')
+  };
+  
+  return fallbacks[type] || fallbacks.general;
+};
+
+/**
+ * Get real NFT image or fallback
+ * @param {Object} nft - NFT object
+ * @returns {string} Image URL
+ */
+export const getRealNFTImage = (nft) => {
+  if (nft?.image) {
+    return getNFTImageUrl(nft.image);
+  }
+  
+  if (nft?.metadata?.image) {
+    return getNFTImageUrl(nft.metadata.image);
+  }
+  
+  return generateNFTImage(nft);
 };
 
 const imageUtils = {
   getNFTImageUrl,
   getRealNFTImage,
-  getPlaceholderImageUrl,
+  getPlaceholderImageUrl: generatePlaceholder,
   handleImageError,
   generateNFTImage,
   getFallbackImage,
-  createGradientDataURL
+  createGradientDataURL,
+  generatePlaceholder,
+  generateUserAvatar,
+  createProductPlaceholder,
+  getImageUrl
 };
 
 export default imageUtils; 

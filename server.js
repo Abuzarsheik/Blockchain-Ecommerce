@@ -16,6 +16,7 @@ const paymentService = require('./backend/services/paymentService');
 
 // Route imports
 const adminRoutes = require('./backend/routes/admin');
+const analyticsRoutes = require('./backend/routes/analytics');
 const auditRoutes = require('./backend/routes/audit');
 const authRoutes = require('./backend/routes/auth');
 const blockchainRoutes = require('./backend/routes/blockchain');
@@ -265,6 +266,7 @@ app.use('/api/tracking', trackingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/ipfs', ipfsRoutes);
 app.use('/api/monitoring', monitoringRoutes);

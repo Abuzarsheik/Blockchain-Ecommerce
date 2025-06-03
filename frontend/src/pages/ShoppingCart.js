@@ -21,7 +21,7 @@ import {
   applyCoupon,
   removeCoupon
 } from '../store/slices/cartSlice';
-import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
+import { getImageUrl, handleImageError, generatePlaceholder } from '../utils/imageUtils';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -37,6 +37,12 @@ const ShoppingCart = () => {
 
   // Check if user is a seller (sellers shouldn't access cart)
   const isSeller = user?.userType === 'seller' && user?.role !== 'admin';
+
+  // Helper function to safely format currency values
+  const formatCurrency = (value) => {
+    const numValue = parseFloat(value);
+    return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
+  };
 
   // Redirect sellers away from cart
   useEffect(() => {
@@ -167,7 +173,7 @@ const ShoppingCart = () => {
               <div key={item.productId} className="cart-item">
                 <div className="item-image">
                   <img 
-                    src={getNFTImageUrl(item.image) || '/api/placeholder/120/120'}
+                    src={getImageUrl(item.image) || generatePlaceholder(120, 120, 'Product')}
                     alt={item.name}
                     onError={handleImageError}
                   />
@@ -247,14 +253,14 @@ const ShoppingCart = () => {
                 
                 <div className="item-price">
                   <div className="price-per-item">
-                    ${item.price.toFixed(2)} each
+                    ${formatCurrency(item.price)} each
                   </div>
                   <div className="total-price">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    ${formatCurrency(item.price * item.quantity)}
                   </div>
                   {item.originalPrice && item.originalPrice > item.price && (
                     <div className="original-price">
-                      ${item.originalPrice.toFixed(2)}
+                      ${formatCurrency(item.originalPrice)}
                     </div>
                   )}
                 </div>
@@ -309,29 +315,29 @@ const ShoppingCart = () => {
             <div className="price-breakdown">
               <div className="price-row">
                 <span>Subtotal ({items.length} items)</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>${formatCurrency(subtotal)}</span>
               </div>
               
               {discount > 0 && (
                 <div className="price-row discount">
                   <span>Discount</span>
-                  <span>-${discount.toFixed(2)}</span>
+                  <span>-${formatCurrency(discount)}</span>
                 </div>
               )}
               
               <div className="price-row">
                 <span>Shipping</span>
-                <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                <span>{shipping === 0 ? 'Free' : `$${formatCurrency(shipping)}`}</span>
               </div>
               
               <div className="price-row">
                 <span>Tax</span>
-                <span>${tax.toFixed(2)}</span>
+                <span>${formatCurrency(tax)}</span>
               </div>
               
               <div className="price-row total">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>${formatCurrency(total)}</span>
               </div>
             </div>
 
@@ -388,14 +394,14 @@ const ShoppingCart = () => {
             <h4>You might also like</h4>
             <div className="recommended-items">
               <div className="recommended-item">
-                <img src="/api/placeholder/80/80" alt="Recommended" />
+                <img src={generatePlaceholder(80, 80, 'Product')} alt="Recommended" />
                 <div className="recommended-info">
                   <span className="recommended-name">Digital Art Collection</span>
                   <span className="recommended-price">$29.99</span>
                 </div>
               </div>
               <div className="recommended-item">
-                <img src="/api/placeholder/80/80" alt="Recommended" />
+                <img src={generatePlaceholder(80, 80, 'Product')} alt="Recommended" />
                 <div className="recommended-info">
                   <span className="recommended-name">Gaming Asset Pack</span>
                   <span className="recommended-price">$49.99</span>

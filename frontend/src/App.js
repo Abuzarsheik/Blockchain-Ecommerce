@@ -11,7 +11,7 @@ import './styles/accessibility.css';
 import './styles/micro-interactions.css';
 
 import { store } from './store/store';
-import { loadUser } from './store/slices/authSlice';
+import { loadUser, setUser } from './store/slices/authSlice';
 import { applyUserPreferences } from './utils/personalization';
 import { ariaUtils } from './utils/accessibility';
 
@@ -47,7 +47,6 @@ import ProfileSettings from './pages/ProfileSettings';
 import Register from './pages/Register';
 import ResetPassword from './pages/ResetPassword';
 import ReviewsPage from './pages/ReviewsPage';
-import SearchResults from './pages/SearchResults';
 import Security from './pages/Security';
 import SecurityAuditTrail from './pages/SecurityAuditTrail';
 import SellerDashboard from './pages/SellerDashboard';
@@ -59,6 +58,9 @@ import TrackingPage from './pages/TrackingPage';
 import TwoFactorSetup from './pages/TwoFactorSetup';
 import UserProfile from './pages/UserProfile';
 import Wishlist from './pages/Wishlist';
+import WalletManager from './components/WalletManager';
+import BlockchainVerifier from './pages/BlockchainVerifier';
+import EscrowDetails from './pages/EscrowDetails';
 
 const GlobalLoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -148,7 +150,7 @@ function AppContent() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/catalog" element={<ProductCatalog />} />
                 <Route path="/products" element={<ProductCatalog />} />
-                <Route path="/search" element={<SearchResults />} />
+                <Route path="/search" element={<ProductCatalog />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
                 <Route path="/technology" element={<Technology />} />
                 <Route path="/about" element={<About />} />
@@ -157,6 +159,15 @@ function AppContent() {
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />
+
+                <Route path="/verify" element={<BlockchainVerifier />} />
+                <Route path="/verify/:txHash" element={<BlockchainVerifier />} />
+                <Route path="/blockchain/verify/:txHash" element={<BlockchainVerifier />} />
+                <Route path="/escrow/details/:escrowId" element={
+                  <ProtectedRoute>
+                    <EscrowDetails />
+                  </ProtectedRoute>
+                } />
 
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
@@ -192,6 +203,11 @@ function AppContent() {
                 <Route path="/notifications" element={
                   <ProtectedRoute>
                     <Notifications />
+                  </ProtectedRoute>
+                } />
+                <Route path="/wallet" element={
+                  <ProtectedRoute>
+                    <WalletManager />
                   </ProtectedRoute>
                 } />
 
@@ -353,6 +369,23 @@ function AppContent() {
             enableMultiContainer={false}
             containerId="default"
             style={{ zIndex: 9999 }}
+            progressStyle={{
+              background: 'linear-gradient(90deg, #4f46e5, #7c3aed)',
+              height: '3px'
+            }}
+            toastStyle={{
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)',
+              color: '#1a202c',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+            progressBar={{
+              background: 'linear-gradient(90deg, #4f46e5, #7c3aed)'
+            }}
           />
           
           <div 

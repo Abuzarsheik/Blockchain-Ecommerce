@@ -1,46 +1,33 @@
 import '../styles/AdminDashboard.css';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   BarChart3,
   Users,
   ShoppingCart,
   DollarSign,
-  TrendingUp,
   AlertTriangle,
   Package,
   Activity,
-  CheckCircle,
   Settings,
   Shield,
   User,
   Eye,
-  FileText,
-  MessageSquare,
   CreditCard,
-  Globe,
-  Database,
-  Lock,
   Monitor,
-  PieChart,
-  UserCheck,
   Zap,
-  Bell,
   Calendar,
-  Filter,
   Download,
   RefreshCw,
   Search,
   ArrowUpRight,
   ArrowDownRight,
-  Clock,
-  Target,
-  Trending
+  Clock
 } from 'lucide-react';
-import { logger } from '../utils/logger';
+import { getApiUrl } from '../config/api';
+import { logError } from '../utils/logger.production';
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -182,7 +169,7 @@ const AdminDashboard = () => {
   const apiEndpoints = useMemo(() => ({
     getDashboardStats: async (period) => {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/admin/dashboard-stats?period=${period}`, {
+      const response = await fetch(getApiUrl(`/admin/dashboard-stats?period=${period}`), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -223,7 +210,7 @@ const AdminDashboard = () => {
         throw new Error(response.message || 'Failed to fetch dashboard data');
       }
     } catch (err) {
-      logger.error('Failed to fetch dashboard data:', err);
+      logError('Failed to fetch dashboard data:', err);
       setError(err.message || 'Failed to load dashboard data');
       
       // Set empty activity to prevent rendering errors

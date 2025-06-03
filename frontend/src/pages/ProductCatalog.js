@@ -1,14 +1,16 @@
 import '../styles/ProductCatalog.css';
-import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, Grid, List, ChevronDown, Star, DollarSign, Package, Verified, X, ShoppingCart, Heart, Eye } from 'lucide-react';
-import { logger } from '../utils/logger';
+import React, { useState, useEffect, useCallback, memo } from 'react';
+import { Search, Filter, Grid, List, ChevronDown, Star, DollarSign, Package, Verified, X, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { addToCart } from '../store/slices/cartSlice';
 import { toast } from 'react-toastify';
+import { getApiUrl, getImageUrl } from '../config/api';
+import { logDebug, logError } from '../utils/logger.production';
+import { createProductPlaceholder } from '../utils/imageUtils';
 
 // Local ProductCard component for catalog
-const ProductCard = ({ product, viewMode }) => {
+const ProductCard = memo(({ product, viewMode }) => {
     const dispatch = useDispatch();
     const { user } = useSelector(state => state.auth);
     const isSeller = user?.userType === 'seller' && user?.role !== 'admin';
@@ -16,10 +18,12 @@ const ProductCard = ({ product, viewMode }) => {
     // Handle both _id and id fields (backend transforms _id to id)
     const productId = product._id || product.id;
     
-    // Debug logging for product data
     if (!productId) {
-        console.warn('ProductCard: Product missing both _id and id:', product);
+        logError('ProductCard: Product missing both _id and id:', product);
+        return null;
     }
+
+    const price = product.price?.value || product.price || 0;
 
     const handleAddToCart = (e) => {
         e.preventDefault();
@@ -34,12 +38,23 @@ const ProductCard = ({ product, viewMode }) => {
             toast.info('Sellers cannot purchase items. You can view and manage your own products instead.');
             return;
         }
+
+        // Get product ID from available fields - handle both _id and id
+        const finalProductId = productId || product._id || product.id;
+        
+        if (!finalProductId) {
+            console.error('Product missing ID fields:', product);
+            toast.error('Unable to add product to cart - missing product ID');
+            return;
+        }
+        
+        console.log('ProductCatalog - Adding to cart - Product ID:', finalProductId, 'Product:', product);
         
         dispatch(addToCart({
-            productId: productId,
+            productId: finalProductId,
             name: product.name,
-            price: product.price,
-            image: product.images?.[0]?.url ? `http://localhost:5000${product.images[0].url}` : null,
+            price: price,
+            image: getProductImageUrl(product),
             category: product.category,
             quantity: 1,
             stock: product.inventory?.quantity || 0
@@ -48,18 +63,29 @@ const ProductCard = ({ product, viewMode }) => {
         toast.success(`${product.name} added to cart!`);
     };
 
-    const getImageUrl = () => {
-        if (product.images && product.images.length > 0) {
-            return `http://localhost:5000${product.images[0].url}`;
+    // Helper function to get the right image URL
+    const getProductImageUrl = (product) => {
+        // Handle the case where product.images is an array of image objects
+        if (product?.images && product.images.length > 0) {
+            const imageObj = product.images[0];
+            // If it's an object with url property, extract the url
+            if (typeof imageObj === 'object' && imageObj.url) {
+                return getImageUrl(imageObj.url);
+            }
+            // If it's just a string, use it directly
+            if (typeof imageObj === 'string') {
+                return getImageUrl(imageObj);
+            }
         }
-        return '/api/placeholder/280/200';
-    };
-
-    // Don't render products without valid IDs
-    if (!productId) {
-        console.error('ProductCard: Cannot render product without _id or id:', product);
+        
+        // Legacy fallback for product.image (singular)
+        const imageObj = product?.image;
+        if (imageObj && imageObj.url) {
+            return getImageUrl(imageObj.url);
+        }
+        
         return null;
-    }
+    };
 
     if (viewMode === 'list') {
         return (
@@ -67,10 +93,11 @@ const ProductCard = ({ product, viewMode }) => {
                 <Link to={`/product/${productId}`} className="product-link">
                     <div className="product-image">
                         <img 
-                            src={getImageUrl()} 
+                            src={getProductImageUrl(product) || createProductPlaceholder(280, 200, product.category)}
                             alt={product.name}
+                            loading="lazy"
                             onError={(e) => {
-                                e.target.src = '/api/placeholder/280/200';
+                                e.target.src = createProductPlaceholder(280, 200, product.category);
                             }}
                         />
                         {product.inventory?.quantity <= product.inventory?.lowStockThreshold && (
@@ -82,7 +109,7 @@ const ProductCard = ({ product, viewMode }) => {
                         <p className="product-description">{product.shortDescription || product.description}</p>
                         <div className="product-meta">
                             <span className="product-category">{product.category}</span>
-                            <span className="product-price">${product.price}</span>
+                            <span className="product-price">${price}</span>
                             <span className="product-stock">Stock: {product.inventory?.quantity || 0}</span>
                         </div>
                     </div>
@@ -108,10 +135,11 @@ const ProductCard = ({ product, viewMode }) => {
             <Link to={`/product/${productId}`} className="product-link">
                 <div className="product-image">
                     <img 
-                        src={getImageUrl()} 
+                        src={getProductImageUrl(product) || createProductPlaceholder(280, 200, product.category)}
                         alt={product.name}
+                        loading="lazy"
                         onError={(e) => {
-                            e.target.src = '/api/placeholder/280/200';
+                            e.target.src = createProductPlaceholder(280, 200, product.category);
                         }}
                     />
                     {product.inventory?.quantity <= product.inventory?.lowStockThreshold && (
@@ -127,7 +155,7 @@ const ProductCard = ({ product, viewMode }) => {
                     <h3 className="product-title">{product.name}</h3>
                     <div className="product-meta">
                         <span className="product-category">{product.category}</span>
-                        <span className="product-price">${product.price}</span>
+                        <span className="product-price">${price}</span>
                     </div>
                     <p className="product-description">{product.shortDescription || product.description?.substring(0, 100)}...</p>
                     <div className="product-footer">
@@ -147,11 +175,12 @@ const ProductCard = ({ product, viewMode }) => {
             </Link>
         </div>
     );
-};
+});
 
 const ProductCatalog = () => {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     
     // UI State
@@ -172,22 +201,22 @@ const ProductCatalog = () => {
     const [totalItems, setTotalItems] = useState(0);
     const itemsPerPage = 12;
 
+    const fetchCategories = useCallback(async () => {
+        try {
+            const response = await fetch(getApiUrl('/products/categories'));
+            if (response.ok) {
+                const data = await response.json();
+                setCategories(data);
+            }
+        } catch (error) {
+            logError('Failed to fetch categories:', error);
+        }
+    }, []);
+
     // Fetch categories when component mounts
     useEffect(() => {
         fetchCategories();
-    }, []);
-
-    const fetchCategories = async () => {
-        try {
-            const response = await fetch('http://localhost:5000/api/products/categories');
-            if (response.ok) {
-                const data = await response.json();
-                setCategories(data.data?.options || []);
-            }
-        } catch (error) {
-            logger.error('Error fetching categories:', error);
-        }
-    };
+    }, [fetchCategories]);
 
     const applyAdvancedFilters = useCallback((productsData) => {
         return productsData.filter(product => {
@@ -209,6 +238,9 @@ const ProductCatalog = () => {
     }, [priceRange, minRating, showInStock, showVerified]);
 
     const fetchProducts = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        
         try {
             const params = new URLSearchParams({
                 page: currentPage,
@@ -219,41 +251,43 @@ const ProductCatalog = () => {
             if (searchTerm) params.append('search', searchTerm);
             if (selectedCategory) params.append('category', selectedCategory);
 
-            console.log('🔍 ProductCatalog - Fetching products');
-            console.log('- API URL:', `http://localhost:5000/api/products?${params}`);
+            logDebug('ProductCatalog - Fetching products');
+            logDebug('API URL:', getApiUrl(`/products?${params}`));
 
-            const response = await fetch(`http://localhost:5000/api/products?${params}`);
+            const response = await fetch(getApiUrl(`/products?${params}`));
+            
             if (response.ok) {
                 const data = await response.json();
                 let filteredProducts = data.products || [];
-
-                console.log('- Raw products received:', filteredProducts.length);
-                console.log('- Sample product:', filteredProducts[0]);
                 
-                // Check for products missing both _id and id (backend transforms _id to id)
+                logDebug('Raw products received:', filteredProducts.length);
+                logDebug('Sample product:', filteredProducts[0]);
+
+                // Validate products have required fields
                 const productsWithoutId = filteredProducts.filter(p => !p._id && !p.id);
                 if (productsWithoutId.length > 0) {
-                    console.warn('- Products missing both _id and id:', productsWithoutId.length);
-                    console.warn('- Examples:', productsWithoutId.slice(0, 3));
+                    logError('Products missing both _id and id:', productsWithoutId.length);
+                    logError('Examples:', productsWithoutId.slice(0, 3));
                 } else {
-                    console.log('- All products have valid IDs (using field:', filteredProducts[0]?._id ? '_id' : 'id', ')');
+                    logDebug('All products have valid IDs (using field:', filteredProducts[0]?._id ? '_id' : 'id', ')');
                 }
 
                 // Apply client-side filters that the backend doesn't handle
                 filteredProducts = applyAdvancedFilters(filteredProducts);
 
-                console.log('- Filtered products:', filteredProducts.length);
-
+                logDebug('Filtered products:', filteredProducts.length);
+                
                 setProducts(filteredProducts);
                 setTotalItems(data.pagination?.total_items || 0);
             } else {
-                console.error('- Response not ok:', response.status, response.statusText);
+                logError('Response not ok:', response.status, response.statusText);
                 setError('Failed to fetch products');
             }
         } catch (error) {
-            logger.error('Error fetching products:', error);
-            console.error('- Fetch error:', error);
-            setError('Error fetching products');
+            logError('Fetch error:', error);
+            setError('Failed to load products');
+        } finally {
+            setLoading(false);
         }
     }, [currentPage, searchTerm, selectedCategory, sortBy, applyAdvancedFilters]);
 
@@ -261,6 +295,23 @@ const ProductCatalog = () => {
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
+
+    // Add search handling in useEffect
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchQuery = urlParams.get('q');
+        const searchIntent = urlParams.get('intent');
+        
+        if (searchQuery) {
+            setSearchTerm(searchQuery);
+            setCurrentPage(1);
+        }
+        
+        if (searchIntent) {
+            // Handle search intent if needed
+            console.log('Search intent:', searchIntent);
+        }
+    }, []);
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
@@ -337,6 +388,15 @@ const ProductCatalog = () => {
                 <h2>Error Loading Products</h2>
                 <p>{error}</p>
                 <button onClick={() => window.location.reload()}>Retry</button>
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="catalog-loading">
+                <div className="loading-spinner"></div>
+                <p>Loading products...</p>
             </div>
         );
     }
@@ -571,58 +631,42 @@ const ProductCatalog = () => {
                 {/* Products Grid/List */}
                 <div className="catalog-main">
                     {products.length === 0 ? (
-                        <div className="catalog-empty">
-                            <h3>No Products Found</h3>
-                            <p>
-                                {searchTerm || selectedCategory || getActiveFiltersCount() > 0
-                                    ? 'Try adjusting your search criteria or filters.'
-                                    : 'Check back later for new products.'}
-                            </p>
-                            {(searchTerm || selectedCategory || getActiveFiltersCount() > 0) && (
-                                <button className="reset-btn" onClick={clearFilters}>
-                                    Reset Filters
-                                </button>
-                            )}
+                        <div className="no-products">
+                            <Package size={48} />
+                            <h3>No products found</h3>
+                            <p>Try adjusting your filters or search terms</p>
                         </div>
                     ) : (
                         <>
-                            <div className={`products-${viewMode}`}>
-                                {products
-                                    .filter(product => product && (product._id || product.id)) // Filter out products without valid IDs
-                                    .map((product) => (
-                                        <ProductCard 
-                                            key={product._id || product.id} 
-                                            product={product} 
-                                            viewMode={viewMode}
-                                        />
-                                    ))
-                                }
+                            <div className={`products-container ${viewMode}`}>
+                                {products.map((product) => (
+                                    <ProductCard 
+                                        key={product._id || product.id} 
+                                        product={product} 
+                                        viewMode={viewMode}
+                                    />
+                                ))}
                             </div>
 
                             {/* Pagination */}
                             {totalItems > itemsPerPage && (
                                 <div className="pagination">
-                                    <button
-                                        className="pagination-btn"
-                                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                    <button 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                                         disabled={currentPage === 1}
+                                        className="pagination-button"
                                     >
                                         Previous
                                     </button>
                                     
                                     <div className="pagination-info">
-                                        <span>
-                                            Page {currentPage} of {Math.ceil(totalItems / itemsPerPage)}
-                                        </span>
-                                        <span className="item-count">
-                                            Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} products
-                                        </span>
+                                        Page {currentPage} of {Math.ceil(totalItems / itemsPerPage)}
                                     </div>
                                     
-                                    <button
-                                        className="pagination-btn"
-                                        onClick={() => setCurrentPage(Math.min(Math.ceil(totalItems / itemsPerPage), currentPage + 1))}
+                                    <button 
+                                        onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalItems / itemsPerPage), prev + 1))}
                                         disabled={currentPage >= Math.ceil(totalItems / itemsPerPage)}
+                                        className="pagination-button"
                                     >
                                         Next
                                     </button>

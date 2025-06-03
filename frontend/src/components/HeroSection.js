@@ -15,6 +15,7 @@ import {
   Star,
   Globe
 } from 'lucide-react';
+import { generatePlaceholder } from '../utils/imageUtils';
 
 const HeroSection = () => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -24,27 +25,24 @@ const HeroSection = () => {
   const featuredProducts = [
     {
       id: 1,
-      title: "Premium Wireless Headphones",
-      creator: "AudioTech Co.",
-      price: "199.99",
-      image: "/api/placeholder/400/300",
-      category: "Electronics"
+      name: "Digital Art Collection",
+      price: 0.5,
+      image: generatePlaceholder(400, 300, 'Art'),
+      category: "Art"
     },
     {
       id: 2,
-      title: "Handcrafted Leather Bag",
-      creator: "Artisan Crafts",
-      price: "89.99",
-      image: "/api/placeholder/400/300",
-      category: "Fashion"
+      name: "Gaming Asset Pack",
+      price: 1.2,
+      image: generatePlaceholder(400, 300, 'Gaming'),
+      category: "Gaming"
     },
     {
       id: 3,
-      title: "Organic Coffee Beans",
-      creator: "Mountain Roasters",
-      price: "24.99",
-      image: "/api/placeholder/400/300",
-      category: "Food & Beverage"
+      name: "Music NFT Album",
+      price: 0.8,
+      image: generatePlaceholder(400, 300, 'Music'),
+      category: "Music"
     }
   ];
 
@@ -152,7 +150,7 @@ const HeroSection = () => {
               <div className="product-image-container">
                 <img
                   src={currentProduct.image}
-                  alt={currentProduct.title}
+                  alt={currentProduct.name}
                   className="product-image"
                 />
                 <div className="product-overlay">
@@ -165,8 +163,8 @@ const HeroSection = () => {
               </div>
               
               <div className="product-info">
-                <h3 className="product-title">{currentProduct.title}</h3>
-                <p className="product-creator">by {currentProduct.creator}</p>
+                <h3 className="product-title">{currentProduct.name}</h3>
+                <p className="product-creator">Price: ${currentProduct.price}</p>
                 <div className="product-price">
                   <span className="price-label">Price</span>
                   <span className="price-value">${currentProduct.price}</span>
@@ -187,13 +185,13 @@ const HeroSection = () => {
 
             <div className="floating-products">
               <div className="floating-product floating-product-1">
-                <img src="/api/placeholder/120/120" alt="Product" />
+                <img src={generatePlaceholder(120, 120, 'Product')} alt="Product" />
               </div>
               <div className="floating-product floating-product-2">
-                <img src="/api/placeholder/120/120" alt="Product" />
+                <img src={generatePlaceholder(120, 120, 'Product')} alt="Product" />
               </div>
               <div className="floating-product floating-product-3">
-                <img src="/api/placeholder/120/120" alt="Product" />
+                <img src={generatePlaceholder(120, 120, 'Product')} alt="Product" />
               </div>
             </div>
           </div>

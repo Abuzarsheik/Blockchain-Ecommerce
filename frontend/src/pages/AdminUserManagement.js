@@ -1,30 +1,21 @@
 import '../styles/AdminUserManagement.css';
 import React, { useState, useEffect, useCallback } from 'react';
-import { apiEndpoints } from '../services/api';
 import { 
-  User, 
   Search, 
-  Filter, 
   Shield, 
-  Ban, 
   CheckCircle, 
   Eye,
-  Calendar,
   Clock,
   XCircle,
   AlertTriangle,
-  ChevronDown,
   RefreshCw,
-  Unlock,
   Edit,
   Users,
   UserCheck,
-  UserX,
   Package,
   ShoppingCart,
-  Star
+  Calendar
 } from 'lucide-react';
-import { logger } from '../utils/logger';
 
 const AdminUserManagement = () => {
   const [users, setUsers] = useState([]);

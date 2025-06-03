@@ -75,51 +75,84 @@ const cartSlice = createSlice({
   initialState,
   reducers: {
     addToCart: (state, action) => {
-      const { productId, quantity = 1, price, name, image, category, isVerified, isDigital, stock, originalPrice } = action.payload;
-      const existingItem = state.items.find(item => item.productId === productId);
+      const { productId, name, price, image, category, quantity = 1, stock = 0 } = action.payload;
       
+      // Enhanced logging for debugging
+      console.log('addToCart action payload:', action.payload);
+      console.log('Destructured productId:', productId);
+      console.log('Available keys in payload:', Object.keys(action.payload));
+      
+      // Ensure proper product ID structure
+      const normalizedProductId = productId || action.payload.product_id || action.payload.id;
+      
+      console.log('Normalized product ID:', normalizedProductId);
+      
+      if (!normalizedProductId) {
+        console.error('Missing product ID in cart item:', action.payload);
+        console.error('Checked fields: productId, product_id, id');
+        return;
+      }
+
+      const existingItem = state.items.find(item => 
+        (item.productId === normalizedProductId) || 
+        (item.product_id === normalizedProductId)
+      );
+
       if (existingItem) {
         existingItem.quantity += quantity;
       } else {
         state.items.push({
-          productId,
-          name,
-          image,
-          category,
-          price,
-          originalPrice,
-          quantity,
-          isVerified: isVerified || false,
-          isDigital: isDigital || false,
-          stock
+          productId: normalizedProductId,
+          product_id: normalizedProductId, // Ensure both fields are present
+          name: name || 'Unnamed Product',
+          price: parseFloat(price) || 0,
+          image: image || '',
+          category: category || 'General',
+          quantity: parseInt(quantity) || 1,
+          stock: parseInt(stock) || 0
         });
       }
+
+      state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0);
+      state.subtotal = state.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+      state.total = state.subtotal + state.tax + state.shipping - state.discount;
+      state.itemCount = state.items.reduce((total, item) => total + item.quantity, 0);
       
-      cartSlice.caseReducers.calculateTotals(state);
+      // Save to localStorage
       saveCartToStorage(state);
     },
     
     removeFromCart: (state, action) => {
       const productId = action.payload;
-      state.items = state.items.filter(item => item.productId !== productId);
-      cartSlice.caseReducers.calculateTotals(state);
+      state.items = state.items.filter(item => 
+        item.productId !== productId && item.product_id !== productId
+      );
+      
+      state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0);
+      state.subtotal = state.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+      state.total = state.subtotal + state.tax + state.shipping - state.discount;
+      state.itemCount = state.items.reduce((total, item) => total + item.quantity, 0);
+      
+      // Save to localStorage
       saveCartToStorage(state);
     },
     
     updateQuantity: (state, action) => {
       const { productId, quantity } = action.payload;
-      const item = state.items.find(item => item.productId === productId);
+      const item = state.items.find(item => 
+        item.productId === productId || item.product_id === productId
+      );
       
-      if (item) {
-        if (quantity <= 0) {
-          state.items = state.items.filter(item => item.productId !== productId);
-        } else {
-          item.quantity = quantity;
-        }
+      if (item && quantity > 0) {
+        item.quantity = parseInt(quantity);
+        state.totalItems = state.items.reduce((total, item) => total + item.quantity, 0);
+        state.subtotal = state.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+        state.total = state.subtotal + state.tax + state.shipping - state.discount;
+        state.itemCount = state.items.reduce((total, item) => total + item.quantity, 0);
+        
+        // Save to localStorage
+        saveCartToStorage(state);
       }
-      
-      cartSlice.caseReducers.calculateTotals(state);
-      saveCartToStorage(state);
     },
     
     clearCart: (state) => {
@@ -160,14 +193,13 @@ const cartSlice = createSlice({
     removeCoupon: (state) => {
       state.coupon = null;
       state.discount = 0;
-      cartSlice.caseReducers.calculateTotals(state);
+      state.total = state.subtotal + state.tax + state.shipping - state.discount;
       saveCartToStorage(state);
     },
 
     setShippingMethod: (state, action) => {
       state.shippingMethod = action.payload;
-      cartSlice.caseReducers.calculateShipping(state);
-      cartSlice.caseReducers.calculateTotals(state);
+      state.total = state.subtotal + state.tax + state.shipping - state.discount;
       saveCartToStorage(state);
     },
 

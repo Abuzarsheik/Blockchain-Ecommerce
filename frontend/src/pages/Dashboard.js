@@ -1,11 +1,25 @@
 import '../styles/Dashboard.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, User, Star, TrendingUp, CheckCircle } from 'lucide-react';
-import PersonalizedRecommendations from '../components/PersonalizedRecommendations';
-import RecentActivity from '../components/RecentActivity';
-import NFTShowcase from '../components/NFTShowcase';
+import { 
+  Search, 
+  User, 
+  TrendingUp, 
+  ShoppingCart,
+  Heart,
+  Package,
+  CreditCard,
+  ArrowRight,
+  Wallet,
+  Award,
+  UserPlus,
+  RefreshCw,
+  Star,
+  CheckCircle,
+  Clock,
+  Zap
+} from 'lucide-react';
 import { logger } from '../utils/logger';
 import { api, apiEndpoints } from '../services/api';
 
@@ -23,27 +37,18 @@ const Dashboard = () => {
 
   const [loading, setLoading] = useState(false);
   const [userStats, setUserStats] = useState({
-    // Buyer stats
     totalSpent: 0,
     totalOrders: 0,
     wishlistItems: 0,
     completedOrders: 0,
     pendingOrders: 0,
-    // Seller stats
-    totalRevenue: 0,
-    totalSales: 0,
-    productsListed: 0,
-    ordersReceived: 0,
-    averageRating: 0,
-    pendingPayouts: 0,
-    profile: {
-      completionPercentage: 0
-    }
+    recentOrders: [],
+    savedAmount: 0,
+    loyaltyPoints: 0,
+    profileCompleteness: 75
   });
 
-  // Check if user is a seller
-  const isSeller = user?.userType === 'seller';
-  const userTypeLabel = isSeller ? 'Seller' : 'Buyer';
+  const [recentProducts, setRecentProducts] = useState([]);
 
   // Check if user is new (account created less than 7 days ago)
   const isNewUser = user ? (() => {
@@ -54,483 +59,399 @@ const Dashboard = () => {
     return daysDiff < 7;
   })() : true;
 
-  // Check if user profile is complete
-  const checkProfileCompletion = () => {
-    if (!user) return false;
-    
-    // Define required fields for a complete profile
-    const requiredFields = [
+  const calculateProfileCompleteness = useCallback(() => {
+    if (!user) return 0;
+    const fields = [
       user.firstName,
       user.lastName,
       user.email,
-      user.phoneNumber,
+      user.phone,
+      user.avatar,
       user.address?.street,
-      user.address?.city,
-      user.address?.country
+      user.address?.city
     ];
-    
-    // Check if all required fields are filled
-    const isComplete = requiredFields.every(field => field && field.trim() !== '');
-    
-    // Also check if user has uploaded an avatar
-    const hasAvatar = user.avatar && user.avatar !== '';
-    
-    return {
-      isComplete: isComplete && hasAvatar,
-      missingFields: !isComplete,
-      hasAvatar
-    };
-  };
+    const completedFields = fields.filter(field => field && field.trim() !== '').length;
+    return Math.round((completedFields / fields.length) * 100);
+  }, [user]);
 
-  const profileStatus = checkProfileCompletion();
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Fetch user data
-      const userResponse = await api.get('/users/me');
-      const userData = userResponse.data.data;
-      
-      // Determine if user is a seller
-      const isSellerUser = userData.userType === 'seller';
+      // Fetch user stats
+      const [ordersResponse, wishlistResponse, productsResponse] = await Promise.all([
+        api.get('/orders').catch(() => ({ data: { orders: [] } })),
+        apiEndpoints.getWishlist().catch(() => ({ count: 0, data: [] })),
+        api.get('/products?limit=6').catch(() => ({ data: { products: [] } }))
+      ]);
 
-      // Fetch stats based on user type
-      let statsData = {};
-      if (isSellerUser) {
-        // Fetch seller statistics
-        try {
-          const sellerStatsResponse = await api.get('/users/seller-stats');
-          statsData = sellerStatsResponse.data.data;
-        } catch (error) {
-          console.error('Error fetching seller stats:', error);
-          logger.error('Failed to fetch seller statistics', { error });
-          // Use default values
-          statsData = {
-            totalRevenue: 0,
-            totalSales: 0,
-            productsListed: 0,
-            ordersReceived: 0,
-            averageRating: 0,
-            pendingPayouts: 0
-          };
-        }
-      } else {
-        // Fetch buyer statistics (existing logic)
-        let totalSpent = 0;
-        let totalOrders = 0;
-        let wishlistCount = 0;
+      const orders = ordersResponse?.data?.orders || [];
+      const completedOrders = orders.filter(order => order.status === 'delivered');
+      const pendingOrders = orders.filter(order => ['pending', 'processing', 'shipped'].includes(order.status));
+      const totalSpent = completedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+      const savedAmount = Math.round(totalSpent * 0.15); // Estimated savings
 
-        try {
-          const ordersResponse = await api.get('/orders');
-          if (ordersResponse.data.success) {
-            const orders = ordersResponse.data.data;
-            totalOrders = orders.length;
-            totalSpent = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-          }
-        } catch (error) {
-          logger.error('Failed to fetch orders for dashboard', { error });
-        }
-
-        try {
-          const wishlistResponse = await apiEndpoints.getWishlist();
-          if (wishlistResponse.success) {
-            wishlistCount = wishlistResponse.data.length;
-          }
-        } catch (error) {
-          logger.error('Failed to fetch wishlist for dashboard', { error });
-        }
-
-        statsData = {
-          totalSpent,
-          totalOrders,
-          wishlistItems: wishlistCount,
-          completedOrders: totalOrders,
-          pendingOrders: 0,
-        };
-      }
-
-      setUserStats(prevStats => ({
-        ...prevStats,
-        ...statsData
+      setUserStats(prev => ({
+        ...prev,
+        totalOrders: orders.length,
+        completedOrders: completedOrders.length,
+        pendingOrders: pendingOrders.length,
+        totalSpent: totalSpent,
+        savedAmount: savedAmount,
+        wishlistItems: wishlistResponse?.count || wishlistResponse?.data?.length || 0,
+        recentOrders: orders.slice(0, 3),
+        loyaltyPoints: Math.round(totalSpent * 10), // 10 points per dollar
+        profileCompleteness: calculateProfileCompleteness()
       }));
 
+      setRecentProducts(productsResponse?.data?.products?.slice(0, 4) || []);
+
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      logger.error('Dashboard data fetch failed', { error });
+      logger.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [calculateProfileCompleteness]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchDashboardData();
     }
-  }, [user, isAuthenticated]);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!isAuthenticated) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        
-        // Fetch user profile and orders in parallel
-        const [ordersResponse, wishlistResponse] = await Promise.all([
-          api.get('/orders').catch(err => ({ data: { orders: [] } })), // Use correct endpoint
-          apiEndpoints.getWishlist().catch(err => ({ count: 0 })) // Use apiEndpoints and handle error gracefully
-        ]);
-
-        if (ordersResponse?.data?.orders) {
-          const orders = ordersResponse.data.orders;
-          const completedOrders = orders.filter(order => order.status === 'completed');
-          const pendingOrders = orders.filter(order => ['pending', 'processing', 'shipped'].includes(order.status));
-          const totalSpent = completedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-
-          setUserStats(prev => ({
-            ...prev,
-            totalOrders: orders.length,
-            completedOrders: completedOrders.length,
-            pendingOrders: pendingOrders.length,
-            totalSpent: totalSpent,
-            wishlistItems: wishlistResponse?.count || 0
-          }));
-        }
-
-      } catch (error) {
-        logger.error('Error fetching user data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, [isAuthenticated]);
+  }, [user, isAuthenticated, fetchDashboardData]);
 
   if (!isAuthenticated) {
     return (
       <div className="auth-prompt">
-        <h2>Please log in to access your dashboard</h2>
-        <Link to="/login" className="login-link">Go to Login</Link>
+        <div className="auth-prompt-content">
+          <div className="auth-icon">🔐</div>
+          <h2>Welcome to Blocmerce</h2>
+          <p>Please log in to access your personalized dashboard</p>
+          <Link to="/login" className="auth-btn primary">
+            <User size={20} />
+            Log In
+          </Link>
+          <Link to="/register" className="auth-btn secondary">
+            <UserPlus size={20} />
+            Sign Up
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const getWelcomeMessage = () => {
-    const baseMessage = isNewUser 
-      ? `Welcome to Blocmerce, ${user?.firstName || 'User'}! 🎉`
-      : `Welcome back, ${user?.firstName || 'User'}! 👋`;
-    
-    const subtitle = isSeller 
-      ? (isNewUser 
-          ? "Let's get you started selling on our marketplace" 
-          : "Your seller dashboard awaits")
-      : (isNewUser 
-          ? "Let's get you started on your blockchain marketplace journey" 
-          : "Your marketplace journey continues");
-    
-    return {
-      title: baseMessage,
-      subtitle: subtitle
-    };
-  };
+  const StatCard = ({ icon: Icon, title, value, subtitle, trend, color = "blue" }) => (
+    <div className={`modern-stat-card ${color}`}>
+      <div className="stat-card-header">
+        <div className="stat-icon-wrapper">
+          <Icon size={24} />
+        </div>
+        {trend && (
+          <div className={`trend ${trend > 0 ? 'positive' : 'negative'}`}>
+            <TrendingUp size={16} />
+            <span>{Math.abs(trend)}%</span>
+          </div>
+        )}
+      </div>
+      <div className="stat-card-content">
+        <h3>{title}</h3>
+        <div className="stat-value">{value}</div>
+        {subtitle && <p className="stat-subtitle">{subtitle}</p>}
+      </div>
+    </div>
+  );
+
+  const QuickActionCard = ({ icon: Icon, title, description, path, color = "blue" }) => (
+    <Link to={path} className={`quick-action-card ${color}`}>
+      <div className="action-icon">
+        <Icon size={24} />
+      </div>
+      <div className="action-content">
+        <h4>{title}</h4>
+        <p>{description}</p>
+      </div>
+      <ArrowRight size={20} className="action-arrow" />
+    </Link>
+  );
 
   return (
-    <div className="dashboard enhanced-dashboard">
-      <div className="dashboard-header enhanced-header">
-        <div className="welcome-animation">
-          <div className="welcome-content">
-            <h1 className="dashboard-title">{`${userTypeLabel} Dashboard`}</h1>
-            <div className="welcome-message">
-              <h2>{getWelcomeMessage().title}</h2>
-              <p>{getWelcomeMessage().subtitle}</p>
-            </div>
-          </div>
-        </div>
-        {isNewUser && (
-          <div className="new-user-banner">
-            <div className="banner-content">
-              <h3>🚀 Getting Started</h3>
-              <p>
-                {isSeller 
-                  ? "Start selling on our marketplace! List your first product and reach customers worldwide."
-                  : "Explore trending products, add items to your wishlist, and start shopping!"
+    <div className="modern-dashboard">
+      {/* Header Section */}
+      <div className="dashboard-header-modern">
+        <div className="header-content">
+          <div className="welcome-section">
+            <div className="user-greeting">
+              <h1>Welcome back, {user?.firstName || 'User'}! 👋</h1>
+              <p className="greeting-subtitle">
+                {isNewUser 
+                  ? "Let's get you started on your blockchain marketplace journey" 
+                  : "Here's what's happening with your account today"
                 }
               </p>
-              <div className="quick-start-actions">
-                {isSeller ? (
-                  // Seller Actions
-                  <>
-                    <Link to="/create-product" className="enhanced-action-btn primary">
-                      <div className="btn-icon">
-                        <Search size={20} />
-                      </div>
-                      <div className="btn-content">
-                        <span className="btn-title">List Your First Product</span>
-                        <span className="btn-subtitle">Start selling today</span>
-                      </div>
-                      <div className="btn-arrow">
-                        <TrendingUp size={16} />
-                      </div>
-                    </Link>
-                    <Link to="/seller/analytics" className="enhanced-action-btn secondary">
-                      <div className="btn-icon">
-                        <TrendingUp size={20} />
-                      </div>
-                      <div className="btn-content">
-                        <span className="btn-title">View Analytics</span>
-                        <span className="btn-subtitle">Track your performance</span>
-                      </div>
-                      <div className="btn-arrow">
-                        <CheckCircle size={16} />
-                      </div>
-                    </Link>
-                  </>
-                ) : (
-                  // Buyer Actions
-                  <>
-                    <Link to="/catalog" className="enhanced-action-btn primary">
-                      <div className="btn-icon">
-                        <Search size={20} />
-                      </div>
-                      <div className="btn-content">
-                        <span className="btn-title">Browse Products</span>
-                        <span className="btn-subtitle">Discover amazing items</span>
-                      </div>
-                      <div className="btn-arrow">
-                        <TrendingUp size={16} />
-                      </div>
-                    </Link>
-                    {/* Only show profile completion button if profile is not complete */}
-                    {!profileStatus.isComplete ? (
-                      <Link to="/profile-settings" className="enhanced-action-btn secondary">
-                        <div className="btn-icon">
-                          <User size={20} />
-                        </div>
-                        <div className="btn-content">
-                          <span className="btn-title">Complete Profile</span>
-                          <span className="btn-subtitle">Personalize your account</span>
-                        </div>
-                        <div className="btn-arrow">
-                          <Star size={16} />
-                        </div>
-                      </Link>
-                    ) : (
-                      <Link to="/profile-settings" className="enhanced-action-btn secondary">
-                        <div className="btn-icon">
-                          <User size={20} />
-                        </div>
-                        <div className="btn-content">
-                          <span className="btn-title">View Profile</span>
-                          <span className="btn-subtitle">Manage your account settings</span>
-                        </div>
-                        <div className="btn-arrow">
-                          <CheckCircle size={16} />
-                        </div>
-                      </Link>
-                    )}
-                  </>
-                )}
-              </div>
+            </div>
+            <div className="header-actions">
+              <button 
+                onClick={fetchDashboardData} 
+                className="refresh-btn"
+                disabled={loading}
+              >
+                <RefreshCw size={18} className={loading ? 'spinning' : ''} />
+                Refresh
+              </button>
+              <Link to="/profile-settings" className="profile-btn">
+                <User size={18} />
+                Profile
+              </Link>
             </div>
           </div>
-        )}
-        
-        {/* Show profile completion banner for any user with incomplete profile */}
-        {!profileStatus.isComplete && isNewUser && (
-          <div className="profile-completion-banner">
-            <div className="banner-content">
-              <h3>📝 Complete Your Profile</h3>
-              <p>Add missing information to get the most out of your Blocmerce experience</p>
-              <Link to="/profile-settings" className="enhanced-action-btn warning">
-                <div className="btn-icon">
+
+          {/* Profile Completion Banner */}
+          {userStats.profileCompleteness < 100 && (
+            <div className="completion-banner">
+              <div className="completion-info">
+                <div className="completion-icon">
                   <User size={20} />
                 </div>
-                <div className="btn-content">
-                  <span className="btn-title">Complete Profile</span>
-                  <span className="btn-subtitle">Add missing details</span>
+                <div>
+                  <h4>Complete Your Profile</h4>
+                  <p>You're {userStats.profileCompleteness}% done</p>
                 </div>
-                <div className="btn-arrow">
-                  <Star size={16} />
+              </div>
+              <div className="completion-progress">
+                <div 
+                  className="progress-bar"
+                  style={{ width: `${userStats.profileCompleteness}%` }}
+                ></div>
+              </div>
+              <Link to="/profile-settings" className="complete-btn">
+                Complete
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="stats-grid-modern">
+        <StatCard
+          icon={CreditCard}
+          title="Total Spent"
+          value={`$${userStats.totalSpent.toLocaleString()}`}
+          subtitle="Lifetime purchases"
+          color="blue"
+          trend={5}
+        />
+        <StatCard
+          icon={Package}
+          title="Orders"
+          value={userStats.totalOrders}
+          subtitle={`${userStats.completedOrders} completed`}
+          color="green"
+        />
+        <StatCard
+          icon={Heart}
+          title="Wishlist"
+          value={userStats.wishlistItems}
+          subtitle="Saved for later"
+          color="pink"
+        />
+        <StatCard
+          icon={Award}
+          title="Loyalty Points"
+          value={userStats.loyaltyPoints.toLocaleString()}
+          subtitle={`$${userStats.savedAmount} saved`}
+          color="purple"
+        />
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="dashboard-grid-modern">
+        {/* Quick Actions */}
+        <div className="dashboard-section quick-actions-section">
+          <div className="section-header">
+            <h2>Quick Actions</h2>
+            <p>Get things done faster</p>
+          </div>
+          <div className="quick-actions-grid">
+            <QuickActionCard
+              icon={Search}
+              title="Browse Products"
+              description="Discover new items"
+              path="/catalog"
+              color="blue"
+            />
+            <QuickActionCard
+              icon={ShoppingCart}
+              title="View Cart"
+              description={`${items.length} items waiting`}
+              path="/cart"
+              color="green"
+            />
+            <QuickActionCard
+              icon={Heart}
+              title="My Wishlist"
+              description="Items you love"
+              path="/wishlist"
+              color="pink"
+            />
+            <QuickActionCard
+              icon={Wallet}
+              title="Wallet"
+              description="Manage crypto payments"
+              path="/wallet"
+              color="purple"
+            />
+          </div>
+        </div>
+
+        {/* Recent Orders */}
+        <div className="dashboard-section recent-orders-section">
+          <div className="section-header">
+            <h2>Recent Orders</h2>
+            <Link to="/orders" className="view-all">
+              View All <ArrowRight size={16} />
+            </Link>
+          </div>
+          {userStats.recentOrders.length > 0 ? (
+            <div className="orders-list-modern">
+              {userStats.recentOrders.map((order, index) => (
+                <div key={order.id || index} className="order-item-modern">
+                  <div className="order-info">
+                    <div className="order-header">
+                      <span className="order-id">#{order.orderNumber || `ORD-${index + 1}`}</span>
+                      <span className={`order-status ${order.status}`}>
+                        {order.status || 'pending'}
+                      </span>
+                    </div>
+                    <p className="order-items">
+                      {order.items?.length || 1} items • ${order.totalAmount || 0}
+                    </p>
+                    <span className="order-date">
+                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'Today'}
+                    </span>
+                  </div>
+                  <Link to={`/orders/${order.id}`} className="order-arrow">
+                    <ArrowRight size={20} />
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <Package size={48} />
+              <h3>No Orders Yet</h3>
+              <p>Start shopping to see your orders here</p>
+              <Link to="/catalog" className="empty-action-btn">
+                Browse Products
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Trending Products */}
+        <div className="dashboard-section trending-section">
+          <div className="section-header">
+            <h2>Trending Products</h2>
+            <Link to="/catalog?sort=trending" className="view-all">
+              View All <ArrowRight size={16} />
+            </Link>
+          </div>
+          <div className="products-grid-compact">
+            {recentProducts.map((product, index) => (
+              <Link 
+                key={product.id || index} 
+                to={`/product/${product.id}`}
+                className="product-card-compact"
+              >
+                <div className="product-image">
+                  {product.images?.[0] ? (
+                    <img src={product.images[0]} alt={product.name} />
+                  ) : (
+                    <div className="placeholder-image">
+                      <Package size={24} />
+                    </div>
+                  )}
+                </div>
+                <div className="product-info">
+                  <h4>{product.name || `Product ${index + 1}`}</h4>
+                  <p className="product-price">${product.price || '99.99'}</p>
+                  <div className="product-rating">
+                    <Star size={14} fill="currentColor" />
+                    <span>{product.rating || '4.5'}</span>
+                  </div>
                 </div>
               </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Activity Feed */}
+        <div className="dashboard-section activity-section">
+          <div className="section-header">
+            <h2>Recent Activity</h2>
+            <span className="activity-count">{userStats.totalOrders + userStats.wishlistItems} activities</span>
+          </div>
+          <div className="activity-feed">
+            {userStats.recentOrders.length > 0 ? (
+              userStats.recentOrders.slice(0, 3).map((order, index) => (
+                <div key={index} className="activity-item">
+                  <div className="activity-icon completed">
+                    <CheckCircle size={16} />
+                  </div>
+                  <div className="activity-content">
+                    <p>Order #{order.orderNumber || `ORD-${index + 1}`} placed</p>
+                    <span className="activity-time">
+                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'Today'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-activity">
+                <Clock size={32} />
+                <p>Your activity will appear here</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Getting Started for New Users */}
+      {isNewUser && (
+        <div className="getting-started-modern">
+          <div className="getting-started-header">
+            <Zap size={24} />
+            <h2>Getting Started Guide</h2>
+            <p>Complete these steps to make the most of Blocmerce</p>
+          </div>
+          <div className="getting-started-steps">
+            <div className="step-card">
+              <div className="step-number">1</div>
+              <div className="step-content">
+                <h4>Explore the Marketplace</h4>
+                <p>Browse thousands of products from verified sellers</p>
+                <Link to="/catalog" className="step-action">Start Exploring</Link>
+              </div>
+            </div>
+            <div className="step-card">
+              <div className="step-number">2</div>
+              <div className="step-content">
+                <h4>Connect Your Wallet</h4>
+                <p>Set up crypto payments for secure transactions</p>
+                <Link to="/wallet" className="step-action">Connect Wallet</Link>
+              </div>
+            </div>
+            <div className="step-card">
+              <div className="step-number">3</div>
+              <div className="step-content">
+                <h4>Make Your First Purchase</h4>
+                <p>Complete your profile and start shopping</p>
+                <Link to="/profile-settings" className="step-action">Complete Profile</Link>
+              </div>
             </div>
           </div>
-        )}
-      </div>
-
-      <div className="dashboard-stats enhanced-stats">
-        {isSeller ? (
-          // Seller Stats
-          <>
-            <div className="stat-card animated-stat">
-              <div className="stat-icon">💰</div>
-              <div className="stat-info">
-                <h3>Total Revenue</h3>
-                <p className="stat-value">
-                  {loading ? 'Loading...' : `$${userStats.totalRevenue || 0}`}
-                </p>
-              </div>
-            </div>
-            <div className="stat-card animated-stat">
-              <div className="stat-icon">📦</div>
-              <div className="stat-info">
-                <h3>Products Listed</h3>
-                <p className="stat-value">
-                  {loading ? 'Loading...' : userStats.productsListed || 0}
-                </p>
-              </div>
-            </div>
-            <div className="stat-card animated-stat">
-              <div className="stat-icon">🛒</div>
-              <div className="stat-info">
-                <h3>Orders Received</h3>
-                <p className="stat-value">{userStats.ordersReceived || 0}</p>
-              </div>
-            </div>
-            <div className="stat-card animated-stat">
-              <div className="stat-icon">⭐</div>
-              <div className="stat-info">
-                <h3>Average Rating</h3>
-                <p className="stat-value">{userStats.averageRating || 0.0}/5.0</p>
-              </div>
-            </div>
-          </>
-        ) : (
-          // Buyer Stats
-          <>
-            <div className="stat-card animated-stat">
-              <div className="stat-icon">💰</div>
-              <div className="stat-info">
-                <h3>Total Spent</h3>
-                <p className="stat-value">
-                  {loading ? 'Loading...' : `$${userStats.totalSpent || 0}`}
-                </p>
-              </div>
-            </div>
-            <div className="stat-card animated-stat">
-              <div className="stat-icon">📦</div>
-              <div className="stat-info">
-                <h3>Orders Placed</h3>
-                <p className="stat-value">
-                  {loading ? 'Loading...' : userStats.totalOrders || 0}
-                </p>
-              </div>
-            </div>
-            <div className="stat-card animated-stat">
-              <div className="stat-icon">❤️</div>
-              <div className="stat-info">
-                <h3>Wishlist Items</h3>
-                <p className="stat-value">{userStats.wishlistItems || 0}</p>
-              </div>
-            </div>
-            <div className="stat-card animated-stat">
-              <div className="stat-icon">🛒</div>
-              <div className="stat-info">
-                <h3>Cart Items</h3>
-                <p className="stat-value">{items.length}</p>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="dashboard-content enhanced-content">
-        <div className="left-panel">
-          <PersonalizedRecommendations 
-            insights={{ 
-              avgMatchScore: 87, 
-              totalViews: userStats.profileViews || 0, 
-              favoriteCategory: userStats.favoriteCategory || 'Digital Art' 
-            }}
-            user={user}
-            realProducts={[]}
-            isNewUser={isNewUser}
-          />
-          
-          {/* Only show recent activity if user has activities */}
-          {(userStats.hasActivities || !isNewUser) && (
-            <RecentActivity 
-              hasRealData={userStats.hasActivities}
-              isNewUser={isNewUser}
-            />
-          )}
-          
-          {/* Show getting started guide for new users */}
-          {isNewUser && (
-            <div className="getting-started-section">
-              <h3>🎯 Getting Started Guide</h3>
-              <div className="guide-steps">
-                <div className="guide-step">
-                  <span className="step-number">1</span>
-                  <div className="step-content">
-                    <h4>Explore Products</h4>
-                    <p>Browse our marketplace to discover amazing items</p>
-                    <Link to="/catalog" className="step-link">Start Exploring →</Link>
-                  </div>
-                </div>
-                <div className="guide-step">
-                  <span className="step-number">2</span>
-                  <div className="step-content">
-                    <h4>Create Your Wishlist</h4>
-                    <p>Save items you love for later</p>
-                    <Link to="/wishlist" className="step-link">View Wishlist →</Link>
-                  </div>
-                </div>
-                <div className="guide-step">
-                  <span className="step-number">3</span>
-                  <div className="step-content">
-                    <h4>Make Your First Purchase</h4>
-                    <p>Add items to cart and checkout securely</p>
-                    <Link to="/cart" className="step-link">View Cart →</Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-
-        <div className="right-panel">
-          {/* Only show NFT showcase if user has NFTs or is not new */}
-          {(userStats.hasNFTs || !isNewUser) && (
-            <NFTShowcase 
-              nftData={userStats.nftData}
-              salesData={userStats.salesData}
-              loading={loading}
-              hasRealData={userStats.hasNFTs}
-              isNewUser={isNewUser}
-            />
-          )}
-          
-          {/* Show marketplace highlights for new users instead of empty NFT collection */}
-          {isNewUser && !userStats.hasNFTs && (
-            <div className="marketplace-highlights">
-              <h3>🌟 Marketplace Highlights</h3>
-              <p>Discover what's trending in our marketplace</p>
-              <div className="highlights-grid">
-                {/* Placeholder for product highlights */}
-                <div className="highlight-card">
-                  <div className="highlight-image">
-                    <div className="placeholder-image">📷</div>
-                  </div>
-                  <div className="highlight-info">
-                    <h4>Sample Product</h4>
-                    <p className="highlight-price">$99.99</p>
-                    <p className="highlight-seller">by Verified Seller</p>
-                  </div>
-                </div>
-              </div>
-              <Link to="/catalog" className="view-all-highlights">
-                View All Products →
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 };

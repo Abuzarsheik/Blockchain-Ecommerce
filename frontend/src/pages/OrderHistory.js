@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Calendar, DollarSign, Eye, Truck, ExternalLink } from 'lucide-react';
 import { fetchOrders } from '../store/slices/ordersSlice';
-import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
+import { getImageUrl, handleImageError } from '../utils/imageUtils';
 import { useDispatch, useSelector } from 'react-redux';
 
 const OrderHistory = () => {
@@ -83,6 +83,11 @@ const OrderHistory = () => {
     });
   };
 
+  const formatCurrency = (value) => {
+    const numValue = parseFloat(value);
+    return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
+  };
+
   const hasTrackingInfo = (order) => {
     return order.shipping_info?.tracking_number || order.tracking_number;
   };
@@ -157,7 +162,7 @@ const OrderHistory = () => {
                   </div>
                   <div className="order-total">
                     <DollarSign size={16} />
-                    <span className="amount">${(order.total || order.amount || 0).toFixed(2)}</span>
+                    <span className="amount">${formatCurrency(order.total || order.amount || 0)}</span>
                   </div>
                 </div>
 
@@ -190,7 +195,7 @@ const OrderHistory = () => {
                       <div key={index} className="item-preview">
                         {item.image && (
                           <img 
-                            src={getNFTImageUrl(item.image)} 
+                            src={getImageUrl(item.image)} 
                             alt={item.name} 
                             className="item-image"
                             onError={handleImageError}

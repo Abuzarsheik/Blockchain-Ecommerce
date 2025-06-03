@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { getApiUrl } from '../config/api';
+import { logDebug, logError, logInfo } from '../utils/logger.production';
 import { 
   Upload, 
   Image as ImageIcon, 
@@ -178,11 +180,11 @@ const CreateProduct = () => {
     try {
       const productData = new FormData();
       
-      // Debug logging to track what's being sent
-      console.log('🔍 FRONTEND DEBUG - CreateProduct form submission:');
-      console.log('- Category from formData:', `"${formData.category}"`);
-      console.log('- Available categories:', categories);
-      console.log('- Selected category details:', categories.find(c => c.value === formData.category));
+      // Remove debug logging for production
+      logDebug('CreateProduct form submission');
+      logDebug('Category from formData:', formData.category);
+      logDebug('Available categories:', categories);
+      logDebug('Selected category details:', categories.find(c => c.value === formData.category));
       
       // Add product details
       productData.append('name', formData.name);
@@ -196,38 +198,31 @@ const CreateProduct = () => {
       productData.append('tags', formData.tags);
       productData.append('status', 'active');
       
-      // Debug what's actually being sent in FormData
-      console.log('🔍 FRONTEND DEBUG - FormData contents:');
-      for (let [key, value] of productData.entries()) {
-        console.log(`- ${key}:`, `"${value}"`);
+      logDebug('FormData contents prepared');
+      
+      // Add dimensions if provided
+      if (formData.dimensions.length || formData.dimensions.width || formData.dimensions.height) {
+        productData.append('dimensions', JSON.stringify(formData.dimensions));
       }
-      
-      // Add dimensions
-      productData.append('dimensions', JSON.stringify(formData.dimensions));
-      
-      // Add images
+
+      // Add all images
       imageFiles.forEach((file, index) => {
         productData.append('images', file);
       });
 
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/products', {
+      const response = await fetch(getApiUrl('/products'), {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: productData
       });
 
+      const result = await response.json();
+
       if (response.ok) {
-        const result = await response.json();
-        
-        // Show success message with marketplace confirmation
-        setErrors({ 
-          success: 'Product created successfully and is now live in the marketplace! Buyers can now discover and purchase your product.' 
-        });
-        
-        // Reset form
+        logInfo('Product created successfully:', result);
+        // Show success message and redirect
         setFormData({
           name: '',
           description: '',
@@ -239,28 +234,23 @@ const CreateProduct = () => {
           tags: '',
           inventory: '1',
           shippingWeight: '',
-          dimensions: {
-            length: '',
-            width: '',
-            height: ''
-          },
+          dimensions: { length: '', width: '', height: '' },
           status: 'active'
         });
         setImageFiles([]);
         setImagePreviews([]);
         
-        // Redirect after a short delay to let user see success message
-        setTimeout(() => {
-          navigate('/seller-dashboard?tab=products');
-        }, 2000);
-        
+        navigate('/seller/dashboard?tab=products');
       } else {
-        const error = await response.json();
-        setErrors({ submit: error.message || 'Failed to create product' });
+        throw new Error(result.message || 'Failed to create product');
       }
+
     } catch (error) {
-      console.error('Error creating product:', error);
-      setErrors({ submit: 'Network error. Please try again.' });
+      logError('Error creating product:', error);
+      setErrors(prev => ({
+        ...prev,
+        submit: 'Failed to create product. Please try again.'
+      }));
     } finally {
       setIsSubmitting(false);
     }
@@ -542,14 +532,6 @@ const CreateProduct = () => {
             <div className="error-message submit-error">
               <AlertCircle size={16} />
               {errors.submit}
-            </div>
-          )}
-
-          {/* Success Messages */}
-          {errors.success && (
-            <div className="success-message submit-success">
-              <CheckCircle size={16} />
-              {errors.success}
             </div>
           )}
 

@@ -1,23 +1,30 @@
 import '../styles/Checkout.css';
+import { getApiUrl } from '../config/api';
+import { logDebug } from '../utils/logger.production';
 import React, { useState, useEffect } from 'react';
-import { 
-  CreditCard, 
-  Wallet, 
-  Check, 
-  ArrowLeft, 
-  Shield,
-  Info
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import {
+  CreditCard, Shield, CheckCircle, ArrowLeft
 } from 'lucide-react';
 import { clearCart } from '../store/slices/cartSlice';
-import { getNFTImageUrl, handleImageError } from '../utils/imageUtils';
+import { getImageUrl, handleImageError, generatePlaceholder } from '../utils/imageUtils';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
 import { logger } from '../utils/logger';
+import { walletService } from '../services/walletService';
+import { blockchainService } from '../services/blockchain';
+import { ethers } from 'ethers';
 
 const Checkout = () => {
+  // TESTING MODE: Set to false for production
+  const TESTING_MODE = true;
+  
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [isConnectingWallet, setIsConnectingWallet] = useState(false);
+  const [walletInfo, setWalletInfo] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(null);
+  const [contractDetails, setContractDetails] = useState(null);
   const [formData, setFormData] = useState({
     // Billing Information
     firstName: '',
@@ -80,6 +87,40 @@ const Checkout = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    const info = walletService.getWalletInfo();
+    setWalletInfo(info);
+    
+    // Fetch wallet balance if connected
+    if (info?.connected && window.ethereum) {
+      fetchWalletBalance();
+    }
+  }, []);
+
+  useEffect(() => {
+    // Update balance when wallet connection changes
+    if (walletInfo?.connected && window.ethereum) {
+      fetchWalletBalance();
+    } else {
+      setWalletBalance(null);
+    }
+  }, [walletInfo?.connected]);
+
+  const fetchWalletBalance = async () => {
+    try {
+      if (!window.ethereum) return;
+      
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const balance = await provider.getBalance(signer.address);
+      const balanceInETH = ethers.formatEther(balance);
+      setWalletBalance(balanceInETH);
+    } catch (error) {
+      logger.error('Failed to fetch wallet balance:', error);
+      setWalletBalance('Error');
+    }
+  };
+
   const validateStep1 = () => {
     const newErrors = {};
     
@@ -104,9 +145,8 @@ const Checkout = () => {
       if (!formData.expiryDate.trim()) newErrors.expiryDate = 'Expiry date is required';
       if (!formData.cvv.trim()) newErrors.cvv = 'CVV is required';
       if (!formData.cardName.trim()) newErrors.cardName = 'Cardholder name is required';
-    } else if (paymentMethod === 'crypto') {
-      if (!formData.walletAddress.trim()) newErrors.walletAddress = 'Wallet address is required';
     }
+    // For crypto/escrow payments, validation is handled by wallet connection check in nextStep
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -150,10 +190,36 @@ const Checkout = () => {
   };
 
   const nextStep = () => {
+    console.log('NextStep called - Current step:', step, 'Payment method:', paymentMethod);
+    
     if (step === 1 && validateStep1()) {
+      console.log('Moving from step 1 to step 2');
       setStep(2);
     } else if (step === 2 && validateStep2()) {
+      console.log('Step 2 validation passed');
+      
+      // Additional validation for crypto/escrow payments ONLY
+      if (paymentMethod === 'crypto' || paymentMethod === 'escrow') {
+        const currentWalletInfo = walletService.getWalletInfo();
+        console.log('Checking wallet connection for crypto/escrow:', currentWalletInfo);
+        
+        if (!currentWalletInfo?.connected) {
+          console.log('Wallet not connected, showing error');
+          toast.error('Please connect your wallet to proceed with crypto payment');
+          return;
+        }
+      }
+      
+      // Proceed to review step
+      console.log('Moving from step 2 to step 3');
       setStep(3);
+    } else {
+      console.log('Validation failed for step:', step);
+      if (step === 1) {
+        console.log('Step 1 validation failed');
+      } else if (step === 2) {
+        console.log('Step 2 validation failed');
+      }
     }
   };
 
@@ -167,21 +233,44 @@ const Checkout = () => {
     setIsProcessing(true);
     
     try {
-      // Prepare order data
-      const orderData = {
-        items: cart.items.map(item => ({
-          product_id: item.productId,
-          name: item.name,
-          image: item.image,
-          category: item.category,
+      // Validate cart items structure
+      if (!cart.items || cart.items.length === 0) {
+        throw new Error('No items in cart');
+      }
+
+      // Ensure all cart items have required fields
+      const validatedItems = cart.items.map(item => {
+        // Handle both productId and product_id fields
+        const productId = item.productId || item.product_id || item.id;
+        
+        if (!productId) {
+          logger.warn('Item missing product ID:', item);
+          throw new Error(`Item "${item.name || 'Unknown'}" is missing product ID`);
+        }
+
+        if (!item.quantity || item.quantity <= 0) {
+          throw new Error(`Invalid quantity for item "${item.name}"`);
+        }
+
+        if (!item.price || item.price <= 0) {
+          throw new Error(`Invalid price for item "${item.name}"`);
+        }
+
+        return {
+          product_id: productId,
           quantity: item.quantity,
           price: item.price
-        })),
+        };
+      });
+
+      // Create order object
+      const orderData = {
+        items: validatedItems,
+        total: cart.total,
         subtotal: cart.subtotal,
         tax: cart.tax,
-        shipping: cart.shipping,
+        shipping_cost: cart.shipping,
         discount: cart.discount,
-        total: cart.total,
         payment_method: paymentMethod,
         billing_info: {
           firstName: formData.firstName,
@@ -194,20 +283,147 @@ const Checkout = () => {
           zipCode: formData.zipCode,
           country: formData.country
         },
-        shipping_address: {
+        shippingAddress: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
           street: formData.address,
           city: formData.city,
           state: formData.state,
-          zipCode: formData.zipCode,
+          postalCode: formData.zipCode,
           country: formData.country
         }
       };
 
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      logDebug('Processing order with data:', orderData);
 
-      // Create order via API
-      const response = await fetch('http://localhost:5000/api/orders', {
+      // Add debug logging to check structure before sending
+      console.log('Order data being sent:', JSON.stringify(orderData, null, 2));
+      console.log('Shipping address structure:', orderData.shippingAddress);
+
+      let blockchainTx = null;
+      let escrowId = null;
+
+      // Handle crypto/escrow payments with smart contract
+      if (paymentMethod === 'crypto' || paymentMethod === 'escrow') {
+        try {
+          // Check wallet connection
+          const currentWalletInfo = walletService.getWalletInfo();
+          if (!currentWalletInfo?.connected) {
+            throw new Error('Please connect your wallet to complete crypto payment');
+          }
+
+          toast.info('🔍 Checking wallet balance...');
+
+          // Check wallet balance before proceeding
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          const balance = await provider.getBalance(signer.address);
+          
+          // Calculate required amount (purchase + factory fee + gas estimate)
+          const purchaseAmount = ethers.parseEther(orderData.total.toString());
+          const factoryFee = ethers.parseEther('0.001'); // 0.001 ETH factory fee
+          const estimatedGas = ethers.parseEther('0.01'); // Rough gas estimate
+          const totalRequired = purchaseAmount + factoryFee + estimatedGas;
+          
+          logger.info('Balance check:', {
+            balance: ethers.formatEther(balance),
+            required: ethers.formatEther(totalRequired),
+            purchase: ethers.formatEther(purchaseAmount),
+            factoryFee: ethers.formatEther(factoryFee),
+            estimatedGas: ethers.formatEther(estimatedGas)
+          });
+
+          // TESTING MODE: Bypass balance check for demonstration
+          if (!TESTING_MODE && balance < totalRequired) {
+            const shortfall = totalRequired - balance;
+            throw new Error(
+              `Insufficient ETH balance. You need ${ethers.formatEther(totalRequired)} ETH total ` +
+              `(${ethers.formatEther(purchaseAmount)} for purchase + ${ethers.formatEther(factoryFee)} factory fee + ` +
+              `≈${ethers.formatEther(estimatedGas)} gas). You have ${ethers.formatEther(balance)} ETH. ` +
+              `Please add ${ethers.formatEther(shortfall)} ETH to your wallet.`
+            );
+          }
+
+          if (TESTING_MODE && balance < totalRequired) {
+            const shortfall = totalRequired - balance;
+            toast.warning(`⚠️ TESTING MODE: Bypassing balance check. Need ${ethers.formatEther(shortfall)} more ETH in production.`);
+            logger.warn('Testing mode: Proceeding with insufficient balance for demonstration purposes');
+          }
+
+          toast.info('🔐 Initiating smart contract escrow...');
+          
+          // Create escrow smart contract
+          const escrowContract = await blockchainService.createEscrowContract({
+            buyerAddress: currentWalletInfo.wallet?.address || currentWalletInfo.wallet?.account,
+            sellerAddress: validatedItems[0].sellerAddress || '0x0000000000000000000000000000000000000000', // Get from product
+            amount: orderData.total.toString(),
+            productHash: generateProductHash(orderData),
+            escrowDuration: 7 * 24 * 60 * 60, // 7 days in seconds
+            testingMode: TESTING_MODE // Pass testing mode to blockchain service
+          });
+
+          escrowId = escrowContract.contractAddress;
+          blockchainTx = escrowContract.transactionHash;
+
+          // Store contract details for display
+          setContractDetails({
+            contractAddress: escrowContract.contractAddress,
+            transactionHash: escrowContract.transactionHash,
+            blockNumber: escrowContract.blockNumber,
+            gasUsed: escrowContract.gasUsed,
+            buyerAddress: currentWalletInfo.wallet?.address || currentWalletInfo.wallet?.account,
+            sellerAddress: validatedItems[0].sellerAddress || '0x0000000000000000000000000000000000000000',
+            amount: orderData.total.toString(),
+            productHash: generateProductHash(orderData),
+            escrowDuration: 7 * 24 * 60 * 60,
+            createdAt: new Date().toISOString()
+          });
+
+          toast.success('🎉 Smart contract escrow created successfully!');
+          logger.info('Contract created:', {
+            address: escrowContract.contractAddress,
+            txHash: escrowContract.transactionHash,
+            blockNumber: escrowContract.blockNumber
+          });
+          
+          // Add blockchain data to order
+          orderData.blockchainTx = blockchainTx;
+          orderData.escrowId = escrowId;
+          orderData.payment_status = 'escrowed';
+
+        } catch (blockchainError) {
+          logger.error('Blockchain transaction failed:', blockchainError);
+          
+          // Provide specific error messages for different blockchain errors
+          let errorMessage = 'Blockchain transaction failed. Please try again.';
+          
+          if (blockchainError.message.includes('Insufficient ETH balance')) {
+            errorMessage = blockchainError.message;
+          } else if (blockchainError.code === 'ACTION_REJECTED' || blockchainError.message.includes('rejected')) {
+            errorMessage = 'Transaction was cancelled by user.';
+          } else if (blockchainError.message.includes('insufficient funds')) {
+            errorMessage = 'Insufficient funds for transaction. Please check your ETH balance and try again.';
+          } else if (blockchainError.code === 'NETWORK_ERROR') {
+            errorMessage = 'Network error. Please check your internet connection and try again.';
+          } else if (blockchainError.message.includes('gas')) {
+            errorMessage = 'Transaction failed due to gas issues. Please try again with a higher gas limit.';
+          } else if (blockchainError.message) {
+            errorMessage = `Smart contract error: ${blockchainError.message}`;
+          }
+          
+          toast.error(errorMessage);
+          throw blockchainError;
+        }
+      } else {
+        // Simulate traditional payment processing
+        toast.info('💳 Processing payment...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      // Submit order to backend
+      const response = await fetch(getApiUrl('/orders'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -216,18 +432,33 @@ const Checkout = () => {
         body: JSON.stringify(orderData)
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create order');
+        logger.error('Order creation failed:', responseData);
+        throw new Error(responseData.error || responseData.message || 'Failed to create order');
       }
 
-      const result = await response.json();
-      const order = result.order;
+      const order = responseData.order || responseData.data;
 
       // Clear cart and show success
       dispatch(clearCart());
       setOrderComplete(true);
-      toast.success('Order placed successfully!');
+      
+      if (paymentMethod === 'crypto' || paymentMethod === 'escrow') {
+        toast.success('🎉 Order placed with smart contract escrow! Funds are secured until delivery.');
+      } else {
+        toast.success('🎉 Order placed successfully!');
+      }
+      
+      // Log successful order creation
+      logger.info('Order created successfully:', {
+        orderId: order._id || order.id,
+        total: orderData.total,
+        paymentMethod: paymentMethod,
+        blockchainTx,
+        escrowId
+      });
       
       // Redirect to order confirmation after a delay
       setTimeout(() => {
@@ -236,9 +467,62 @@ const Checkout = () => {
       
     } catch (error) {
       logger.error('Order creation failed:', error);
-      toast.error(error.message || 'Payment failed. Please try again.');
+      
+      // Provide specific error messages
+      let errorMessage = 'Order processing failed. Please try again.';
+      
+      if (error.message.includes('product_id')) {
+        errorMessage = 'Invalid product information. Please refresh your cart.';
+      } else if (error.message.includes('wallet')) {
+        errorMessage = 'Wallet connection issue. Please reconnect your wallet.';
+      } else if (error.message.includes('smart contract')) {
+        errorMessage = 'Blockchain transaction failed. Please try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // Generate product hash for smart contract verification
+  const generateProductHash = (orderData) => {
+    const productData = {
+      items: orderData.items.map(item => ({
+        id: item.product_id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price
+      })),
+      total: orderData.total,
+      timestamp: Math.floor(Date.now() / 1000)
+    };
+    
+    // Create a simple hash (in production, use proper cryptographic hashing)
+    return ethers.keccak256(ethers.toUtf8Bytes(JSON.stringify(productData)));
+  };
+
+  // Add wallet connection handler
+  const handleConnectWallet = async () => {
+    setIsConnectingWallet(true);
+    try {
+      const connectedWallet = await walletService.connectWallet('metamask');
+      const info = walletService.getWalletInfo();
+      setWalletInfo(info);
+      
+      // Fetch balance after successful connection
+      if (info?.connected) {
+        await fetchWalletBalance();
+      }
+      
+      toast.success('Wallet connected successfully!');
+    } catch (error) {
+      logger.error('Failed to connect wallet:', error);
+      toast.error(`Failed to connect wallet: ${error.message}`);
+    } finally {
+      setIsConnectingWallet(false);
     }
   };
 
@@ -247,16 +531,83 @@ const Checkout = () => {
       <div className="checkout-container">
         <div className="order-success">
           <div className="success-icon">
-            <Check size={64} />
+            <CheckCircle size={64} />
           </div>
           <h1>Order Confirmed!</h1>
           <p>Thank you for your purchase. You will receive a confirmation email shortly.</p>
-          <button 
-            className="success-button"
-            onClick={() => navigate('/dashboard')}
-          >
-            View Order Details
-          </button>
+          
+          {contractDetails && (
+            <div className="contract-details">
+              <h3>🔐 Smart Contract Details</h3>
+              <div className="contract-info">
+                <div className="detail-row">
+                  <span>Contract Address:</span>
+                  <code>{contractDetails.contractAddress}</code>
+                </div>
+                <div className="detail-row">
+                  <span>Transaction Hash:</span>
+                  <code>{contractDetails.transactionHash}</code>
+                </div>
+                <div className="detail-row">
+                  <span>Block Number:</span>
+                  <span>{contractDetails.blockNumber}</span>
+                </div>
+                <div className="detail-row">
+                  <span>Buyer Address:</span>
+                  <code>{contractDetails.buyerAddress}</code>
+                </div>
+                <div className="detail-row">
+                  <span>Amount (ETH):</span>
+                  <span>{contractDetails.amount} ETH</span>
+                </div>
+                <div className="detail-row">
+                  <span>Escrow Duration:</span>
+                  <span>{Math.floor(contractDetails.escrowDuration / (24 * 60 * 60))} days</span>
+                </div>
+                <div className="detail-row">
+                  <span>Product Hash:</span>
+                  <code>{contractDetails.productHash.slice(0, 20)}...</code>
+                </div>
+                <div className="detail-row">
+                  <span>Created At:</span>
+                  <span>{new Date(contractDetails.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="contract-actions">
+                <a 
+                  href={`https://etherscan.io/tx/${contractDetails.transactionHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="etherscan-link"
+                >
+                  View on Etherscan ↗
+                </a>
+                <button 
+                  onClick={() => navigate(`/verify/${contractDetails.transactionHash}`)}
+                  className="verify-blockchain-btn"
+                >
+                  🔍 Verify on Blocmerce
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <div className="success-actions">
+            <button 
+              className="success-button primary"
+              onClick={() => navigate('/orders')}
+            >
+              View Order Details
+            </button>
+            {contractDetails && (
+              <button 
+                className="success-button secondary"
+                onClick={() => navigate(`/verify/${contractDetails.contractAddress}`)}
+              >
+                🔗 Verify Smart Contract
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -264,6 +615,17 @@ const Checkout = () => {
 
   return (
     <div className="checkout-container">
+      {/* Testing Mode Banner */}
+      {(() => {
+        return TESTING_MODE && (
+          <div className="testing-mode-banner-main">
+            <div className="testing-alert-main">
+              🧪 <strong>TESTING MODE ACTIVE:</strong> Balance checks bypassed - Smart contracts will be mocked for demonstration purposes
+            </div>
+          </div>
+        );
+      })()}
+      
       <div className="checkout-header">
         <button className="back-button" onClick={() => navigate('/cart')}>
           <ArrowLeft size={20} />
@@ -430,6 +792,18 @@ const Checkout = () => {
             {step === 2 && (
               <div className="step-content">
                 <h2>Payment Method</h2>
+                
+                {/* Testing Mode Indicator */}
+                {(() => {
+                  return TESTING_MODE && (
+                    <div className="testing-mode-banner">
+                      <div className="testing-alert">
+                        🧪 <strong>TESTING MODE:</strong> Balance checks are bypassed for demonstration. 
+                        Smart contracts will be mocked regardless of wallet balance.
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="payment-methods">
                   <div 
@@ -437,14 +811,35 @@ const Checkout = () => {
                     onClick={() => setPaymentMethod('card')}
                   >
                     <CreditCard size={24} />
-                    <span>Credit/Debit Card</span>
+                    <div className="payment-details">
+                      <span>Credit/Debit Card</span>
+                      <small>Traditional payment with instant processing</small>
+                    </div>
                   </div>
+                  
                   <div 
                     className={`payment-option ${paymentMethod === 'crypto' ? 'selected' : ''}`}
                     onClick={() => setPaymentMethod('crypto')}
                   >
-                    <Wallet size={24} />
-                    <span>Cryptocurrency</span>
+                    <CreditCard size={24} />
+                    <div className="payment-details">
+                      <span>Cryptocurrency</span>
+                      <small>Pay with ETH directly from your wallet</small>
+                    </div>
+                  </div>
+
+                  <div 
+                    className={`payment-option ${paymentMethod === 'escrow' ? 'selected' : ''}`}
+                    onClick={() => setPaymentMethod('escrow')}
+                  >
+                    <Shield size={24} />
+                    <div className="payment-details">
+                      <span>Smart Contract Escrow</span>
+                      <small>Secure payment held until delivery confirmed</small>
+                    </div>
+                    <div className="payment-badge">
+                      <span>🔒 Most Secure</span>
+                    </div>
                   </div>
                 </div>
 
@@ -509,24 +904,132 @@ const Checkout = () => {
                   </div>
                 )}
 
-                {paymentMethod === 'crypto' && (
+                {(paymentMethod === 'crypto' || paymentMethod === 'escrow') && (
                   <div className="crypto-form">
                     <div className="crypto-info">
-                      <Info size={20} />
-                      <span>Pay with Ethereum (ETH). Make sure you have enough ETH in your wallet.</span>
+                      <div className="info-box">
+                        <Shield size={20} />
+                        <div>
+                          <h4>
+                            {paymentMethod === 'escrow' ? 'Smart Contract Escrow Payment' : 'Cryptocurrency Payment'}
+                          </h4>
+                          <p>
+                            {paymentMethod === 'escrow' 
+                              ? 'Your payment will be held securely in a smart contract until you confirm delivery. Maximum protection for buyers.'
+                              : 'Pay directly with Ethereum (ETH). Make sure you have enough ETH in your wallet plus gas fees.'
+                            }
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div className="form-group">
-                      <label>Wallet Address</label>
-                      <input
-                        type="text"
-                        name="walletAddress"
-                        value={formData.walletAddress}
-                        onChange={handleInputChange}
-                        className={errors.walletAddress ? 'error' : ''}
-                        placeholder="0x..."
-                      />
-                      {errors.walletAddress && <span className="error-message">{errors.walletAddress}</span>}
+
+                    {/* Wallet Connection Status */}
+                    <div className="wallet-status">
+                      {walletInfo?.connected ? (
+                        <div className="wallet-connected">
+                          <CheckCircle size={20} className="text-green-500" />
+                          <div>
+                            <span>Wallet Connected</span>
+                            <small>{walletService.formatAddress(walletInfo?.wallet?.address || walletInfo?.wallet?.account)}</small>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="wallet-disconnected">
+                          <Shield size={20} className="text-orange-500" />
+                          <div>
+                            <span>Wallet Not Connected</span>
+                            <button 
+                              className="connect-wallet-btn"
+                              onClick={handleConnectWallet}
+                              disabled={isConnectingWallet}
+                            >
+                              {isConnectingWallet ? (
+                                <>
+                                  <div className="loading-spinner"></div>
+                                  Connecting...
+                                </>
+                              ) : (
+                                'Connect Wallet'
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {paymentMethod === 'escrow' && (
+                      <div className="escrow-features">
+                        <h4>🔐 Escrow Protection Features:</h4>
+                        <ul>
+                          <li>✅ Funds held securely in smart contract</li>
+                          <li>✅ Payment released only after delivery confirmation</li>
+                          <li>✅ Dispute resolution system available</li>
+                          <li>✅ Automatic refund if seller doesn't deliver</li>
+                          <li>✅ No third-party can access your funds</li>
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="payment-summary">
+                      <div className="summary-row">
+                        <span>Subtotal:</span>
+                        <span>${cart.subtotal?.toFixed(2) || '0.00'}</span>
+                      </div>
+                      <div className="summary-row">
+                        <span>Purchase Amount (ETH):</span>
+                        <span>{(cart.total / 2000).toFixed(4)} ETH</span>
+                      </div>
+                      {paymentMethod === 'escrow' && (
+                        <>
+                          <div className="summary-row">
+                            <span>Smart Contract Fee:</span>
+                            <span>0.001 ETH</span>
+                          </div>
+                          <div className="summary-row">
+                            <span>Estimated Gas:</span>
+                            <span>≈ 0.01 ETH</span>
+                          </div>
+                          <div className="summary-row total-required">
+                            <span>Total ETH Required:</span>
+                            <span>{((cart.total / 2000) + 0.001 + 0.01).toFixed(4)} ETH</span>
+                          </div>
+                        </>
+                      )}
+                      {paymentMethod === 'crypto' && (
+                        <>
+                          <div className="summary-row">
+                            <span>Estimated Gas:</span>
+                            <span>≈ 0.005 ETH</span>
+                          </div>
+                          <div className="summary-row total-required">
+                            <span>Total ETH Required:</span>
+                            <span>{((cart.total / 2000) + 0.005).toFixed(4)} ETH</span>
+                          </div>
+                        </>
+                      )}
+                      
+                      {walletInfo?.connected && (
+                        <div className="wallet-balance">
+                          <div className="balance-info">
+                            <span>Your Wallet Balance:</span>
+                            <span className={`balance-amount ${walletBalance === 'Error' ? 'error' : ''}`}>
+                              {walletBalance === null ? 'Loading...' : 
+                               walletBalance === 'Error' ? 'Error loading balance' :
+                               `${parseFloat(walletBalance).toFixed(4)} ETH`}
+                            </span>
+                          </div>
+                          <small>Make sure you have enough ETH for the transaction plus gas fees</small>
+                          {walletBalance && walletBalance !== 'Error' && (
+                            <div className="balance-warning">
+                              {((cart.total / 2000) + (paymentMethod === 'escrow' ? 0.011 : 0.005)) > parseFloat(walletBalance) && (
+                                <span className="insufficient-funds">
+                                  ⚠️ Insufficient funds. You need more ETH for this transaction.
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -608,7 +1111,7 @@ const Checkout = () => {
               {cart.items.map(item => (
                 <div key={item.productId} className="summary-item">
                   <img 
-                    src={getNFTImageUrl(item.image) || 'https://via.placeholder.com/80x80?text=No+Image'}
+                    src={getImageUrl(item.image || item.imageUrl) || generatePlaceholder(80, 80, 'No Image')}
                     alt={item.name}
                     onError={handleImageError}
                   />
