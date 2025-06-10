@@ -1,0 +1,36 @@
+{
+  "name": "blocmerce-frontend",
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "installCommand": "npm install",
+  "framework": "create-react-app",
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "https://your-backend-url.herokuapp.com",
+    "REACT_APP_WS_URL": "wss://your-backend-url.herokuapp.com",
+    "REACT_APP_FRONTEND_URL": "https://blocmerce.vercel.app"
+  }
+} 
