@@ -156,11 +156,11 @@ graph TB
 git clone https://github.com/Abuzarsheik/Blockchain-Ecommerce.git
 cd Blockchain-Ecommerce
 
-# Install backend dependencies
+# Install dependencies
 npm install
 
 # Install frontend dependencies
-cd frontend && npm install
+cd frontend && npm install && cd ..
 ```
 
 ### 2️⃣ **Environment Setup**
@@ -176,14 +176,17 @@ JWT_SECRET=your_super_secure_jwt_secret
 
 ### 3️⃣ **Launch Application**
 ```bash
-# Option 1: Quick start (both frontend and backend)
-./start-full-app.bat
+# Option 1: Quick demo with sample data
+./quick-demo.bat
 
 # Option 2: Manual start
-# Terminal 1: Backend
+# Terminal 1: Setup demo data (optional)
+npm run setup-demo
+
+# Terminal 2: Backend
 npm start
 
-# Terminal 2: Frontend
+# Terminal 3: Frontend
 cd frontend && npm start
 ```
 

@@ -15,7 +15,7 @@ pause
 
 echo.
 echo 📦 Adding sample demo data...
-node create_test_data.js
+node scripts/setup-demo.js
 timeout /t 2 /nobreak > nul
 
 echo.
