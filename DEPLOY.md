@@ -50,10 +50,15 @@ REACT_APP_WS_URL=wss://your-backend-url.com
 
 ## Troubleshooting
 
+**Build fails with ESLint warnings?**
+- The build script is configured with `CI=false` to prevent warnings from failing the build
+- This is normal for development projects with minor ESLint warnings
+
 **Build fails?**
 - Check that `frontend/package.json` exists
 - Ensure Node.js version is 18+
 - Verify all dependencies are installed
+- Make sure `cross-env` is installed as a dev dependency
 
 **404 on routes?**
 - Netlify: `netlify.toml` handles redirects
